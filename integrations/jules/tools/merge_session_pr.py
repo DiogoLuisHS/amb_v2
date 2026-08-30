@@ -48,19 +48,35 @@ from jules_client import JulesClient
 
 
 def detect_pr_from_session(session_id: str) -> Optional[int]:
-    """Inspeciona as atividades e mensagens da sessão para extrair o número do PR."""
+    """Inspeciona os outputs da sessão e as atividades para extrair o número do PR."""
     client = JulesClient()
     try:
+        # 1. Checa diretamente na lista de outputs da sessão
+        sess = client.get_session(session_id)
+        outputs = sess.get("outputs", [])
+        if isinstance(outputs, list):
+            for item in outputs:
+                if isinstance(item, dict) and "pullRequest" in item:
+                    pr_url = item["pullRequest"].get("url", "")
+                    m = re.search(r"/pull/(\d+)", pr_url)
+                    if m:
+                        return int(m.group(1))
+        elif isinstance(outputs, dict) and "pullRequest" in outputs:
+            pr_url = outputs["pullRequest"].get("url", "")
+            m = re.search(r"/pull/(\d+)", pr_url)
+            if m:
+                return int(m.group(1))
+
+        # 2. Checa em activities
         act_res = client.list_activities(session_id=session_id, page_size=50)
-        activities = act_res.get("activities", [])
+        activities = act_res if isinstance(act_res, list) else act_res.get("activities", [])
         for act in activities:
             txt = str(act)
-            # Busca links de PR no formato github.com/user/repo/pull/123
             match = re.search(r"github\.com/[^/]+/[^/]+/pull/(\d+)", txt)
             if match:
                 return int(match.group(1))
     except Exception as e:
-        log_error("DETECT-PR", f"Falha ao consultar atividades da sessão: {e}")
+        log_error("DETECT-PR", f"Falha ao consultar PR da sessão: {e}")
     return None
 
 
@@ -196,7 +212,17 @@ def approve_and_merge_pr(
     print(f"📁 Repositório: {repo_name} ➔ Branch: {target_branch}")
     print("=" * 75 + "\n")
 
-    # 2. Aprova o PR (Code Review)
+    # 2. Marca como Pronto (caso o Jules tenha deixado o PR como Draft / Publish PR)
+    subprocess.run(
+        ["gh", "pr", "ready", str(resolved_pr), "--repo", repo_name],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        shell=True
+    )
+
+    # 3. Aprova o PR (Code Review)
     if auto_approve_review:
         log("GITHUB-REVIEW", f"Aprovando Pull Request #{resolved_pr} via GitHub CLI...", Colors.HEADER)
         review_proc = subprocess.run(
