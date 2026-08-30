@@ -1,4 +1,4 @@
-# ⚙️ Módulo de Configuração & Setup Inteligente (`00_setup_config`)
+# ⚙️ Módulo de Configuração & Setup Inteligente (`config`)
 
 Este módulo isola o carregamento de variáveis de ambiente, a validação estrita de dependências (Fail-Fast) e o assistente cognitivo de configuração inicial de projetos.
 
@@ -8,19 +8,22 @@ Este módulo isola o carregamento de variáveis de ambiente, a validação estri
 
 | Arquivo | Responsabilidade Única |
 | :--- | :--- |
-| `config.py` | Gerenciador central de `.env`, validações estritas (`require_env`), logging e caminhos do repositório. |
+| `__init__.py` | Exportações de símbolos e exceções para o pacote. |
+| `config.py` | Gerenciador central de `.env`, validações estritas (`require_env`), logging e detecção da raiz do repositório. |
 | `setup_project.py` | Assistente inteligente que analisa git, stack técnica e regras com o Antigravity SDK. |
-| `amb_project.json` | Arquivo gerado com a especificação e metadados detectados do projeto. |
 | `.env.example` | Modelo limpo de variáveis de ambiente necessárias. |
 
 ---
 
-## 🚀 Como Executar:
+## 🚀 Como Executar via CLI (`amb`):
 
 ```bash
-# Validar ambiente e chaves
-python amb_v2/config/config.py
+# Validar ambiente, chaves e checklist do projeto
+amb check
 
 # Rodar assistente de auto-setup do projeto
-python amb_v2/config/setup_project.py
+amb setup
+
+# Exibir o Prompt Mestre de Auto-Configuração para IAs
+amb prompt
 ```

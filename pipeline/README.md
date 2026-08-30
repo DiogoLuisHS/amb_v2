@@ -8,7 +8,7 @@ Pipeline unificado e modular para desenvolvimento autônomo de interfaces e func
 
 ```mermaid
 graph TD
-    A["📄 Prompt da Tarefa (.jules/prompts/ ou template_tarefa.md)"] --> B["🎨 Google Stitch SDK (Geração/Refinamento Visual)"]
+    A["📄 Prompt da Tarefa (.amb/prompts/ ou template_tarefa.md)"] --> B["🎨 Google Stitch SDK (Geração/Refinamento Visual)"]
     B --> C["🚪 Gatekeeper 1: Decisão de Design (Aprovar / Refinar / Variantes)"]
     C -->|Aprovar| D["🧠 Antigravity Synthesizer (Injeção de DOM, Tokens e Regras do Projeto)"]
     C -->|Refinar| B
@@ -29,8 +29,8 @@ graph TD
 # Via CLI unificada amb
 amb pipeline amb_v2/pipeline/prompts/template_tarefa.md
 
-# Ou apontando para qualquer especificação em .jules/prompts/
-amb pipeline .jules/prompts/minha_tela.md
+# Ou apontando para qualquer especificação em .amb/prompts/
+amb pipeline .amb/prompts/minha_tela.md
 ```
 
 ### 🔹 2. Utilizar Tela Já Existente no Stitch (`--screen-id`)
@@ -40,10 +40,10 @@ amb pipeline template_tarefa.md --screen-id <SCREEN_ID>
 
 ### 🔹 3. Retomar Monitoramento de Sessão Ativa do Jules (`--resume-session`)
 ```bash
-python amb_v2/pipeline/pipeline.py --resume-session <SESSION_ID>
+amb pipeline template_tarefa.md --resume-session <SESSION_ID>
 ```
 
 ### 🔹 4. Pular a Etapa do Stitch (`--skip-stitch`)
 ```bash
-python amb_v2/pipeline/pipeline.py template_tarefa.md --skip-stitch
+amb pipeline template_tarefa.md --skip-stitch
 ```

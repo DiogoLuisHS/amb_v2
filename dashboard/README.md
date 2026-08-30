@@ -1,40 +1,51 @@
-# 📡 Módulo de Monitoramento & Sentinela em Tempo Real (`06_monitoramento`)
+# 📡 Módulo de Monitoramento, Sentinela & Dashboard Web (`dashboard`)
 
-Este módulo vigia ativamente todos os 4 serviços (Google Jules, Google Stitch, Google Antigravity e Render Cloud), emitindo alertas imediatos ou respondendo dúvidas no piloto automático:
+Este módulo vigia ativamente os serviços do ecossistema (Google Jules, Google Stitch, Google Antigravity e Render Cloud), emitindo alertas imediatos, respondendo dúvidas no piloto automático e servindo o Dashboard Web em tempo real.
 
 ---
 
 ## 🧭 Estrutura da Pasta:
 
 ```
-06_monitoramento/
+dashboard/
 ├── README.md                      # 📖 Este guia
-│
-├── unified_monitor.py             # 📡 Sentinela contínuo em tempo real (com --auto-approve)
-├── auto_advisor.py                # 🤖 Menu cognitivo para resolver pendências com Antigravity
-│
+├── dashboard_server.py            # 🖥️ Servidor Web SPA em tempo real (Porta 3333)
+├── unified_monitor.py             # 📡 Sentinela contínuo em tempo real (com --auto-approve e --interactive)
 └── watchers/                      # 👁️ Sentinelas Isolados (SRP)
     ├── jules_watcher.py           # Monitor de sessões, atividades e feedback do Jules
     ├── render_watcher.py          # Monitor de status e falhas de deploy no Render
-    └── alert_notifier.py          # Emissor de alertas visuais e sonoros (beep ANSI)
+    └── alert_notifier.py          # Emissor de alertas visuais e sonoros
 ```
 
 ---
 
-## 🚀 Como Executar:
+## 🚀 Como Executar via CLI (`amb`):
 
-### 1. Rodar o Sentinela Contínuo:
+### 1. Iniciar o Dashboard Web SPA:
 ```bash
-python amb_v2/dashboard/unified_monitor.py
+amb dashboard
+# Ou em porta customizada:
+amb dashboard --port 8080
 ```
 
-### 2. Rodar o Sentinela no Piloto Automático (Auto-Reply com IA):
+### 2. Rodar o Sentinela Contínuo:
 ```bash
-python amb_v2/dashboard/unified_monitor.py --auto-approve
+amb monitor
 ```
 
-### 3. Abrir o Menu Central de Resolução de Pendências:
+### 3. Rodar o Sentinela no Piloto Automático (Auto-Reply com Gemini):
 ```bash
-python amb_v2/dashboard/auto_advisor.py
+amb monitor --auto-approve
 ```
-*(Ou em lote: `python amb_v2/dashboard/auto_advisor.py --auto-approve`)*
+
+### 4. Checagem Rápida de 1 Rodada:
+```bash
+amb monitor --check-once
+```
+
+### 5. Menu Cognitivo de Resolução de Pendências:
+```bash
+amb advisor
+# Ou:
+amb monitor --interactive
+```
