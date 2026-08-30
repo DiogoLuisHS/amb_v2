@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+🧠 AMB_V2 - Google Antigravity SDK & Cognitive Client (SRP)
+Localização: amb_v2/integrations/antigravity/antigravity_client.py
+Responsabilidade Única: Prover interface unificada para geração de texto e inferência cognitiva
+utilizando a CLI oficial `agy` ou chamada direta à REST API do Gemini com fail-fast.
+"""
+
+import os
+import sys
+import json
+import subprocess
+import urllib.request
+import urllib.error
+from typing import Dict, Any, Optional
+
+# Bootstrap dinâmico de caminhos amb_v2
+_cur = os.path.dirname(os.path.abspath(__file__))
+while _cur and os.path.basename(_cur) != "amb_v2":
+    _p = os.path.dirname(_cur)
+    if _p == _cur:
+        break
+    _cur = _p
+_AMB = _cur
+for _sub in [
+    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
+    "integrations/jules", "integrations/jules/tools",
+    "integrations/stitch", "integrations/stitch/tools",
+    "integrations/antigravity", "integrations/antigravity/tools",
+    "integrations/render", "integrations/render/tools",
+]:
+    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
+    if os.path.exists(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from config import Colors, log, log_error, get_env, require_env, ApiExecutionError, find_repo_root
+
+
+class AntigravityClient:
+    """Client cognitivo que usa a CLI oficial `agy` ou a API direta do Gemini."""
+
+    def __init__(self, model: str = "gemini-2.5-flash"):
+        self.model = model
+        self.api_key = get_env("GEMINI_API_KEY")
+
+    def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
+        """Tenta inferência via CLI agy se disponível no PATH."""
+        try:
+            full_prompt = f"System: {system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
+            res = subprocess.run(
+                ["agy", "-p", full_prompt],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=45,
+                check=False
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+        return None
+
+    def _generate_via_api(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+        """Executa chamada direta à REST API do Google Gemini."""
+        if not self.api_key:
+            require_env("GEMINI_API_KEY")
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        headers = {"Content-Type": "application/json"}
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 4096
+            }
+        }
+
+        if system_instruction:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
+
+        data_bytes = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+                candidates = resp_data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+                raise ApiExecutionError("Resposta vazia retornada pelo modelo Gemini.")
+        except urllib.error.HTTPError as e:
+            err_text = e.read().decode("utf-8")
+            msg = f"HTTP {e.code}: {e.reason}"
+            try:
+                err_j = json.loads(err_text)
+                if "error" in err_j:
+                    msg = f"{msg} - {err_j['error'].get('message', err_text)}"
+            except Exception:
+                msg = f"{msg} - {err_text}"
+            raise ApiExecutionError(f"Erro na chamada do Gemini/Antigravity: {msg}", hint="Verifique se sua GEMINI_API_KEY é válida.")
+        except Exception as e:
+            raise ApiExecutionError(f"Falha de conexão com a API do Gemini: {e}")
+
+    def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+        """Gera texto utilizando CLI agy ou fallback para API REST oficial."""
+        cli_out = self._generate_via_agy_cli(prompt, system_instruction)
+        if cli_out:
+            return cli_out
+        return self._generate_via_api(prompt, system_instruction)
+
+
+if __name__ == "__main__":
+    try:
+        c = AntigravityClient()
+        log("ANTIGRAVITY", "Testando inferência com modelo padrão...", Colors.CYAN)
+        res = c.generate_text(prompt="Responda apenas 'OK - Antigravity Online'")
+        print(f"{Colors.GREEN}✅ {res}{Colors.RESET}")
+    except Exception as e:
+        log_error("ANTIGRAVITY", str(e))
