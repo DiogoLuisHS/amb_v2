@@ -34,7 +34,8 @@ Abaixo está o mapeamento exato de validação de todos os comandos do repositó
 | `python agents/local_agent_runner.py --list` | `amb agent --list` (`-l`) | ✅ Ativo | Lista personas disponíveis em `.amb/personas/`. |
 | `python agents/local_agent_runner.py --role relay` | `amb agent --role relay` (`-r`) | ✅ Ativo | Executa persona específica localmente com CLI `agy`. |
 | `python agents/local_agent_runner.py --role relay -j` | `amb agent --role relay -j` | ✅ Ativo | Despacha persona para a nuvem do Google Jules. |
-| `python agents/autonomous_loop.py` | `amb agent --loop` (`-c`) | ✅ Ativo | **Loop Contínuo:** ciclo de personas, monitoramento e merge. |
+| `python agents/autonomous_loop.py --max-cycles 5` | `amb agent --loop --max-cycles 5` | ✅ Ativo | **Loop com Limite:** executa N ciclos contínuos de desenvolvimento e encerra. |
+| `python agents/autonomous_loop.py` | `amb agent --loop` (`-c`) | ✅ Ativo | **Loop Contínuo:** ciclo infinito de personas, monitoramento e auto-merge de PR. |
 | `python integrations/jules/tools/list_sessions.py` | `amb jules list` | ✅ Ativo | Lista sessões recentes no Google Jules. |
 | `python integrations/jules/tools/get_session.py <id>` | `amb jules get <id>` | ✅ Ativo | Detalhes da sessão, status e link do PR. |
 | `python integrations/jules/tools/monitor_activities.py <id>` | `amb jules get <id> --watch` (`-w`) | ✅ Ativo | Streaming em tempo real das atividades/bash da sessão. |
@@ -79,10 +80,11 @@ amb dashboard               # Inicia o Dashboard Web na porta 3333
 
 ### 🔹 Personas & Ciclos Autônomos:
 ```bash
-amb agent --list            # Lista personas (.md)
-amb agent --role relay      # Executa persona específica localmente
-amb agent --role relay -j   # Despacha persona para o Jules na nuvem
-amb agent --loop            # Loop contínuo com monitoramento e merge automático
+amb agent --list                            # Lista personas (.md) disponíveis
+amb agent --role relay                      # Executa persona localmente
+amb agent --role pixel -j                   # Despacha persona para o Jules na nuvem
+amb agent --role pixel --loop               # Loop contínuo infinito com monitoramento e merge
+amb agent --role pixel --loop --max-cycles 3 # Loop com limite de 3 ciclos e auto-merge
 ```
 
 ### 🔹 Google Jules & Integração Git:
