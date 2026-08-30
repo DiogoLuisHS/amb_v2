@@ -158,9 +158,9 @@ def cmd_stitch(args):
         generate_screen.main()
 
     elif sub == "refine":
-        import auto_refine
-        sys.argv = ["auto_refine.py", "--screen-id", args.screen_id] + (["--feedback", args.feedback] if args.feedback else []) + (["--theme", args.theme] if args.theme else [])
-        auto_refine.main()
+        import edit_screen
+        sys.argv = ["edit_screen.py", "--screen-id", args.screen_id, "--prompt", args.prompt]
+        edit_screen.main()
 
     elif sub == "get":
         import get_screen
@@ -189,8 +189,8 @@ def cmd_render(args):
 
 def cmd_pipeline(args):
     """Executa o pipeline completo Design-to-Deploy."""
-    from orchestrator import run_pipeline
-    run_pipeline(prompt_file=args.template)
+    from pipeline import PipelineOrchestrator
+    PipelineOrchestrator.run(prompt_file=args.template)
 
 
 def main():
@@ -269,10 +269,9 @@ def main():
     s_gen.add_argument("--prompt", "-p", required=True, help="Descrição visual da tela.")
     s_gen.add_argument("--title", "-t", help="Título da tela.")
 
-    s_ref = s_subs.add_parser("refine", help="Refina uma tela existente com IA respeitando o Design System.")
+    s_ref = s_subs.add_parser("refine", help="Refina uma tela existente no Stitch com novas instruções.")
     s_ref.add_argument("--screen-id", "-s", required=True, help="ID da tela.")
-    s_ref.add_argument("--feedback", "-f", help="Observações de feedback.")
-    s_ref.add_argument("--theme", choices=["auto", "light", "dark"], default="auto", help="Preferência de tema.")
+    s_ref.add_argument("--prompt", "-p", required=True, help="Instruções de edição e refinamento visual.")
 
     s_get = s_subs.add_parser("get", help="Obtém o código HTML/CSS de uma tela.")
     s_get.add_argument("--screen-id", "-s", required=True, help="ID da tela.")
