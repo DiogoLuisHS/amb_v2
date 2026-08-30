@@ -8,9 +8,9 @@ enviando prompts estruturados (ou personas) ao Google Jules, monitorando
 atividades em tempo real, respondendo dúvidas via Antigravity e integrando PRs no Git.
 
 Exemplos de Uso:
-  amb agent --loop --role relay
-  amb agent --loop --role sentry --modules kanban,agenda
-  python amb_v2/agents/autonomous_loop.py --role relay --max-cycles 5
+  amb agent --role pixel --loop --max-cycles 3
+  amb agent --all --loop --max-cycles 2
+  python amb_v2/agents/autonomous_loop.py --all --max-cycles 2
 """
 
 import os
@@ -147,7 +147,8 @@ def monitor_and_assist_session(client: JulesClient, session_id: str, auto_reply_
 
 
 def run_autonomous_loop(
-    role: Optional[str] = "relay",
+    role: Optional[str] = None,
+    all_personas: bool = False,
     prompt_file: Optional[str] = None,
     modules: Optional[List[str]] = None,
     max_cycles: Optional[int] = None,
@@ -155,93 +156,115 @@ def run_autonomous_loop(
     branch: str = "develop",
     no_auto_merge: bool = False
 ):
-    """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo."""
+    """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para uma ou todas as personas."""
     repo_name = get_repo_name()
     client = JulesClient()
     source_name = f"sources/github/{repo_name}"
 
-    cycle_count = 0
+    personas_dir = get_personas_directory()
+    discovered = discover_personas(personas_dir)
+
+    if all_personas:
+        roles_to_run = list(discovered.keys()) if discovered else ["relay", "sentry", "pixel"]
+    elif role:
+        roles_to_run = [role]
+    else:
+        roles_to_run = ["relay"]
+
     modules_list = modules or [""]
 
     print("\n" + "=" * 75)
     print(f"{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}")
     print(f"📁 Repositório: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {branch})")
-    print(f"🤖 Persona Base: {Colors.BOLD}{role or 'Prompt Customizado'}{Colors.RESET}")
+    print(f"🤖 Personas no Ciclo ({len(roles_to_run)}): {Colors.BOLD}{', '.join(roles_to_run)}{Colors.RESET}")
     if modules and modules != [""]:
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
-    print(f"⏱️ Limite de Ciclos: {max_cycles if max_cycles else 'Infinito (Contínuo)'}")
+    print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}")
     print("=" * 75 + "\n")
 
+    completed_cycles = 0
+
     while True:
-        cycle_count += 1
-        current_module = modules_list[(cycle_count - 1) % len(modules_list)]
+        completed_cycles += 1
 
         print("\n" + "#" * 75)
-        print(f"🔄 {Colors.BOLD}CICLO #{cycle_count}{Colors.RESET}" + (f" - Foco no Módulo: [{current_module}]" if current_module else ""))
+        print(f"🔄 {Colors.BOLD}CICLO #{completed_cycles} DE {max_cycles if max_cycles else '∞'}{Colors.RESET}")
         print("#" * 75 + "\n")
 
-        # 1. Carrega o Prompt
-        if prompt_file and os.path.exists(prompt_file):
-            with open(prompt_file, "r", encoding="utf-8", errors="replace") as pf:
-                base_prompt = pf.read()
-            title = f"Task: {Path(prompt_file).stem.replace('_', ' ').title()}"
-        else:
-            title, base_prompt = load_persona_content(role or "relay")
+        for persona_idx, cur_role in enumerate(roles_to_run, 1):
+            current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
 
-        if current_module:
-            full_prompt = f"{base_prompt}\n\n---\n\n🎯 ESCOPO DESTA ITERAÇÃO:\nConcentre a auditoria e alinhamento estritamente no módulo: `{current_module}`."
-            session_title = f"{title} [{current_module}] - Ciclo #{cycle_count}"
-        else:
-            full_prompt = base_prompt
-            session_title = f"{title} - Ciclo #{cycle_count}"
+            print(f"\n📦 [{persona_idx}/{len(roles_to_run)}] Executando Persona: {Colors.BOLD}{cur_role.upper()}{Colors.RESET}" + (f" - Módulo: [{current_module}]" if current_module else ""))
 
-        # 2. Despacho no Jules
-        log("LOOP", f"Criando nova sessão no Google Jules...", Colors.CYAN)
-        session_resp = client.create_session(
-            prompt=full_prompt,
-            source_name=source_name,
-            title=session_title,
-            base_branch=branch
-        )
+            # 1. Carrega o Prompt
+            if prompt_file and os.path.exists(prompt_file):
+                with open(prompt_file, "r", encoding="utf-8", errors="replace") as pf:
+                    base_prompt = pf.read()
+                title = f"Task: {Path(prompt_file).stem.replace('_', ' ').title()}"
+            else:
+                title, base_prompt = load_persona_content(cur_role)
 
-        session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get("id", "")
-        if not session_id:
-            raise AmbError(f"Falha ao obter ID da sessão: {session_resp}")
+            if current_module:
+                full_prompt = f"{base_prompt}\n\n---\n\n🎯 ESCOPO DESTA ITERAÇÃO:\nConcentre a auditoria e alinhamento estritamente no módulo: `{current_module}`."
+                session_title = f"{title} [{current_module}] - Ciclo #{completed_cycles}"
+            else:
+                session_title = f"{title} - Ciclo #{completed_cycles}"
+                full_prompt = base_prompt
 
-        print(f"🎉 Sessão #{cycle_count} Criada: {Colors.GREEN}{session_id}{Colors.RESET}")
-        print(f"🔗 Acompanhe: {Colors.BLUE}https://jules.google.com/session/{session_id}{Colors.RESET}\n")
+            # 2. Despacho no Jules
+            log("LOOP", f"Criando sessão para persona '{cur_role}' no Google Jules...", Colors.CYAN)
+            try:
+                session_resp = client.create_session(
+                    prompt=full_prompt,
+                    source_name=source_name,
+                    title=session_title,
+                    base_branch=branch
+                )
 
-        log("LOOP", "Aguardando provisionamento da VM no Jules (5s)...", Colors.DIM)
-        time.sleep(5)
+                session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get("id", "")
+                if not session_id:
+                    raise AmbError(f"Falha ao obter ID da sessão: {session_resp}")
 
-        # 3. Monitoramento + Auto-Resposta
-        try:
-            state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
-            
-            # 4. Aprovação e Integração do PR no Git
-            if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
-                log("GIT-MERGE", f"Iniciando aprovação e merge do Pull Request da sessão {session_id}...", Colors.HEADER)
-                try:
-                    approve_and_merge_pr(session_id=session_id, target_branch=branch)
-                except Exception as em:
-                    log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
-        except KeyboardInterrupt:
-            print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário após o ciclo #{cycle_count}.{Colors.RESET}")
+                print(f"🎉 Sessão Criada: {Colors.GREEN}{session_id}{Colors.RESET}")
+                print(f"🔗 Acompanhe: {Colors.BLUE}https://jules.google.com/session/{session_id}{Colors.RESET}\n")
+
+                log("LOOP", "Aguardando provisionamento da VM no Jules (5s)...", Colors.DIM)
+                time.sleep(5)
+
+                # 3. Monitoramento + Auto-Resposta
+                state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
+                
+                # 4. Aprovação e Integração do PR no Git
+                if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
+                    log("GIT-MERGE", f"Verificando Pull Request da sessão {session_id}...", Colors.HEADER)
+                    try:
+                        approve_and_merge_pr(session_id=session_id, target_branch=branch)
+                    except Exception as em:
+                        log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
+
+            except KeyboardInterrupt:
+                print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
+                return
+            except Exception as e:
+                log_error("LOOP", f"Erro no processamento da persona '{cur_role}': {e}")
+
+            if len(roles_to_run) > 1:
+                log("LOOP", f"Pausa de {delay_between_cycles}s antes da próxima persona...", Colors.DIM)
+                time.sleep(delay_between_cycles)
+
+        # Checagem de Limite de Ciclos Globais
+        if max_cycles and completed_cycles >= max_cycles:
+            log("LOOP", f"Limite de {max_cycles} ciclos atingido. Todas as personas foram executadas com sucesso!", Colors.GREEN)
             break
 
-        # 5. Checagem de Limite
-        if max_cycles and cycle_count >= max_cycles:
-            log("LOOP", f"Limite de {max_cycles} ciclos atingido. Encerrando loop com sucesso!", Colors.GREEN)
-            break
-
-        # 6. Pausa antes do próximo ciclo
-        log("LOOP", f"Aguardando {delay_between_cycles}s para iniciar o próximo ciclo...", Colors.DIM)
+        log("LOOP", f"Ciclo #{completed_cycles} concluído. Aguardando {delay_between_cycles}s para a próxima rodada...", Colors.DIM)
         time.sleep(delay_between_cycles)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)")
-    parser.add_argument("--role", "-r", default="relay", help="Persona a ser executada em loop (ex: relay, sentry, pixel). Padrão: relay")
+    parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: relay, sentry, pixel).")
+    parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas disponíveis da pasta em cada ciclo.")
     parser.add_argument("--prompt", "-p", help="Caminho de um arquivo .md com prompt customizado.")
     parser.add_argument("--modules", "-m", help="Lista de módulos separados por vírgula para alternar por ciclo (ex: kanban,agenda,projects).")
     parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar (se omitido, roda continuamente).")
@@ -256,6 +279,7 @@ def main():
     try:
         run_autonomous_loop(
             role=args.role,
+            all_personas=args.all,
             prompt_file=args.prompt,
             modules=modules_list,
             max_cycles=args.max_cycles,

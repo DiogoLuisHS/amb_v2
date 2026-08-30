@@ -103,7 +103,8 @@ def cmd_agent(args):
     if getattr(args, "loop", False):
         from autonomous_loop import run_autonomous_loop
         run_autonomous_loop(
-            role=args.role or "relay",
+            role=args.role,
+            all_personas=getattr(args, "all", False),
             prompt_file=args.task if (args.task and os.path.exists(args.task)) else None,
             max_cycles=getattr(args, "max_cycles", None)
         )

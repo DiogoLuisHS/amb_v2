@@ -188,7 +188,7 @@ def approve_and_merge_pr(
             log_error("GIT-SYNC", f"Falha ao processar patch da sessão: {e}")
 
     if not resolved_pr:
-        log_error("GIT-SYNC", "Nenhum Pull Request aberto nem patch de saída encontrado para integração.")
+        log("GIT-SYNC", "Nenhum Pull Request aberto pela sessão (sessão diagnóstica/informativa sem alterações de código).", Colors.DIM)
         return False
 
     print("\n" + "=" * 75)
