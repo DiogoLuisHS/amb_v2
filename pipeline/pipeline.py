@@ -47,15 +47,9 @@ for _sub in [
         sys.path.insert(0, _p)
 
 from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, require_env, AmbError, ConfigurationError
-from generate_screen import generate_screen
-from get_screen import get_screen
-from edit_screen import edit_screen
-from generate_variants import generate_variants
-from sync_design_system import sync_design_system
+from stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
 from jules_client import JulesClient
-from antigravity_client import AntigravityClient
-from synthesize_prompt import synthesize_prompt
-from validate_architecture import validate_architecture
+from antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
 
 
 class PromptParser:

@@ -120,6 +120,95 @@ class AntigravityClient:
             return cli_out
         return self._generate_via_api(prompt, system_instruction)
 
+    def synthesize_prompt(self, raw_idea: str, role: str = "general") -> str:
+        """Sintetiza um prompt formal para execução autônoma."""
+        root = find_repo_root()
+        rules_dir = os.path.join(root, ".antigravity", "rules")
+        if not os.path.exists(rules_dir):
+            rules_dir = os.path.join(root, ".gemini", "rules")
+
+        rules_content = ""
+        if os.path.exists(rules_dir):
+            for f in sorted(os.listdir(rules_dir)):
+                if f.endswith(".md"):
+                    try:
+                        with open(os.path.join(rules_dir, f), "r", encoding="utf-8", errors="replace") as rf:
+                            rules_content += f"\n--- [{f}] ---\n" + rf.read()[:500]
+                    except Exception:
+                        pass
+
+        system_instruction = (
+            "Você é o Arquiteto de Software Principal do projeto. "
+            "Sua missão é ler uma especificação informal de tarefa e gerar um prompt técnico "
+            "extremamente detalhado, com critérios de aceitação, separação de responsabilidades (SRP) "
+            "e contratos estritos de tipos."
+        )
+
+        prompt = f"""Ideia / Solicitação do Usuário:
+"{raw_idea}"
+
+Papel / Especialidade: {role}
+
+Regras Arquiteturais do Repositório:
+{rules_content or 'TypeScript estrito, SRP, componentes modulares, validação com build/typecheck.'}
+
+Gere o prompt executivo final pronto para despacho."""
+        return self.generate_text(prompt=prompt, system_instruction=system_instruction)
+
+    def validate_code(self, file_path: str) -> str:
+        """Audita o código contra as diretrizes e regras arquiteturais do projeto."""
+        root = find_repo_root()
+        full_path = os.path.abspath(os.path.join(root, file_path)) if not os.path.isabs(file_path) else file_path
+
+        if not os.path.exists(full_path):
+            raise ApiExecutionError(f"Arquivo não encontrado para validação: {full_path}")
+
+        with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+            code_content = f.read()
+
+        rules_dir = os.path.join(root, ".antigravity", "rules")
+        if not os.path.exists(rules_dir):
+            rules_dir = os.path.join(root, ".gemini", "rules")
+
+        rules_text = ""
+        if os.path.exists(rules_dir):
+            for rf in sorted(os.listdir(rules_dir)):
+                if rf.endswith(".md"):
+                    try:
+                        with open(os.path.join(rules_dir, rf), "r", encoding="utf-8", errors="replace") as rule_file:
+                            rules_text += f"\n--- [{rf}] ---\n" + rule_file.read()
+                    except Exception:
+                        pass
+
+        system_instruction = (
+            "Você é o Auditor de Qualidade de Código do Antigravity. "
+            "Analise o arquivo fornecido e aponte violações de tipagem TypeScript, Princípio da Responsabilidade Única (SRP), "
+            "imports mortos, falta de validação ou não conformidade com as regras do repositório."
+        )
+
+        prompt = f"""Arquivo analisado: {file_path}
+
+CÓDIGO:
+```
+{code_content[:4000]}
+```
+
+REGRAS ARQUITETURAIS:
+{rules_text or 'TypeScript estrito, SRP, componentes isolados, 0 any, 0 imports mortos.'}
+
+Aponte se o código está em conformidade. Se houver problemas, liste os pontos específicos para correção."""
+        return self.generate_text(prompt=prompt, system_instruction=system_instruction)
+
+
+# Funções utilitárias avulsas para import direto
+def synthesize_prompt(raw_idea: str, role: str = "general") -> str:
+    return AntigravityClient().synthesize_prompt(raw_idea, role=role)
+
+def validate_code(file_path: str) -> str:
+    return AntigravityClient().validate_code(file_path)
+
+validate_architecture = validate_code
+
 
 if __name__ == "__main__":
     try:

@@ -99,6 +99,17 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
             time.sleep(interval_seconds)
 
 
+class UnifiedMonitor:
+    """Classe orientada a objetos para o Monitor Unificado AMB_V2."""
+
+    def __init__(self, interval: int = 15, auto_approve: bool = False):
+        self.interval = interval
+        self.auto_approve = auto_approve
+
+    def run(self, check_once: bool = False):
+        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Monitor unificado de atenção para Jules, Render, Stitch e Antigravity.")
     parser.add_argument("--interval", "-i", type=int, default=15, help="Intervalo em segundos entre verificações (padrão: 15s).")
@@ -106,7 +117,8 @@ def main():
     parser.add_argument("--auto-approve", "-y", action="store_true", help="Piloto automático: gera respostas com Antigravity e envia sozinho para todas as dúvidas.")
 
     args = parser.parse_args()
-    run_monitor(interval_seconds=args.interval, check_once=args.check_once, auto_approve=args.auto_approve)
+    monitor = UnifiedMonitor(interval=args.interval, auto_approve=args.auto_approve)
+    monitor.run(check_once=args.check_once)
 
 
 if __name__ == "__main__":

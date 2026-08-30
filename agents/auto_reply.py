@@ -239,6 +239,110 @@ def advise_and_reply(session_id: str, auto_approve: bool = False):
     log("JULES-ADVISOR", "🎉 Resposta enviada com sucesso ao Google Jules!", Colors.GREEN)
 
 
+# Alias para retrocompatibilidade
+auto_reply_session = advise_and_reply
+
+
+def get_pending_sessions(client: Optional[JulesClient] = None) -> list[dict]:
+    """Varre as sessões do repositório atual e retorna as que demandam feedback humano."""
+    c = client or JulesClient()
+    from config import get_repo_name
+    current_repo = get_repo_name()
+    sessions = c.list_sessions(page_size=50, repo_filter=current_repo)
+    pending = []
+    for s in sessions:
+        sid = s.get("name", "").split("/")[-1] or s.get("id")
+        state = s.get("state", "UNKNOWN")
+        title = s.get("title") or "Sem título"
+
+        if state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]:
+            try:
+                _, _, _, context_txt = get_full_session_history(c, sid)
+                pending.append({
+                    "session_id": sid,
+                    "state": state,
+                    "title": title,
+                    "question": context_txt
+                })
+            except Exception:
+                pending.append({
+                    "session_id": sid,
+                    "state": state,
+                    "title": title,
+                    "question": "Aguardando feedback humano."
+                })
+    return pending
+
+
+def run_auto_advisor(auto_approve: bool = False):
+    """Processa chats pendentes com opção de auto-aprovação em lote ou menu interativo."""
+    print("\n" + "=" * 75)
+    mode_label = f"{Colors.GREEN}[MODO AUTO-APPROVE 100% AUTÔNOMO]{Colors.RESET}" if auto_approve else "[MODO INTERATIVO COM APROVAÇÃO]"
+    print(f"{Colors.BOLD}{Colors.CYAN}🤖 AMB_V2 — ASSISTENTE COGNITIVO DE RESPOSTAS (ANTIGRAVITY + JULES) {mode_label}{Colors.RESET}")
+    print("=" * 75)
+
+    client = JulesClient()
+    pending = get_pending_sessions(client)
+
+    if not pending:
+        print(f"\n{Colors.GREEN}✔ Nenhum chat aguardando resposta ou pendência no momento!{Colors.RESET}\n")
+        return
+
+    print(f"\n{Colors.BOLD}📋 Chats do Jules aguardando resposta ({len(pending)} encontrados):{Colors.RESET}\n")
+    for idx, item in enumerate(pending, 1):
+        print(f"  [{Colors.BOLD}{idx}{Colors.RESET}] {Colors.CYAN}{item['title']}{Colors.RESET} (ID: {item['session_id']})")
+        print(f"      Estado: {Colors.YELLOW}{item['state']}{Colors.RESET}")
+        first_line = item['question'].split("\n")[0][:100]
+        print(f"      Contexto/Dúvida: {Colors.DIM}{first_line}...{Colors.RESET}\n")
+
+    # MODO 1: Auto-Approve em lote
+    if auto_approve:
+        log("AUTO-ADVISOR", f"Iniciando resolução automática de todos os {len(pending)} chats pendentes...", Colors.CYAN)
+        for idx, item in enumerate(pending, 1):
+            sid = item["session_id"]
+            print(f"\n{'=' * 75}")
+            print(f"⚡ [{idx}/{len(pending)}] Processando Sessão: {item['title']} ({sid})")
+            print(f"{'=' * 75}")
+            try:
+                advise_and_reply(session_id=sid, auto_approve=True)
+            except Exception as e:
+                log_error("AUTO-ADVISOR", f"Falha ao responder sessão {sid}: {e}")
+
+        print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Todos os {len(pending)} chats foram analisados e respondidos com sucesso pelo Antigravity!{Colors.RESET}\n")
+        return
+
+    # MODO 2: Interativo
+    while True:
+        try:
+            choice = input(f"👉 Digite o número da sessão (ou 'A' para auto-responder todas, '0' para sair): ").strip()
+            if choice in ["0", "s", "sair", "exit"]:
+                break
+
+            if choice.lower() in ["a", "all", "todos"]:
+                run_auto_advisor(auto_approve=True)
+                break
+
+            idx = int(choice) - 1
+            if 0 <= idx < len(pending):
+                target_sid = pending[idx]["session_id"]
+                advise_and_reply(session_id=target_sid, auto_approve=False)
+                break
+            else:
+                print(f"{Colors.YELLOW}Opção inválida. Digite um número de 1 a {len(pending)}.{Colors.RESET}")
+        except ValueError:
+            print(f"{Colors.YELLOW}Digite um número válido.{Colors.RESET}")
+        except KeyboardInterrupt:
+            break
+
+
+def auto_reply_all_pending(auto_approve: bool = True):
+    run_auto_advisor(auto_approve=auto_approve)
+
+
+def interactive_advisor_menu():
+    run_auto_advisor(auto_approve=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Gera sugestão de resposta via Antigravity com histórico completo do chat.")
     parser.add_argument("--session-id", "-s", required=False, help="ID da sessão no Jules (opcional, se omitido lista todos os chats pendentes).")
@@ -250,7 +354,6 @@ def main():
         if args.session_id:
             advise_and_reply(session_id=args.session_id, auto_approve=args.auto_approve)
         else:
-            from auto_advisor import run_auto_advisor
             run_auto_advisor(auto_approve=args.auto_approve)
     except Exception as e:
         log_error("JULES-ADVISOR", str(e))
