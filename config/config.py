@@ -173,17 +173,42 @@ def require_env(key: str, hint: Optional[str] = None) -> str:
     return val
 
 
-def get_repo_name() -> str:
-    """Tenta obter o nome do repositório GitHub configurado ou detectado."""
+def get_repo_name(start_dir: Optional[str] = None) -> str:
+    """Tenta obter o nome do repositório GitHub configurado ou detectado dinamicamente."""
+    root = find_repo_root(start_dir)
+
+    # 1. Tenta extrair diretamente do git remote origin da pasta ativa
+    try:
+        res = subprocess.run(
+            ["git", "-C", root, "config", "--get", "remote.origin.url"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            url = res.stdout.strip()
+            url = re.sub(r"\.git$", "", url)
+            if "github.com" in url:
+                parts = url.split("github.com")[-1].lstrip("/:").split("/")
+                if len(parts) >= 2:
+                    return f"{parts[-2]}/{parts[-1]}"
+    except Exception:
+        pass
+
+    # 2. Tenta variável de ambiente GITHUB_REPOSITORY
     repo = get_env("GITHUB_REPOSITORY")
     if repo:
         return repo
-    if "repository" in _PROJECT_METADATA and _PROJECT_METADATA["repository"]:
-        return _PROJECT_METADATA["repository"]
-    raise ConfigurationError(
-        "Nome do repositório GitHub não identificado.",
-        hint="Defina GITHUB_REPOSITORY=usuario/repo no .env ou execute python amb_v2/config/setup_project.py"
-    )
+
+    # 3. Tenta amb_project.json
+    p_meta = load_project_json()
+    if "repository" in p_meta and p_meta["repository"]:
+        return p_meta["repository"]
+
+    # 4. Fallback seguro para o nome da pasta do projeto
+    return os.path.basename(root)
 
 
 def main():

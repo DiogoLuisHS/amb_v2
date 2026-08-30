@@ -93,12 +93,38 @@ class JulesClient:
         res = self._request("GET", "sources", params={"pageSize": page_size})
         return res.get("sources", [])
 
+    def get_source_for_repo(self, repo_name: Optional[str] = None) -> str:
+        """Localiza a source exata do Jules correspondente ao repositório informado."""
+        from config import get_repo_name
+        target_repo = (repo_name or get_repo_name()).lower()
+        repo_simple = target_repo.split("/")[-1].lower()
+
+        sources = self.list_sources()
+        if not sources:
+            return f"sources/github/{target_repo}"
+
+        # 1. Match exato pelo nome completo (ex: DiogoLuisHS/NexusHub)
+        for s in sources:
+            s_name = s.get("name", "").lower()
+            if target_repo in s_name:
+                return s.get("name")
+
+        # 2. Match pelo nome do repositório/pasta (ex: nexushub)
+        for s in sources:
+            s_name = s.get("name", "").lower()
+            if s_name.endswith(f"/{repo_simple}") or f"/{repo_simple}/" in s_name:
+                return s.get("name")
+
+        # 3. Fallback: constrói a source padrão para o repositório
+        return f"sources/github/{target_repo}"
+
     # 2. Sessions
-    def create_session(self, prompt: str, source_name: str, title: Optional[str] = None, base_branch: str = "main") -> Dict[str, Any]:
+    def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: str = "main") -> Dict[str, Any]:
+        resolved_source = source_name or self.get_source_for_repo()
         payload = {
             "prompt": prompt,
             "sourceContext": {
-                "source": source_name,
+                "source": resolved_source,
                 "githubRepoContext": {
                     "startingBranch": base_branch
                 }

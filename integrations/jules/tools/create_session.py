@@ -14,10 +14,8 @@ from jules_client import JulesClient, Colors, log, log_error
 
 def create_session(prompt: str, title: str = None, source_name: str = None, client: JulesClient = None):
     c = client or JulesClient()
-    if not source_name:
-        sources = c.list_sources()
-        source_name = sources[0]["name"] if sources else None
-    return c.create_session(prompt=prompt, title=title, source_name=source_name)
+    resolved_source = source_name or c.get_source_for_repo()
+    return c.create_session(prompt=prompt, title=title, source_name=resolved_source)
 
 def main():
     p = argparse.ArgumentParser()
