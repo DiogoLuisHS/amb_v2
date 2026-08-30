@@ -100,6 +100,15 @@ def cmd_dashboard(args):
 # -------------------------------------------------------------
 def cmd_agent(args):
     """Executa personas dinâmicas localmente, em loop contínuo ou na nuvem."""
+    if getattr(args, "loop", False):
+        from autonomous_loop import run_autonomous_loop
+        run_autonomous_loop(
+            role=args.role or "relay",
+            prompt_file=args.task if (args.task and os.path.exists(args.task)) else None,
+            max_cycles=getattr(args, "max_cycles", None)
+        )
+        return
+
     import local_agent_runner as runner
     personas_dir = runner.get_personas_directory(args.personas_dir)
     personas = runner.discover_personas(personas_dir)
@@ -391,6 +400,7 @@ def main():
     p_agent.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis.")
     p_agent.add_argument("--dispatch-jules", "-j", action="store_true", help="Despacha para o Google Jules na nuvem.")
     p_agent.add_argument("--loop", "-c", "--continuous", action="store_true", help="Executa o ciclo contínuo e autônomo de personas.")
+    p_agent.add_argument("--max-cycles", type=int, help="Limite de ciclos no modo loop (se omitido, roda continuamente).")
     p_agent.add_argument("--personas-dir", help="Pasta customizada de personas.")
     p_agent.set_defaults(func=cmd_agent)
 
