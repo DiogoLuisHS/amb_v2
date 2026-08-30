@@ -158,7 +158,7 @@ def run_autonomous_loop(
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo."""
     repo_name = get_repo_name()
     client = JulesClient()
-    source_name = client.get_source_for_repo(repo_name)
+    source_name = f"sources/github/{repo_name}"
 
     cycle_count = 0
     modules_list = modules or [""]

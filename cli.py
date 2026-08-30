@@ -177,8 +177,7 @@ def cmd_jules(args):
     elif sub == "create":
         from jules_client import JulesClient
         client = JulesClient()
-        source_name = client.get_source_for_repo()
-        res = client.create_session(prompt=args.prompt, title=args.title, source_name=source_name)
+        res = client.create_session(prompt=args.prompt, title=args.title)
         sid = res.get("name", "").split("/")[-1] or res.get("id")
         log("JULES", f"Sessão criada com sucesso: {sid}", Colors.GREEN)
         print(f"Painel: https://jules.google.com/session/{sid}")
