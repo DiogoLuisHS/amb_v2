@@ -1,138 +1,280 @@
-# 🚀 AMB_V2 — CLI Global de Automação, Agentes e Integrações
+# 🚀 AMB_V2 — CLI Global de Automação, Agentes e Engenharia
 
-O **`amb_v2`** é um ecossistema universal de automação, agentes cognitivos e engenharia de software para monorepos e aplicações modernas. Ele pode ser executado tanto via **CLI global unificada (`amb`)** quanto diretamente pelos **scripts individuais (`python ...`)** para 100% de retrocompatibilidade.
+O **`amb_v2`** é um ecossistema universal de automação de engenharia, orquestração de agentes autônomos e integração contínua para monorepos e aplicações modernas. Ele disponibiliza a **CLI global `amb`**, permitindo operar qualquer repositório no terminal através do arquivo `.env` e da pasta `.amb/`.
 
 ---
 
-## 📦 1. Instalação Global (Single Source of Truth)
+## 📦 1. Instalação Global
 
-Instale o pacote globalmente em **modo editável (`-e`)** a partir da pasta do `amb_v2`:
+Para que o comando `amb` esteja disponível em qualquer terminal ou repositório:
 
 ```bash
-pip install -e amb_v2/
+# Na pasta raiz do amb_v2:
+pip install -e .
 ```
 
-> **💡 Vantagem do modo `-e`:** Qualquer melhoria ou novo comando adicionado ao `amb_v2` passa a valer **instantaneamente** para todos os projetos no seu terminal, sem necessidade de reinstalação!
+> **💡 Modo Editável (`-e`):** Qualquer melhoria no código do `amb_v2` é aplicada imediatamente em todos os seus projetos sem necessidade de reinstalar.
 
 ---
 
-## 🧭 2. Tabela de Equivalência de Comandos (Scripts Anteriores vs Novo CLI)
+## 🧭 2. Guia Completo de Comandos (`amb`)
 
-Abaixo está o mapeamento exato de validação de todos os comandos do repositório:
-
-| Script / Ferramenta Anterior | Novo Comando Unificado (`amb`) | Status | O que faz |
-| :--- | :--- | :---: | :--- |
-| `python config/config.py` | `amb check` (ou `amb status`) | ✅ Ativo | Valida credenciais do `.env` e integridade do projeto. |
-| `python config/setup_project.py` | `amb setup` (ou `amb init`) | ✅ Ativo | Assistente inteligente de provisionamento e stack. |
-| `python config/setup_project.py --prompt` | `amb prompt` | ✅ Ativo | Exibe o Prompt Mestre de Auto-Configuração para IAs. |
-| `python integrations/antigravity/tools/synthesize_prompt.py --idea "..."` | `amb prompt --synthesize "..."` | ✅ Ativo | Sintetiza ideia informal em prompt técnico com Gemini. |
-| `python dashboard/unified_monitor.py` | `amb monitor` | ✅ Ativo | Sentinela contínuo em tempo real (Jules + Render). |
-| `python dashboard/unified_monitor.py --check-once` | `amb monitor --check-once` (`-1`) | ✅ Ativo | Checagem de 1 ciclo e encerramento imediato. |
-| `python dashboard/unified_monitor.py --auto-approve` | `amb monitor --auto-approve` (`-y`) | ✅ Ativo | Sentinela com auto-resposta de dúvidas via Gemini. |
-| `python dashboard/auto_advisor.py` | `amb advisor` (ou `amb monitor -i`) | ✅ Ativo | Menu cognitivo interativo para responder chats do Jules. |
-| `python dashboard/dashboard_server.py` | `amb dashboard` (ou `amb web`, `amb ui`) | ✅ Ativo | Servidor e SPA do Dashboard Web em tempo real (porta 3333). |
-| `python agents/local_agent_runner.py --list` | `amb agent --list` (`-l`) | ✅ Ativo | Lista personas disponíveis em `.amb/personas/`. |
-| `python agents/local_agent_runner.py --role relay` | `amb agent --role relay` (`-r`) | ✅ Ativo | Executa persona específica localmente com CLI `agy`. |
-| `python agents/local_agent_runner.py --role relay -j` | `amb agent --role relay -j` | ✅ Ativo | Despacha persona para a nuvem do Google Jules. |
-| `python agents/autonomous_loop.py --max-cycles 5` | `amb agent --loop --max-cycles 5` | ✅ Ativo | **Loop com Limite:** executa N ciclos contínuos de desenvolvimento e encerra. |
-| `python agents/autonomous_loop.py` | `amb agent --loop` (`-c`) | ✅ Ativo | **Loop Contínuo:** ciclo infinito de personas, monitoramento e auto-merge de PR. |
-| `python integrations/jules/tools/list_sessions.py` | `amb jules list` | ✅ Ativo | Lista sessões recentes no Google Jules. |
-| `python integrations/jules/tools/get_session.py <id>` | `amb jules get <id>` | ✅ Ativo | Detalhes da sessão, status e link do PR. |
-| `python integrations/jules/tools/monitor_activities.py <id>` | `amb jules get <id> --watch` (`-w`) | ✅ Ativo | Streaming em tempo real das atividades/bash da sessão. |
-| `python integrations/jules/tools/create_session.py` | `amb jules create -p "..."` | ✅ Ativo | Cria uma nova sessão no Google Jules. |
-| `python integrations/jules/tools/send_message.py` | `amb jules reply -s <id> -m "..."` | ✅ Ativo | Envia mensagem manual direta para o chat da sessão. |
-| `python agents/auto_reply.py -s <id>` | `amb jules reply -s <id>` | ✅ Ativo | Sugere e envia resposta formulada pelo Gemini. |
-| `python integrations/jules/tools/approve_plan.py` | `amb jules approve -s <id>` | ✅ Ativo | Aprova plano proposto pelo agente (`:approvePlan`). |
-| `python integrations/jules/tools/merge_session_pr.py` | `amb jules merge -s <id>` | ✅ Ativo | Aprova, faz merge do PR no GitHub e valida build local. |
-| `python integrations/jules/tools/cleanup_sessions.py` | `amb jules clean` (ou `cleanup`) | ✅ Ativo | Audita e remove sessões já integradas no Git. |
-| `python integrations/stitch/tools/generate_screen.py` | `amb stitch generate -p "..."` | ✅ Ativo | Gera nova tela visual via Stitch SDK. |
-| `python integrations/stitch/tools/edit_screen.py` | `amb stitch refine -s <id> -p "..."` | ✅ Ativo | Refina tela existente no Stitch. |
-| `python integrations/stitch/tools/generate_variants.py` | `amb stitch variants -s <id>` | ✅ Ativo | Gera 3 ou mais variantes visuais exploratórias. |
-| `python integrations/stitch/tools/sync_design_system.py` | `amb stitch sync` | ✅ Ativo | Sincroniza design tokens do `design.md` com a nuvem. |
-| `python integrations/stitch/tools/get_screen.py` | `amb stitch get -s <id>` | ✅ Ativo | Baixa HTML e screenshot da tela gerada. |
-| `python integrations/render/tools/list_services.py` | `amb render services` | ✅ Ativo | Lista serviços e IDs configurados na conta Render. |
-| `python integrations/render/tools/get_deploy_status.py` | `amb render status` | ✅ Ativo | Status do deploy mais recente do Render. |
-| `python integrations/render/tools/fetch_logs.py` | `amb render logs` | ✅ Ativo | Últimos logs de build/execução do Render. |
-| `python integrations/render/tools/trigger_deploy.py` | `amb render deploy` | ✅ Ativo | Dispara novo deploy no Render. |
-| `python integrations/antigravity/tools/validate_architecture.py` | `amb validate <arquivo>` (ou `lint`) | ✅ Ativo | Audita código contra as regras arquiteturais. |
-| `python pipeline/pipeline.py <arquivo.md>` | `amb pipeline <arquivo.md>` | ✅ Ativo | Pipeline ponta a ponta Design-to-Deploy. |
-| `python architecture/db_schema_reader.py` | `amb schema [filtro]` (ou `db`) | ✅ Ativo | Inspeciona schemas e tabelas de banco de dados. |
-| `python architecture/ai_context_builder.py` | `amb context <modulo>` (ou `ctx`) | ✅ Ativo | Gera roteiro de leitura ordenado por camadas para IA. |
-
----
-
-## 🚀 3. Exemplos Práticos de Uso
-
-### 🔹 Diagnóstico & Setup:
 ```bash
+amb [comando] [subcomando] [opções]
+```
+
+---
+
+### ⚙️ 2.1. Configuração e Diagnóstico (`setup`, `check`, `prompt`)
+
+Gerencia o provisionamento, checklist de credenciais e geração de prompts para IAs.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb check` | `amb status` | Valida as chaves de API (`.env`) e integridade do projeto. |
+| `amb setup` | `amb init` | Assistente interativo de detecção de stack e configuração do `.env`. |
+| `amb setup --auto` | — | Executa o setup em modo automático/não-interativo. |
+| `amb prompt` | `amb setup -p` | Imprime o Prompt Mestre de Auto-Configuração para colar em novas IAs. |
+| `amb prompt --synthesize "<ideia>"` | `-s` | Converte uma ideia informal em prompt arquitetural estruturado com Gemini. |
+| `amb prompt --role <especialidade>` | `-r` | Define a especialidade da IA para a síntese do prompt (ex: `frontend`, `security`). |
+
+```bash
+# Exemplos:
 amb check
 amb setup
-amb prompt --synthesize "Criar tela de checkout responsiva com Stripe"
-```
-
-### 🔹 Sentinela & Dashboard Web:
-```bash
-amb monitor -1              # Checagem instantânea de status
-amb monitor -i              # Menu cognitivo (ou: amb advisor)
-amb monitor -y              # Sentinela contínuo com auto-resposta Gemini
-amb dashboard               # Inicia o Dashboard Web na porta 3333
-```
-
-### 🔹 Personas & Ciclos Autônomos:
-```bash
-amb agent --list                            # Lista personas (.md) disponíveis
-amb agent --role relay                      # Executa persona localmente
-amb agent --role pixel -j                   # Despacha persona para o Jules na nuvem
-amb agent --role pixel --loop               # Loop contínuo infinito com monitoramento e merge
-amb agent --role pixel --loop --max-cycles 3 # Loop com limite de 3 ciclos e auto-merge
-```
-
-### 🔹 Google Jules & Integração Git:
-```bash
-amb jules list                      # Lista sessões
-amb jules get <id> --watch          # Streaming em tempo real de logs
-amb jules reply -s <id>             # Responde dúvida com Gemini
-amb jules reply -s <id> -m "texto"  # Mensagem manual direta
-amb jules merge -s <id>             # Merge do PR no GitHub + typecheck local
-amb jules clean                     # Limpeza na nuvem de sessões integradas
+amb prompt --synthesize "Criar painel de métricas financeiras com gráficos e filtros por data" --role frontend
 ```
 
 ---
 
-## 📂 4. Estrutura Arquitetural do Ecossistema
+### 📡 2.2. Sentinela, Advisor & Dashboard Web (`monitor`, `advisor`, `dashboard`)
+
+Vigilância em tempo real das sessões do Jules e deploys do Render, com auto-resposta via Gemini e UI Web em tempo real.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb monitor` | `watch`, `sentinel` | Inicia o sentinela contínuo em tempo real (polling a cada 15s). |
+| `amb monitor --check-once` | `-1` | Executa apenas 1 rodada de checagem de status e encerra. |
+| `amb monitor --interactive` | `-i` | Inspeciona pendências e abre o menu interativo cognitivo (Advisor). |
+| `amb monitor --auto-approve` | `-y` | **Piloto Automático:** vigia e responde dúvidas no Jules 100% via Gemini. |
+| `amb monitor --interval <N>` | — | Define o intervalo de polling em segundos (padrão: 15s). |
+| `amb advisor` | `ask` | Menu interativo cognitivo para revisar e responder chats com pendência no Jules. |
+| `amb advisor --auto-approve` | `-y` | Responde todas as dúvidas pendentes em lote com IA sem pedir confirmação. |
+| `amb dashboard` | `web`, `ui` | Inicia o servidor Web SPA em tempo real na porta 3333 (ou `--port <N>`). |
+
+```bash
+# Exemplos:
+amb monitor -1                  # Checagem instantânea de status
+amb monitor -y                  # Sentinela autônomo (vigia e auto-responde no Jules)
+amb advisor                     # Menu interativo para responder chats pendentes
+amb dashboard --port 3333       # Inicia a interface Web em http://localhost:3333
+```
+
+---
+
+### 🤖 2.3. Agentes e Personas Autônomas (`agent`)
+
+Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jules/personas/`).
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb agent --list` | `-l` | Lista todas as personas disponíveis no projeto ativo. |
+| `amb agent --role <nome>` | `-r` | Executa uma persona localmente via CLI `agy` (ex: `pixel`, `relay`, `sentry`). |
+| `amb agent --role <nome> --dispatch-jules` | `-j` | Despacha a persona para a nuvem do Google Jules (Cloud VM + Branch + PR). |
+| `amb agent --role <nome> --task "<texto>"` | `-t` | Anexa instruções ou escopo adicional ao prompt base da persona. |
+| `amb agent --all` | `-a` | Executa todas as personas da pasta sequencialmente em lote. |
+| `amb agent --loop` | `-c`, `--continuous` | **Ciclo Autônomo:** loop contínuo de envio, vigilância, auto-reply e auto-merge no Git. |
+| `amb agent --loop --max-cycles <N>` | — | Limita a execução do loop a N ciclos de desenvolvimento antes de parar. |
+| `amb agent --personas-dir <pasta>` | — | Define um diretório customizado de personas. |
+
+```bash
+# Exemplos:
+amb agent --list                                # Ver personas disponíveis
+amb agent --role pixel                          # Executar persona localmente
+amb agent --role pixel -j                       # Despachar persona para o Jules na nuvem
+amb agent --role pixel --loop                   # Loop contínuo infinito com auto-merge de PR
+amb agent --role pixel --loop --max-cycles 3    # Loop com limite de 3 ciclos de manutenção
+```
+
+---
+
+### ⚡ 2.4. Google Jules Cloud (`jules`)
+
+Integração direta com o Google Jules para desenvolvimento remoto e gestão de PRs no GitHub.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb jules list` | — | Lista as sessões recentes do repositório no Jules (`--limit <N>`). |
+| `amb jules get <id>` | — | Exibe detalhes da sessão, status da VM e URL do Pull Request. |
+| `amb jules get <id> --watch` | `-w` | Acompanha streaming em tempo real das atividades, mensagens e comandos bash. |
+| `amb jules get <id> --json` | — | Retorna o payload completo da sessão em JSON puro. |
+| `amb jules create -p "<prompt>"` | `--prompt` | Cria uma nova sessão no Jules vinculada ao repositório do `.env`. |
+| `amb jules create -p "..." -t "<título>"` | `--title` | Cria uma sessão com título personalizado. |
+| `amb jules reply` | `advisor` | Abre menu interativo com IA para listar e responder dúvidas pendentes. |
+| `amb jules reply -s <id>` | `--session-id` | Gera sugestão com Gemini e responde turn-by-turn a uma sessão específica. |
+| `amb jules reply -s <id> -m "<texto>"` | `--message` | Envia mensagem manual direta para o chat da sessão no Jules. |
+| `amb jules reply -s <id> -y` | `--auto-approve` | Envia a resposta sugerida pelo Gemini imediatamente sem pedir confirmação. |
+| `amb jules approve -s <id>` | `--session-id` | Aprova o plano de ação formulado pelo agente (`:approvePlan`). |
+| `amb jules merge -s <id>` | `--session-id` | Detecta o PR da sessão, aprova, faz merge no GitHub e valida build local. |
+| `amb jules merge --auto-latest` | — | Detecta e faz merge do Pull Request aberto mais recente no repositório. |
+| `amb jules clean` | `cleanup` | Audita e remove na nuvem do Jules as sessões já integradas no Git (`-f` para forçar). |
+
+```bash
+# Exemplos:
+amb jules list --limit 5
+amb jules get 17502412430766789460 --watch      # Streaming de logs ao vivo
+amb jules create -p "Refatorar componentes de modal" -t "Modal Refactor"
+amb jules reply -s 17502412430766789460         # Responder dúvida com Gemini
+amb jules merge -s 17502412430766789460         # Merge do PR no GitHub + QA local
+amb jules clean                                 # Limpar sessões antigas
+```
+
+---
+
+### 🎨 2.5. Google Stitch SDK (`stitch`)
+
+Geração de interfaces visuais, refinamento com Design Tokens e variantes exploratórias.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb stitch generate -p "<prompt>"` | `--prompt` | Gera uma nova tela HTML/CSS via Google Stitch SDK. |
+| `amb stitch refine -s <id> -p "<prompt>"` | `--screen-id` | Refina uma tela existente com novas instruções visuais. |
+| `amb stitch variants -s <id>` | `--screen-id` | Gera variantes visuais exploratórias a partir de uma tela base. |
+| `amb stitch variants -s <id> -c <N>` | `--count` | Define o número de variantes a serem geradas (padrão: 3). |
+| `amb stitch sync` | — | Sincroniza design tokens do `design.md` com o Design System do Stitch. |
+| `amb stitch sync -f <caminho>` | `--file` | Especifica um arquivo customizado de design tokens. |
+| `amb stitch get -s <id>` | `--screen-id` | Baixa o código HTML/CSS, DOM e screenshot da tela. |
+
+```bash
+# Exemplos:
+amb stitch generate -p "Dashboard SaaS com sidebar escura e cards de KPI"
+amb stitch refine -s <SCREEN_ID> -p "Tornar os botões arredondados e ajustar contraste"
+amb stitch variants -s <SCREEN_ID> --count 3
+amb stitch sync
+```
+
+---
+
+### 🚀 2.6. Render Cloud (`render`)
+
+Integração com a infraestrutura em nuvem do Render para monitoramento e deploys.
+
+| Comando | Descrição |
+| :--- | :--- |
+| `amb render status` | Exibe o status do serviço, último deploy e commit associado. |
+| `amb render logs` | Consulta e exibe os últimos logs do servidor de produção. |
+| `amb render services` | Lista todos os serviços configurados na conta Render com seus IDs. |
+| `amb render deploy` | Dispara um novo deploy manual via Render API. |
+
+```bash
+# Exemplos:
+amb render status
+amb render logs
+amb render services
+amb render deploy
+```
+
+---
+
+### 🔍 2.7. Qualidade, Pipeline, Schemas & Contexto (`validate`, `pipeline`, `schema`, `context`)
+
+Ferramentas avançadas para governança de código, orquestração Design-to-Deploy e inteligência de monorepo.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.antigravity/rules/`. |
+| `amb pipeline <arquivo.md>` | — | Executa o pipeline orquestrado ponta a ponta Design-to-Deploy. |
+| `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
+| `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
+| `amb context <modulo> --json` | — | Retorna o grafo de dependências e arquivos em formato JSON estruturado. |
+
+```bash
+# Exemplos:
+amb validate src/components/Header.tsx
+amb pipeline specs/nova_feature.md
+amb schema kanban                               # Inspecionar tabelas relacionadas ao kanban
+amb context agenda                              # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
+```
+
+---
+
+## 📋 3. Tabela de Referência Rápida de Todos os Comandos
+
+| Categoria | Comando CLI | Equivalente Script `python` |
+| :--- | :--- | :--- |
+| **Setup & Env** | `amb check` | `python config/config.py` |
+| **Setup & Env** | `amb setup` | `python config/setup_project.py` |
+| **Setup & Env** | `amb prompt` | `python config/setup_project.py --prompt` |
+| **Setup & Env** | `amb prompt --synthesize "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
+| **Vigilância** | `amb monitor` | `python dashboard/unified_monitor.py` |
+| **Vigilância** | `amb monitor -1` | `python dashboard/unified_monitor.py --check-once` |
+| **Vigilância** | `amb monitor -y` | `python dashboard/unified_monitor.py --auto-approve` |
+| **Vigilância** | `amb advisor` | `python dashboard/auto_advisor.py` |
+| **Vigilância** | `amb dashboard` | `python dashboard/dashboard_server.py` |
+| **Personas** | `amb agent --list` | `python agents/local_agent_runner.py --list` |
+| **Personas** | `amb agent --role <nome>` | `python agents/local_agent_runner.py --role <nome>` |
+| **Personas** | `amb agent --role <nome> -j` | `python agents/local_agent_runner.py --role <nome> -j` |
+| **Personas** | `amb agent --loop` | `python agents/autonomous_loop.py` |
+| **Personas** | `amb agent --loop --max-cycles <N>` | `python agents/autonomous_loop.py --max-cycles <N>` |
+| **Jules Cloud** | `amb jules list` | `python integrations/jules/tools/list_sessions.py` |
+| **Jules Cloud** | `amb jules get <id>` | `python integrations/jules/tools/get_session.py <id>` |
+| **Jules Cloud** | `amb jules get <id> --watch` | `python integrations/jules/tools/monitor_activities.py <id>` |
+| **Jules Cloud** | `amb jules create -p "..."` | `python integrations/jules/tools/create_session.py` |
+| **Jules Cloud** | `amb jules reply -s <id>` | `python agents/auto_reply.py -s <id>` |
+| **Jules Cloud** | `amb jules reply -s <id> -m "..."` | `python integrations/jules/tools/send_message.py` |
+| **Jules Cloud** | `amb jules approve -s <id>` | `python integrations/jules/tools/approve_plan.py` |
+| **Jules Cloud** | `amb jules merge -s <id>` | `python integrations/jules/tools/merge_session_pr.py` |
+| **Jules Cloud** | `amb jules clean` | `python integrations/jules/tools/cleanup_sessions.py` |
+| **Stitch SDK** | `amb stitch generate -p "..."` | `python integrations/stitch/tools/generate_screen.py` |
+| **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | `python integrations/stitch/tools/edit_screen.py` |
+| **Stitch SDK** | `amb stitch variants -s <id>` | `python integrations/stitch/tools/generate_variants.py` |
+| **Stitch SDK** | `amb stitch sync` | `python integrations/stitch/tools/sync_design_system.py` |
+| **Stitch SDK** | `amb stitch get -s <id>` | `python integrations/stitch/tools/get_screen.py` |
+| **Render Cloud**| `amb render services` | `python integrations/render/tools/list_services.py` |
+| **Render Cloud**| `amb render status` | `python integrations/render/tools/get_deploy_status.py` |
+| **Render Cloud**| `amb render logs` | `python integrations/render/tools/fetch_logs.py` |
+| **Render Cloud**| `amb render deploy` | `python integrations/render/tools/trigger_deploy.py` |
+| **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
+| **Pipeline** | `amb pipeline <spec.md>` | `python pipeline/pipeline.py <spec.md>` |
+| **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |
+| **Arquitetura** | `amb context <modulo>` | `python architecture/ai_context_builder.py` |
+
+---
+
+## 📂 4. Estrutura do Repositório
 
 ```text
 📁 amb_v2/
 ├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
 ├── cli.py                           # CLI global unificada (Single Source of Truth)
 ├── config/
-│   ├── config.py                    # Gerenciador central de .env e caminhos
-│   └── setup_project.py             # Assistente de provisionamento
+│   ├── config.py                    # Gerenciador central de .env, validações e caminhos
+│   └── setup_project.py             # Assistente de provisionamento e stack
 ├── architecture/
 │   ├── db_schema_reader.py          # Leitor de schemas e banco de dados (Read-Only)
 │   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
 ├── agents/
-│   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico
-│   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Merge)
+│   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico turn-by-turn
+│   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
 │   └── local_agent_runner.py        # Executor dinâmico de personas
 ├── dashboard/
-│   ├── dashboard_server.py          # Servidor e SPA do Dashboard Web (Porta 3333)
+│   ├── dashboard_server.py          # Servidor e SPA do Dashboard Web em tempo real (Porta 3333)
 │   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
-│   └── watchers/                    # Watchers do Jules e Render
+│   └── watchers/                    # Watchers especializados do Jules e Render
 ├── integrations/
 │   ├── antigravity/
 │   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
-│   │   └── tools/                   # Facades (synthesize_prompt, validate_architecture)
+│   │   └── tools/                   # Facades retrocompatíveis
 │   ├── jules/
 │   │   ├── jules_client.py          # Client REST API oficial do Jules
-│   │   └── tools/                   # Facades e Automações Git (merge_session_pr, cleanup)
+│   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
 │   ├── render/
-│   │   ├── render_client.py         # Client oficial Render Cloud
-│   │   └── tools/                   # Facades (list_services, trigger_deploy, logs)
+│   │   ├── render_client.py         # Client oficial Render Cloud API
+│   │   └── tools/                   # Facades retrocompatíveis
 │   └── stitch/
 │       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
 │       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)
-│       └── tools/                   # Facades (generate_screen, edit_screen, variants, sync)
+│       └── tools/                   # Facades retrocompatíveis
 └── pipeline/
     └── pipeline.py                  # Orquestrador Design-to-Deploy ponta a ponta
 ```
