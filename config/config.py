@@ -70,26 +70,48 @@ def log_error(tag: str, message: str, hint: Optional[str] = None) -> None:
 
 
 def find_repo_root(start_dir: Optional[str] = None) -> str:
-    """Localiza a raiz do repositório procurando por .git, .env ou package.json a partir do diretório atual."""
+    """Localiza a raiz do repositório procurando por .git, .env ou package.json a partir do diretório atual.
+    
+    Regra de prioridade:
+    1. Preferência por .git (marcador definitivo de raiz de repositório)
+    2. .env como marcador de projeto configurado
+    3. Quando rodando DENTRO do amb_v2 (modo standalone), retorna o próprio amb_v2
+       e não sobe para o pai — a menos que o pai tenha .env (projeto hospedeiro)
+    """
     start = os.path.abspath(start_dir or os.getcwd())
     curr = start
 
     # Sobe até 6 níveis procurando marcadores de repositório
     for _ in range(6):
-        if (
-            os.path.exists(os.path.join(curr, ".git"))
-            or os.path.exists(os.path.join(curr, ".env"))
+        has_git = os.path.exists(os.path.join(curr, ".git"))
+        has_env = os.path.exists(os.path.join(curr, ".env"))
+        has_markers = (
+            has_git
+            or has_env
             or os.path.exists(os.path.join(curr, "amb_project.json"))
             or os.path.exists(os.path.join(curr, "package.json"))
             or os.path.exists(os.path.join(curr, "pyproject.toml"))
             or os.path.exists(os.path.join(curr, "requirements.txt"))
-        ):
-            # Se a pasta atual for 'amb_v2', verifica se o diretório pai é o repositório hospedeiro
+        )
+
+        if has_markers:
+            # Caso especial: estamos dentro do próprio amb_v2 (modo standalone / desenvolvimento)
             if os.path.basename(curr) == "amb_v2":
                 parent = os.path.dirname(curr)
-                if os.path.exists(os.path.join(parent, ".git")) or os.path.exists(os.path.join(parent, ".env")):
+                parent_has_env = os.path.exists(os.path.join(parent, ".env"))
+                parent_has_git = os.path.exists(os.path.join(parent, ".git"))
+                # Só sobe para o pai se o pai tiver .env (projeto hospedeiro configurado)
+                # .git no pai sem .env = outro repositório independente, não o projeto hospedeiro
+                if parent_has_env:
+                    return parent
+                # amb_v2 tem seu próprio .env → retorna o próprio amb_v2
+                if has_env:
+                    return curr
+                # amb_v2 sem .env: só sobe se o pai tiver .git E .env
+                if parent_has_git and parent_has_env:
                     return parent
             return curr
+
         parent = os.path.dirname(curr)
         if parent == curr:
             break
