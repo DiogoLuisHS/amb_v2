@@ -11,6 +11,7 @@ import sys
 import os
 import argparse
 import subprocess
+import concurrent.futures
 from typing import List, Dict, Any
 
 # Bootstrap dinâmico de caminhos amb_v2
@@ -124,23 +125,34 @@ def execute_deletion(client: JulesClient, sessions_to_delete: List[Dict[str, Any
         print(f"{Colors.YELLOW}Nenhuma sessão para excluir.{Colors.RESET}")
         return
 
-    print(f"{'🔍 [DRY-RUN]' if dry_run else '🗑️ [EXCLUSÃO]'} Processando {len(sessions_to_delete)} sessões...")
+    total_sessions = len(sessions_to_delete)
+    print(f"{'🔍 [DRY-RUN]' if dry_run else '🗑️ [EXCLUSÃO]'} Processando {total_sessions} sessões...")
     deleted_count = 0
     errors_count = 0
 
-    for idx, it in enumerate(sessions_to_delete, 1):
+    def delete_task(idx, it):
         sid = it["session_id"]
         title = it["title"][:50]
         if dry_run:
-            print(f"   [{idx}/{len(sessions_to_delete)}] Seria excluída: ID {sid} - {title}")
-            deleted_count += 1
+            print(f"   [{idx}/{total_sessions}] Seria excluída: ID {sid} - {title}")
+            return True, None
         else:
             try:
                 client.delete_session(sid)
-                print(f"   [{idx}/{len(sessions_to_delete)}] {Colors.GREEN}✔ Excluída com sucesso:{Colors.RESET} ID {sid} - {title}")
-                deleted_count += 1
+                print(f"   [{idx}/{total_sessions}] {Colors.GREEN}✔ Excluída com sucesso:{Colors.RESET} ID {sid} - {title}")
+                return True, None
             except Exception as e:
-                print(f"   [{idx}/{len(sessions_to_delete)}] {Colors.RED}✖ Falha ao excluir {sid}:{Colors.RESET} {e}")
+                print(f"   [{idx}/{total_sessions}] {Colors.RED}✖ Falha ao excluir {sid}:{Colors.RESET} {e}")
+                return False, e
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(delete_task, idx, it) for idx, it in enumerate(sessions_to_delete, 1)]
+
+        for future in concurrent.futures.as_completed(futures):
+            success, _ = future.result()
+            if success:
+                deleted_count += 1
+            else:
                 errors_count += 1
 
     print("\n" + "=" * 78)
