@@ -72,7 +72,9 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
         elif a.get("bashCommand"):
             cmd = a["bashCommand"].get("command", "")
             out = a["bashCommand"].get("output", "")
-            chat_lines.append(f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput: {out[:150]}...\n")
+            # Bug #3 fix: exibir até 800 chars do output para que Gemini veja erros de typecheck/build
+            trunc_out = out[:800] + (f"\n...[+{len(out)-800} chars omitidos]" if len(out) > 800 else "")
+            chat_lines.append(f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n")
         
         # Plano do Agente
         elif a.get("plan"):
@@ -94,6 +96,25 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
     return session, initial_prompt, full_history, current_question
 
 
+def _filter_rules_for_jules(content: str) -> str:
+    """Filtra seções de Git/VCS das regras para não enviar restrições limitantes ao Jules.
+    Bug #6 fix: detecta qualquer nível de header markdown como delimitador de seção.
+    """
+    lines = []
+    skip = False
+    for line in content.splitlines():
+        # Detecta início de seção bloqueada (qualquer nível de header)
+        if any(kw in line for kw in ["Version Control", "Git Safety Lock", "SAFETY LOCK", "Git Lock", "VCS Rules"]):
+            skip = True
+            continue
+        # Qualquer header markdown (# ## ###) encerra a seção bloqueada
+        if skip and line.lstrip().startswith("#"):
+            skip = False
+        if not skip:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def generate_ai_suggestion(session_title: str, initial_prompt: str, full_chat_history: str, current_question: str) -> str:
     """Gera a sugestão de resposta técnica via Antigravity Client / Gemini contextualizado com histórico e regras."""
     root = find_repo_root()
@@ -107,7 +128,8 @@ def generate_ai_suggestion(session_title: str, initial_prompt: str, full_chat_hi
             if f.endswith(".md"):
                 try:
                     with open(os.path.join(rules_dir, f), "r", encoding="utf-8", errors="replace") as rf:
-                        rules_context += f"\n--- [REGRA: {f}] ---\n" + rf.read()
+                        filtered_rule = _filter_rules_for_jules(rf.read())
+                        rules_context += f"\n--- [REGRA: {f}] ---\n" + filtered_rule
                 except Exception:
                     pass
 

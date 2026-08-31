@@ -78,7 +78,7 @@ class JulesWatcher:
                         last_msg = ""
                         try:
                             act_res = self.client.list_activities(session_id=session_id, page_size=20)
-                            acts = act_res.get("activities", [])
+                            acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
                             for a in reversed(acts):
                                 for key in ["agentMessage", "agentMessaged", "userFeedbackRequired"]:
                                     if key in a:
@@ -105,6 +105,18 @@ class JulesWatcher:
                             action_command=f"python amb_v2/agents/auto_reply.py --session-id {session_id}"
                         )
                         alerts.append({"type": "awaiting_feedback", "session_id": session_id, "text": last_msg})
+                # 3. Bug #7 fix: Sessão COMPLETED mas PR pode estar aguardando merge
+                if state in ["COMPLETED", "SUCCEEDED"]:
+                    event_key = f"completed:{session_id}"
+                    if event_key not in self.notified_events:
+                        self.notified_events.add(event_key)
+                        notify_attention(
+                            source="Google Jules",
+                            title=f"Sessão concluída com PR pendente: '{title}' ({session_id})",
+                            details=f"O Jules finalizou o trabalho. Verifique se o PR foi criado e execute o merge.\nPainel: https://jules.google.com/session/{session_id}",
+                            action_command=f"amb jules merge -s {session_id}"
+                        )
+                        alerts.append({"type": "completed_needs_merge", "session_id": session_id})
                     continue
 
         except Exception as e:

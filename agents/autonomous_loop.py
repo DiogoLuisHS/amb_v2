@@ -233,6 +233,32 @@ def run_autonomous_loop(
                 session_title = f"{title} - Ciclo #{completed_cycles}"
                 full_prompt = base_prompt
 
+            # C5: Enriquecer o prompt com o roteiro arquitetural do amb context
+            # Reduz 20-30min de exploração inicial do Jules ao já fornecer o mapa de arquivos
+            try:
+                from ai_context_builder import AIContextBuilder
+                from pathlib import Path as _Path
+                _repo_root = find_repo_root()
+                _ctx_builder = AIContextBuilder(_Path(_repo_root))
+                _ctx_builder.analyze()
+                _ctx_query = current_module if current_module else cur_role
+                _ctx_chain = _ctx_builder.trace_module_chain(_ctx_query)
+                _ctx_layers = _ctx_builder.classify_and_order_files(_ctx_chain, _ctx_query)
+                _ctx_md = _ctx_builder.generate_markdown(_ctx_query, _ctx_layers)
+                total_ctx_files = sum(len(l["files"]) for l in _ctx_layers.values())
+                if total_ctx_files > 0:
+                    full_prompt = (
+                        f"{full_prompt}\n\n"
+                        f"---\n\n"
+                        f"## 📂 ROTEIRO DE LEITURA ARQUITETURAL (gerado por `amb context {_ctx_query}`)\n\n"
+                        f"**Use este roteiro para iniciar sua análise sem precisar explorar o repositório do zero.**\n"
+                        f"Leia os arquivos na ordem apresentada (DB → Repositórios → Services → Controllers → UI):\n\n"
+                        f"{_ctx_md}"
+                    )
+                    log("LOOP", f"Roteiro arquitetural '{_ctx_query}' ({total_ctx_files} arquivos) anexado ao prompt.", Colors.GREEN)
+            except Exception as ctx_err:
+                log("LOOP", f"Aviso: amb context não disponível — {ctx_err}", Colors.DIM)
+
             # 2. Despacho no Jules
             log("LOOP", f"Criando sessão para persona '{cur_role}' no Google Jules...", Colors.CYAN)
             try:

@@ -284,36 +284,43 @@ def approve_and_merge_pr(
     )
     print(pull_proc.stdout.strip())
 
-    # 5. Validação de QA Local (Typecheck & Build)
+    # 5. Validação de QA Local (Bug #4 fix: comandos configuráveis via amb_project.json)
     log("QA-VALIDATION", "Executando verificação de integridade pós-merge...", Colors.CYAN)
-    
-    p_type = subprocess.run(
-        ["npm", "run", "typecheck"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=True
-    )
-    if p_type.returncode != 0:
-        log_error("QA", "Falha de typecheck pós-merge!", hint="Erros detectados no TypeScript.")
-        return False
-    print(f"{Colors.GREEN}✔ Typecheck: 0 erros.{Colors.RESET}")
 
-    p_build = subprocess.run(
-        ["npm", "run", "build"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=True
-    )
-    if p_build.returncode != 0:
-        log_error("QA", "Falha de build pós-merge!", hint="Erros detectados no bundle de produção.")
-        return False
-    print(f"{Colors.GREEN}✔ Build de produção concluído com sucesso!{Colors.RESET}")
+    def _run_qa_cmd(cmd_str: str, label: str) -> bool:
+        """Executa um comando de QA e retorna True se passou."""
+        if not cmd_str.strip():
+            return True
+        parts = cmd_str.strip().split()
+        proc = subprocess.run(
+            parts, cwd=repo_root,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True
+        )
+        if proc.returncode != 0:
+            log_error("QA", f"Falha no {label}!\n{proc.stdout.strip()}\n{proc.stderr.strip()}")
+            return False
+        print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
+        return True
+
+    # Lê comandos de QA do amb_project.json (Bug #4 fix)
+    from config import load_project_json
+    proj = load_project_json()
+    qa_cfg = proj.get("qa", {})
+
+    # Auto-detecção de stack se não configurado
+    if not qa_cfg:
+        if os.path.exists(os.path.join(repo_root, "package.json")):
+            qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
+        elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
+            qa_cfg = {"build": "python -m py_compile"}
+        elif os.path.exists(os.path.join(repo_root, "go.mod")):
+            qa_cfg = {"build": "go build ./..."}
+        else:
+            qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
+
+    for step_key, step_cmd in qa_cfg.items():
+        if not _run_qa_cmd(step_cmd, step_key):
+            return False
 
     print("\n" + "=" * 75)
     print(f"🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}")
