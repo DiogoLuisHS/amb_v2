@@ -21,7 +21,31 @@ def main():
     p.add_argument("--session-id", "-s", required=True)
     args = p.parse_args()
     try:
-        approve_plan(args.session_id)
+        c = JulesClient()
+
+        # Guardrail: Check if the latest activity contains a planGenerated from the agent
+        activities_response = c.list_activities(session_id=args.session_id, page_size=10)
+        activities = activities_response.get("activities", []) if isinstance(activities_response, dict) else activities_response
+
+        if not isinstance(activities, list):
+            activities = []
+
+        if not activities:
+            log_error("JULES", "Error: There is no pending plan to approve.")
+            sys.exit(1)
+
+        # Sort by createTime descending to get the most recent activity
+        activities.sort(key=lambda x: x.get("createTime", "") if isinstance(x, dict) else "", reverse=True)
+        latest_activity = activities[0]
+
+        originator = latest_activity.get("originator", "").lower() if isinstance(latest_activity, dict) else ""
+        has_plan = isinstance(latest_activity, dict) and "planGenerated" in latest_activity
+
+        if originator != "agent" or not has_plan:
+            log_error("JULES", "Error: There is no pending plan to approve.")
+            sys.exit(1)
+
+        approve_plan(args.session_id, client=c)
         log("JULES", f"✅ Plano da sessão {args.session_id} aprovado com sucesso!", Colors.GREEN)
     except Exception as e:
         log_error("JULES", str(e)); sys.exit(1)
