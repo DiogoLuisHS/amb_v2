@@ -50,6 +50,23 @@ class JulesWatcher:
         try:
             repo = get_repo_name()
             sessions = self.client.list_sessions(page_size=30, repo_filter=repo)
+            # Mapeamento para otimizar busca de atividades em lote
+            feedback_sessions = []
+
+            for s in sessions:
+                session_id = s.get("name", "").split("/")[-1] or s.get("id")
+                state = s.get("state", "UNKNOWN")
+                if state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]:
+                    event_key = f"state_feedback:{session_id}"
+                    if event_key not in self.notified_events:
+                        feedback_sessions.append(s)
+
+            # Busca em paralelo de atividades para otimizar N+1 queries
+            activities_cache = {}
+            if feedback_sessions and hasattr(self.client, 'list_activities_for_sessions'):
+                session_ids = [s.get("name", "").split("/")[-1] or s.get("id") for s in feedback_sessions]
+                activities_cache = self.client.list_activities_for_sessions(session_ids=session_ids, page_size=20)
+
             for s in sessions:
                 session_id = s.get("name", "").split("/")[-1] or s.get("id")
                 state = s.get("state", "UNKNOWN")
@@ -77,8 +94,13 @@ class JulesWatcher:
                         
                         last_msg = ""
                         try:
-                            act_res = self.client.list_activities(session_id=session_id, page_size=20)
-                            acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
+                            acts = activities_cache.get(session_id)
+
+                            # Fallback para caso `list_activities_for_sessions` não esteja disponível (ou erro nela)
+                            if acts is None:
+                                act_res = self.client.list_activities(session_id=session_id, page_size=20)
+                                acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
+
                             for a in reversed(acts):
                                 for key in ["agentMessage", "agentMessaged", "userFeedbackRequired"]:
                                     if key in a:
