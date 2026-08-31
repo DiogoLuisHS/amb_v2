@@ -19,6 +19,17 @@ def main():
     args = p.parse_args()
     try:
         c = JulesClient()
+
+        # Guardrail to avoid double-sending
+        activities_response = c.list_activities(session_id=args.session_id, page_size=1)
+        activities = activities_response.get("activities", []) if isinstance(activities_response, dict) else activities_response
+        if activities and len(activities) > 0:
+            last_activity = activities[0]
+            originator = last_activity.get("originator", "")
+            if originator and originator.lower() == "user":
+                log_error("JULES", "Error: Please wait for the agent to reply before sending another message.")
+                sys.exit(1)
+
         c.send_message(session_id=args.session_id, message=args.message)
         log("JULES", f"✅ Mensagem enviada com sucesso para {args.session_id}!", Colors.GREEN)
     except Exception as e:
