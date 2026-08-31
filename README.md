@@ -84,16 +84,24 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 | `amb agent --role <nome> --task "<texto>"` | `-t` | Anexa instruções ou escopo adicional ao prompt base da persona. |
 | `amb agent --all` | `-a` | Executa todas as personas da pasta sequencialmente em lote. |
 | `amb agent --loop` | `-c`, `--continuous` | **Ciclo Autônomo:** loop contínuo de envio, vigilância, auto-reply e auto-merge no Git. |
-| `amb agent --loop --max-cycles <N>` | — | Limita a execução do loop a N ciclos de desenvolvimento antes de parar. |
+| `amb agent --all --loop` | — | Loop autônomo iterando por **todas as personas** a cada ciclo. |
+| `amb agent --loop --max-cycles <N>` | — | Limita a execução do loop a N ciclos completos antes de parar. |
+| `amb agent --loop --branch <branch>` | `-b` | Define o branch-alvo para criação da sessão Jules (padrão: `develop`). |
+| `amb agent --loop --modules <m1,m2>` | — | Rotaciona o foco entre módulos do repositório a cada ciclo. |
 | `amb agent --personas-dir <pasta>` | — | Define um diretório customizado de personas. |
+
+> **💡 `amb context` automático no loop:** ao despachar cada sessão, o `autonomous_loop` roda automaticamente `amb context <modulo>` e **anexa o roteiro arquitetural completo** (DB → Services → UI) ao prompt enviado ao Jules, reduzindo em 20-30min o tempo de exploração inicial por sessão.
 
 ```bash
 # Exemplos:
-amb agent --list                                # Ver personas disponíveis
-amb agent --role pixel                          # Executar persona localmente
-amb agent --role pixel -j                       # Despachar persona para o Jules na nuvem
-amb agent --role pixel --loop                   # Loop contínuo infinito com auto-merge de PR
-amb agent --role pixel --loop --max-cycles 3    # Loop com limite de 3 ciclos de manutenção
+amb agent --list                                        # Ver personas disponíveis
+amb agent --role pixel                                  # Executar persona localmente
+amb agent --role pixel -j                               # Despachar persona para o Jules na nuvem
+amb agent --role pixel --loop                           # Loop contínuo infinito com auto-merge de PR
+amb agent --role pixel --loop --max-cycles 3            # Loop com limite de 3 ciclos
+amb agent --all --loop --max-cycles 2                   # Todas as personas, 2 ciclos completos
+amb agent --all --loop --branch main --max-cycles 5     # Loop na branch main
+amb agent --role relay --loop --modules agenda,kanban   # Rotacionar entre módulos por ciclo
 ```
 
 ---
@@ -115,18 +123,22 @@ Integração direta com o Google Jules para desenvolvimento remoto e gestão de 
 | `amb jules reply -s <id> -m "<texto>"` | `--message` | Envia mensagem manual direta para o chat da sessão no Jules. |
 | `amb jules reply -s <id> -y` | `--auto-approve` | Envia a resposta sugerida pelo Gemini imediatamente sem pedir confirmação. |
 | `amb jules approve -s <id>` | `--session-id` | Aprova o plano de ação formulado pelo agente (`:approvePlan`). |
-| `amb jules merge -s <id>` | `--session-id` | Detecta o PR da sessão, aprova, faz merge no GitHub e valida build local. |
-| `amb jules merge --auto-latest` | — | Detecta e faz merge do Pull Request aberto mais recente no repositório. |
+| `amb jules merge -s <id>` | `--session-id` | Detecta o PR da sessão, publica se Draft, aprova, faz merge e valida QA local. |
+| `amb jules merge --auto-latest` | — | Detecta e faz merge do Pull Request aberto mais recente (incluindo Drafts). |
+| `amb jules merge -s <id> --branch <b>` | `-b` | Define o branch-alvo do merge (padrão: `develop`). |
 | `amb jules clean` | `cleanup` | Audita e remove na nuvem do Jules as sessões já integradas no Git (`-f` para forçar). |
+
+> **💡 Publicação automática de Draft PRs:** o Jules sempre cria PRs como **Draft**. O pipeline `amb jules merge` executa `gh pr ready` automaticamente antes do merge, sem necessidade de intervenção manual.
 
 ```bash
 # Exemplos:
 amb jules list --limit 5
-amb jules get 17502412430766789460 --watch      # Streaming de logs ao vivo
+amb jules get 17502412430766789460 --watch          # Streaming de logs ao vivo
 amb jules create -p "Refatorar componentes de modal" -t "Modal Refactor"
-amb jules reply -s 17502412430766789460         # Responder dúvida com Gemini
-amb jules merge -s 17502412430766789460         # Merge do PR no GitHub + QA local
-amb jules clean                                 # Limpar sessões antigas
+amb jules reply -s 17502412430766789460              # Responder dúvida com Gemini
+amb jules merge -s 17502412430766789460              # Merge do PR no GitHub + QA local
+amb jules merge -s 17502412430766789460 -b main      # Merge na branch main
+amb jules clean                                      # Limpar sessões antigas
 ```
 
 ---
@@ -215,7 +227,9 @@ amb context agenda                              # Roteiro de arquivos (DB ➔ Se
 | **Personas** | `amb agent --role <nome>` | `python agents/local_agent_runner.py --role <nome>` |
 | **Personas** | `amb agent --role <nome> -j` | `python agents/local_agent_runner.py --role <nome> -j` |
 | **Personas** | `amb agent --loop` | `python agents/autonomous_loop.py` |
+| **Personas** | `amb agent --all --loop` | `python agents/autonomous_loop.py --all` |
 | **Personas** | `amb agent --loop --max-cycles <N>` | `python agents/autonomous_loop.py --max-cycles <N>` |
+| **Personas** | `amb agent --loop --branch <b>` | `python agents/autonomous_loop.py --branch <b>` |
 | **Jules Cloud** | `amb jules list` | `python integrations/jules/tools/list_sessions.py` |
 | **Jules Cloud** | `amb jules get <id>` | `python integrations/jules/tools/get_session.py <id>` |
 | **Jules Cloud** | `amb jules get <id> --watch` | `python integrations/jules/tools/monitor_activities.py <id>` |
@@ -224,6 +238,7 @@ amb context agenda                              # Roteiro de arquivos (DB ➔ Se
 | **Jules Cloud** | `amb jules reply -s <id> -m "..."` | `python integrations/jules/tools/send_message.py` |
 | **Jules Cloud** | `amb jules approve -s <id>` | `python integrations/jules/tools/approve_plan.py` |
 | **Jules Cloud** | `amb jules merge -s <id>` | `python integrations/jules/tools/merge_session_pr.py` |
+| **Jules Cloud** | `amb jules merge --auto-latest` | `python integrations/jules/tools/merge_session_pr.py --auto-latest` |
 | **Jules Cloud** | `amb jules clean` | `python integrations/jules/tools/cleanup_sessions.py` |
 | **Stitch SDK** | `amb stitch generate -p "..."` | `python integrations/stitch/tools/generate_screen.py` |
 | **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | `python integrations/stitch/tools/edit_screen.py` |
@@ -238,6 +253,51 @@ amb context agenda                              # Roteiro de arquivos (DB ➔ Se
 | **Pipeline** | `amb pipeline <spec.md>` | `python pipeline/pipeline.py <spec.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |
 | **Arquitetura** | `amb context <modulo>` | `python architecture/ai_context_builder.py` |
+
+---
+
+## ⚙️ 5. Configuração Avançada
+
+### QA Pós-Merge Customizável
+
+O pipeline de merge (`amb jules merge`) lê os comandos de QA do `.amb/amb_project.json` do projeto ativo. Se não configurado, detecta automaticamente a stack (Node/Python/Go).
+
+```json
+// .amb/amb_project.json
+{
+  "qa": {
+    "typecheck": "npm run typecheck",
+    "build": "npm run build",
+    "test": "npm run test"
+  }
+}
+```
+
+### Personalização de Personas
+
+Crie arquivos `.md` em `.amb/personas/` com o seguinte formato:
+
+```markdown
+# Nome da Persona
+
+Descrição resumida (aparece no `amb agent --list`).
+
+## Missão
+
+Instruções detalhadas que serão enviadas ao Google Jules...
+```
+
+---
+
+## 📚 6. Documentação Adicional
+
+| Arquivo | Descrição |
+| :--- | :--- |
+| [`SUGGESTIONS.md`](./SUGGESTIONS.md) | Sugestões de melhoria pendentes organizadas por MoSCoW (MUST/SHOULD/COULD/WON'T). |
+| [`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md) | Histórico de bugs corrigidos e features implementadas com causa raiz e commits. |
+| [`config/README.md`](./config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
+| [`dashboard/README.md`](./dashboard/README.md) | Documentação do Dashboard Web e Monitor Unificado. |
+
 
 ---
 
