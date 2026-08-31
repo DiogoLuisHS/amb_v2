@@ -151,6 +151,34 @@ class JulesClient:
         path = f"sessions/{clean_id}/activities"
         return self._request("GET", path, params={"pageSize": page_size})
 
+    def list_activities_for_sessions(self, session_ids: List[str], page_size: int = 50, max_workers: int = 10) -> Dict[str, Dict[str, Any]]:
+        import concurrent.futures
+
+        results = {}
+
+        def fetch_for_session(sid):
+            try:
+                act_res = self.list_activities(session_id=sid, page_size=page_size)
+                return sid, (act_res if isinstance(act_res, list) else act_res.get("activities", []))
+            except Exception as e:
+                from config import log_error
+                log_error("JULES-CLIENT", f"Falha ao buscar atividades da sessão {sid}: {e}")
+                return sid, []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_sid = {executor.submit(fetch_for_session, sid): sid for sid in session_ids}
+            for future in concurrent.futures.as_completed(future_to_sid):
+                sid = future_to_sid[future]
+                try:
+                    sid, acts = future.result()
+                    results[sid] = acts
+                except Exception as e:
+                    from config import log_error
+                    log_error("JULES-CLIENT", f"Erro fatal ao processar atividades da sessão {sid}: {e}")
+                    results[sid] = []
+
+        return results
+
 
 if __name__ == "__main__":
     try:
