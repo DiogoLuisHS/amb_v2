@@ -39,3 +39,27 @@ python3 tools/send_message.py --session-id <session_id> --message "<your message
 ### `jules_client.py`
 
 This is the main REST API client for interacting with Jules.
+
+### `cleanup_sessions.py`
+
+This script is used to audit and safely clean up Jules sessions for the current repository.
+
+**Validation Rule (Guardrail):**
+To prevent accidentally deleting a session that is still running, `cleanup_sessions.py` includes a state validation guardrail.
+Before deleting a session, it verifies that the session is in a terminal state (`COMPLETED`, `SUCCEEDED`, `FAILED`, or `CANCELED`).
+If a session is in an active state like `RUNNING` or `PENDING`, the script will log a skip message and safely ignore it. This rule is enforced across all deletion methods, including bulk operations and explicit ID targeting (`--delete-id`).
+
+**Usage:**
+```bash
+# Simulate deletion of sessions with merged PRs
+python3 tools/cleanup_sessions.py --delete-merged --dry-run
+
+# Delete sessions with merged PRs
+python3 tools/cleanup_sessions.py --delete-merged
+
+# Delete all completed sessions (merged or unmerged)
+python3 tools/cleanup_sessions.py --delete-all-completed
+
+# Delete a specific session by ID
+python3 tools/cleanup_sessions.py --delete-id <session_id>
+```

@@ -129,37 +129,48 @@ def execute_deletion(client: JulesClient, sessions_to_delete: List[Dict[str, Any
     print(f"{'🔍 [DRY-RUN]' if dry_run else '🗑️ [EXCLUSÃO]'} Processando {total_sessions} sessões...")
     deleted_count = 0
     errors_count = 0
+    skipped_count = 0
+
+    terminal_states = {"COMPLETED", "SUCCEEDED", "FAILED", "CANCELED"}
 
     def delete_task(idx, it):
         sid = it["session_id"]
         title = it["title"][:50]
+        state = it.get("state", "UNKNOWN")
+
+        if state not in terminal_states:
+            print(f"   [{idx}/{total_sessions}] {Colors.YELLOW}⏭️ Ignorada (estado '{state}'):{Colors.RESET} ID {sid} - {title}")
+            return "SKIPPED", None
+
         if dry_run:
             print(f"   [{idx}/{total_sessions}] Seria excluída: ID {sid} - {title}")
-            return True, None
+            return "SUCCESS", None
         else:
             try:
                 client.delete_session(sid)
                 print(f"   [{idx}/{total_sessions}] {Colors.GREEN}✔ Excluída com sucesso:{Colors.RESET} ID {sid} - {title}")
-                return True, None
+                return "SUCCESS", None
             except Exception as e:
                 print(f"   [{idx}/{total_sessions}] {Colors.RED}✖ Falha ao excluir {sid}:{Colors.RESET} {e}")
-                return False, e
+                return "ERROR", e
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(delete_task, idx, it) for idx, it in enumerate(sessions_to_delete, 1)]
 
         for future in concurrent.futures.as_completed(futures):
-            success, _ = future.result()
-            if success:
+            status, _ = future.result()
+            if status == "SUCCESS":
                 deleted_count += 1
-            else:
+            elif status == "ERROR":
                 errors_count += 1
+            elif status == "SKIPPED":
+                skipped_count += 1
 
     print("\n" + "=" * 78)
     if dry_run:
-        print(f"🔍 Dry-run concluído: {deleted_count} sessões seriam removidas da nuvem do Jules.")
+        print(f"🔍 Dry-run concluído: {deleted_count} sessões seriam removidas | {skipped_count} ignoradas.")
     else:
-        print(f"🎉 Limpeza concluída: {deleted_count} sessões excluídas | {errors_count} falhas.")
+        print(f"🎉 Limpeza concluída: {deleted_count} sessões excluídas | {errors_count} falhas | {skipped_count} ignoradas.")
     print("=" * 78 + "\n")
 
 
@@ -177,7 +188,23 @@ def main():
     print_audit_report(categorized)
 
     if args.delete_id:
-        execute_deletion(client, [{"session_id": args.delete_id, "title": "Sessão Individual"}], dry_run=args.dry_run)
+        found = False
+        for cat, items in categorized.items():
+            for item in items:
+                if item["session_id"] == args.delete_id:
+                    execute_deletion(client, [item], dry_run=args.dry_run)
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            try:
+                session_data = client.get_session(args.delete_id)
+                state = session_data.get("state", "UNKNOWN")
+                title = session_data.get("title", "Sessão Individual")
+                execute_deletion(client, [{"session_id": args.delete_id, "title": title, "state": state}], dry_run=args.dry_run)
+            except Exception as e:
+                print(f"{Colors.RED}Erro ao buscar sessão {args.delete_id}:{Colors.RESET} {e}")
     elif args.delete_merged:
         execute_deletion(client, categorized["merged"], dry_run=args.dry_run)
     elif args.delete_all_completed:
