@@ -4,6 +4,22 @@ This directory contains the integration with the Jules API.
 
 ## Tools
 
+### `approve_plan.py`
+
+This script is used to approve a plan in a Jules session.
+
+**Validation Rule (Guardrail):**
+To ensure a plan actually exists before blindly attempting to approve it, `approve_plan.py` includes a guardrail.
+Before approving a plan, the script fetches the session's activities and examines the most recent one (determined by `createTime`).
+It verifies that the `originator` of this activity is 'agent' and that it contains a `planGenerated` key.
+If these conditions are not met, or if there are no activities, the script will abort and return the following error message:
+> "Error: There is no pending plan to approve."
+
+**Usage:**
+```bash
+python3 tools/approve_plan.py --session-id <session_id>
+```
+
 ### `send_message.py`
 
 This script is used to send a message to a Jules session.
