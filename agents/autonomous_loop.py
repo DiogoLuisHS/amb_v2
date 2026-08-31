@@ -81,53 +81,75 @@ def load_persona_content(role: str) -> tuple[str, str]:
 
 
 def monitor_and_assist_session(client: JulesClient, session_id: str, auto_reply_ai: bool = True) -> str:
-    """Monitora a sessão no Jules, respondendo planos e perguntas até a conclusão."""
+    """Monitora a sessão no Jules, respondendo planos e perguntas até a conclusão.
+    
+    Rastreia a última MENSAGEM DO AGENTE (não qualquer activity) para detectar
+    novas perguntas mesmo quando o Jules faz uma segunda pergunta após receber resposta.
+    """
     log("JULES-MONITOR", f"Iniciando acompanhamento da sessão {session_id}...", Colors.CYAN)
-    last_act_id = None
-    feedback_answered_for_turn = False
+
+    # Rastreia o ID da última mensagem do AGENTE que já foi respondida
+    last_answered_agent_msg_id = None
+    last_state_was_feedback = False
 
     while True:
         try:
             sess = client.get_session(session_id)
             state = sess.get("state", "UNKNOWN")
 
-            acts_resp = client.list_activities(session_id=session_id, page_size=20)
+            acts_resp = client.list_activities(session_id=session_id, page_size=30)
             acts = acts_resp if isinstance(acts_resp, list) else acts_resp.get("activities", [])
 
+            # Identifica a mensagem mais recente DO AGENTE (ignora respostas do usuário)
+            latest_agent_msg_id = None
             has_unapproved_plan = False
-            if acts:
-                latest = acts[0]
-                aid = latest.get("id") or latest.get("name")
-                if aid != last_act_id:
-                    last_act_id = aid
-                    feedback_answered_for_turn = False
+            for a in acts[:15]:
+                # Plano pendente tem prioridade
+                plan = a.get("plan") or a.get("agentMessage", {}).get("plan")
+                if plan and plan.get("state") == "PENDING_USER_APPROVAL":
+                    has_unapproved_plan = True
+                    latest_agent_msg_id = a.get("id") or a.get("name")
+                    break
+                # Mensagem ou progresso do agente
+                if a.get("agentMessage") or a.get("progressUpdated"):
+                    if not latest_agent_msg_id:  # Pega só o mais recente
+                        latest_agent_msg_id = a.get("id") or a.get("name")
 
-                for a in acts[:3]:
-                    plan = a.get("plan") or a.get("agentMessage", {}).get("plan")
-                    if plan and plan.get("state") == "PENDING_USER_APPROVAL":
-                        has_unapproved_plan = True
-                        break
+            # Decisão de responder:
+            # 1. Há uma mensagem nova do agente que não foi respondida ainda, OU
+            # 2. Estado voltou para AWAITING após ter saído (Jules fez 2ª pergunta)
+            is_feedback_state = state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]
+            has_new_agent_msg = latest_agent_msg_id and latest_agent_msg_id != last_answered_agent_msg_id
+            state_returned_to_feedback = is_feedback_state and not last_state_was_feedback
 
-            if state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]:
+            should_reply = has_new_agent_msg or state_returned_to_feedback
+
+            if is_feedback_state and should_reply:
                 if has_unapproved_plan:
-                    if not feedback_answered_for_turn:
-                        log("JULES", "Detectado plano pendente. Aprovando via :approvePlan...", Colors.GREEN)
-                        try:
-                            client.approve_plan(session_id)
-                            feedback_answered_for_turn = True
-                        except Exception as ep:
-                            log_error("JULES", f"Falha ao aprovar plano pendente: {ep}")
-                elif auto_reply_ai and not feedback_answered_for_turn:
-                    log("ANTIGRAVITY", "Sessão aguardando feedback. Formulando resposta técnica...", Colors.HEADER)
+                    log("JULES", "Detectado plano pendente. Aprovando via :approvePlan...", Colors.GREEN)
+                    try:
+                        client.approve_plan(session_id)
+                        last_answered_agent_msg_id = latest_agent_msg_id
+                    except Exception as ep:
+                        log_error("JULES", f"Falha ao aprovar plano pendente: {ep}")
+
+                elif auto_reply_ai:
+                    reason = "nova pergunta detectada" if has_new_agent_msg else "estado voltou para AWAITING (2ª dúvida)"
+                    log("ANTIGRAVITY", f"Sessão aguardando feedback ({reason}). Formulando resposta...", Colors.HEADER)
                     try:
                         advise_and_reply(session_id=session_id, auto_approve=True)
-                        feedback_answered_for_turn = True
+                        last_answered_agent_msg_id = latest_agent_msg_id
                         print(f"[{Colors.GREEN}✔ Resposta enviada com sucesso para destravar o agente.{Colors.RESET}]\n")
                     except Exception as er:
                         log_error("ANTIGRAVITY", f"Falha ao auto-responder com IA: {er}")
 
+            last_state_was_feedback = is_feedback_state
+
             if state in ["COMPLETED", "SUCCEEDED"]:
                 log("LOOP", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso!", Colors.GREEN)
+                # Aguarda Jules popular o PR nos outputs antes de tentar detectar
+                log("LOOP", "Aguardando Jules registrar o PR nos outputs (12s)...", Colors.DIM)
+                time.sleep(12)
                 return state
             elif state in ["FAILED", "CANCELLED", "CLOSED"]:
                 log_error("LOOP", f"Sessão finalizada com estado: {state}")

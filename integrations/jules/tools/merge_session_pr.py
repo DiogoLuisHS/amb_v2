@@ -81,22 +81,26 @@ def detect_pr_from_session(session_id: str) -> Optional[int]:
 
 
 def get_latest_open_pr(repo_name: str) -> Optional[Dict[str, Any]]:
-    """Consulta os PRs abertos no repositório via GitHub CLI."""
-    proc = subprocess.run(
-        ["gh", "pr", "list", "--repo", repo_name, "--state", "open", "--json", "number,title,url,headRefName"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=True
-    )
-    if proc.returncode == 0 and proc.stdout.strip():
-        try:
-            prs = json.loads(proc.stdout)
-            if prs:
-                return prs[0]
-        except Exception:
-            pass
+    """Consulta os PRs abertos no repositório via GitHub CLI, incluindo drafts criados pelo Jules."""
+    for draft_flag in [["--draft"], []]:
+        proc = subprocess.run(
+            ["gh", "pr", "list", "--repo", repo_name, "--state", "open",
+             "--json", "number,title,url,headRefName,isDraft,createdAt"] + draft_flag,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=True
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            try:
+                prs = json.loads(proc.stdout)
+                if prs:
+                    # Ordena por mais recente e retorna o primeiro
+                    prs_sorted = sorted(prs, key=lambda p: p.get("createdAt", ""), reverse=True)
+                    return prs_sorted[0]
+            except Exception:
+                pass
     return None
 
 
