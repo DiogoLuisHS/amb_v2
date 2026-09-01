@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """🧠 Antigravity Tool: validate_architecture (Facade)"""
-import sys, os, argparse
+
+import sys
+import os
+import argparse
+
 _cur = os.path.dirname(os.path.abspath(__file__))
 while _cur and os.path.basename(_cur) != "amb_v2":
     _p = os.path.dirname(_cur)
-    if _p == _cur: break
+    if _p == _cur:
+        break
     _cur = _p
 for _s in ["config", "integrations/antigravity"]:
     _p = os.path.normpath(os.path.join(_cur, *_s.split("/")))
-    if os.path.exists(_p) and _p not in sys.path: sys.path.insert(0, _p)
-from antigravity_client import validate_code, Colors, log, log_error
+    if os.path.exists(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
+from antigravity_client import validate_code, log_error  # noqa: E402
+
 
 def main():
     p = argparse.ArgumentParser()
@@ -20,7 +27,9 @@ def main():
         res = validate_code(args.file)
         print(res)
     except Exception as e:
-        log_error("ANTIGRAVITY", str(e)); sys.exit(1)
+        log_error("ANTIGRAVITY", str(e))
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
