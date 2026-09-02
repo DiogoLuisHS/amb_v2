@@ -345,85 +345,11 @@ class PipelineOrchestrator:
 
     @classmethod
     def _monitor_jules_session(cls, session_id: str, repo_root: str, no_qa: bool = False):
-        """Monitora as atividades do Jules, responde a planos e executa o QA ao término."""
+        """Monitora as atividades do Jules, responde a planos e dúvidas com IA e executa o QA ao término."""
         client = JulesClient()
-        seen_ids = set()
-        plan_approved = False
-
-        log("JULES-MONITOR", f"Streaming de atividades da sessão {session_id}...", Colors.CYAN)
-        time.sleep(3)
-
-        while True:
-            try:
-                session = client.get_session(session_id)
-                state = session.get("state", "UNKNOWN")
-
-                act_data = client.list_activities(session_id=session_id, page_size=50)
-                activities = act_data if isinstance(act_data, list) else act_data.get("activities", [])
-                activities_chronological = list(reversed(activities))
-
-                for act in activities_chronological:
-                    aid = act.get("name") or act.get("id") or str(act.get("createTime"))
-                    if aid not in seen_ids:
-                        seen_ids.add(aid)
-                        orig = act.get("originator", "SYSTEM")
-                        desc = act.get("description") or act.get("title") or ""
-
-                        # 1. Comando Bash
-                        if "bashCommand" in act:
-                            cmd = act.get("bashCommand", {}).get("command", "")
-                            print(f"[{Colors.YELLOW}BASH{Colors.RESET}] $ {cmd}")
-                        # 2. Mensagem do Agente
-                        elif "agentMessage" in act or "agentMessaged" in act:
-                            txt = (act.get("agentMessaged") or act.get("agentMessage") or {}).get("text") or desc
-                            print(f"[{Colors.CYAN}AGENTE{Colors.RESET}] {txt}")
-                        # 3. Plano Gerado
-                        elif "planGenerated" in act or "plan" in act:
-                            plan = act.get("planGenerated", {}).get("plan") or act.get("plan", {})
-                            print(f"\n{Colors.BOLD}{Colors.GREEN}📋 PLANO FORMULADO PELO AGENTE:{Colors.RESET}")
-                            print(json.dumps(plan, indent=2))
-                            if not plan_approved:
-                                log("JULES", "Aprovando plano do agente (:approvePlan)...", Colors.GREEN)
-                                try:
-                                    client.approve_plan(session_id)
-                                    plan_approved = True
-                                except Exception as ep:
-                                    log_error("JULES", f"Falha ao aprovar plano: {ep}")
-                        # 4. Dúvida do Agente / Feedback
-                        elif "userFeedbackRequired" in act or state in ["AWAITING_USER_FEEDBACK", "AWAITING_INPUT"]:
-                            q = act.get("userFeedbackRequired", {}).get("question") or desc
-                            print(f"\n[{Colors.BOLD}{Colors.YELLOW}❓ DÚVIDA DO AGENTE JULES{Colors.RESET}] {q}")
-                            try:
-                                from auto_reply import advise_and_reply
-                                advise_and_reply(session_id=session_id, auto_approve=True)
-                            except Exception as er:
-                                log_error("ANTIGRAVITY", f"Falha ao auto-responder com IA: {er}")
-                        else:
-                            if desc:
-                                print(f"[{Colors.DIM}{orig}{Colors.RESET}] {desc}")
-
-                # Estados de Conclusão
-                if state in ["COMPLETED", "SUCCEEDED"]:
-                    print("\n" + "=" * 75)
-                    log("JULES", f"🎉 Sessão {session_id} concluída com sucesso no Jules!", Colors.GREEN)
-                    print("=" * 75)
-                    break
-                elif state in ["FAILED", "CANCELLED", "CLOSED"]:
-                    log_error("JULES", f"Sessão finalizada com estado: {state}")
-                    break
-
-                time.sleep(6)
-            except KeyboardInterrupt:
-                print(f"\n{Colors.YELLOW}Monitoramento pausado. A sessão continua executando na nuvem do Jules.{Colors.RESET}")
-                return
-            except Exception as e:
-                err_str = str(e)
-                if "404" in err_str or "Not Found" in err_str:
-                    log("JULES-MONITOR", "Aguardando provisionamento dos recursos na nuvem do Jules...", Colors.DIM)
-                else:
-                    log_error("MONITOR", f"Aviso de polling: {e}")
-                time.sleep(5)
-
+        from autonomous_loop import monitor_and_assist_session
+        
+        final_state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
 
         # -------------------------------------------------------------
         # GATEKEEPER 2: QA LOCAL
@@ -431,6 +357,7 @@ class PipelineOrchestrator:
         if not no_qa:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
             QualityGatekeeper.run_qa(repo_root)
+
 
 
 def main():
