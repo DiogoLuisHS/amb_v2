@@ -161,10 +161,29 @@ class JulesClient:
         return self._request("DELETE", path)
 
     # 3. Activities
-    def list_activities(self, session_id: str, page_size: int = 50) -> Dict[str, Any]:
+    def list_activities(self, session_id: str, page_size: int = 50, fetch_all: bool = True) -> Dict[str, Any]:
+        """Lista atividades da sessão. Se fetch_all=True, percorre todas as páginas para capturar as atividades mais recentes."""
         clean_id = session_id.split("/")[-1]
         path = f"sessions/{clean_id}/activities"
-        return self._request("GET", path, params={"pageSize": page_size})
+        
+        if not fetch_all:
+            return self._request("GET", path, params={"pageSize": page_size})
+
+        all_acts = []
+        page_token = None
+        while True:
+            params = {"pageSize": 100}
+            if page_token:
+                params["pageToken"] = page_token
+            res = self._request("GET", path, params=params)
+            acts = res.get("activities", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            all_acts.extend(acts)
+            if not isinstance(res, dict) or not res.get("nextPageToken"):
+                break
+            page_token = res.get("nextPageToken")
+
+        return {"activities": all_acts}
+
 
     def list_activities_for_sessions(self, session_ids: List[str], page_size: int = 50, max_workers: int = 10) -> Dict[str, Dict[str, Any]]:
         import concurrent.futures
