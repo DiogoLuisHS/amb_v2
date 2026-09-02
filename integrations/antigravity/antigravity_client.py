@@ -200,7 +200,23 @@ Regras Arquiteturais do Repositório:
 {rules_content or 'TypeScript estrito, SRP, componentes modulares, validação com build/typecheck.'}
 
 Gere o prompt executivo final pronto para despacho."""
-        return self.generate_text(prompt=prompt, system_instruction=system_instruction)
+        try:
+            return self.generate_text(prompt=prompt, system_instruction=system_instruction)
+        except Exception as e:
+            log("ANTIGRAVITY", f"Aviso: Síntese via IA indisponível temporariamente ({e}). Usando template executivo estruturado...", Colors.YELLOW)
+            return f"""# 🎯 ESCOPO TÉCNICO EXECUTIVO (AMB_V2)
+
+## 📌 Contexto & Requisitos de Engenharia
+{raw_idea}
+
+## 📐 Diretrizes de Arquitetura & Qualidade
+- **Princípio da Responsabilidade Única (SRP)**: Módulos focados e funções coesas.
+- **Tipagem Estrita**: Tipos rigorosos, 0 `any` e conformidade com schemas.
+- **Qualidade & Validação**: Realizar testes locais e validação de build/syntax.
+
+{rules_content}
+"""
+
 
     def validate_code(self, file_path: str) -> str:
         """Audita o código contra as diretrizes e regras arquiteturais do projeto."""
