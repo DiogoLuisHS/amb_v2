@@ -194,19 +194,31 @@ Ferramentas avançadas para governança de código, orquestração Design-to-Dep
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
+| `amb pipeline <spec.md>` | — | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** em 6 etapas. |
+| `amb pipeline <spec.md> --skip-stitch` | — | Pula a etapa visual do Stitch e vai direto para a engenharia no Jules. |
+| `amb pipeline <spec.md> -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
+| `amb pipeline <spec.md> --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: `develop`). |
+| `amb pipeline <spec.md> --device-type <D>`| — | Dispositivo alvo para o Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
+| `amb pipeline <spec.md> --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar. |
+| `amb pipeline --resume-session <id>` | `-r` | Retoma o monitoramento ao vivo e QA de uma sessão Jules já iniciada. |
 | `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.antigravity/rules/`. |
-| `amb pipeline <arquivo.md>` | — | Executa o pipeline orquestrado ponta a ponta Design-to-Deploy. |
 | `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
 | `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
 | `amb context <modulo> --json` | — | Retorna o grafo de dependências e arquivos em formato JSON estruturado. |
 
 ```bash
-# Exemplos:
-amb validate src/components/Header.tsx
-amb pipeline specs/nova_feature.md
-amb schema kanban                               # Inspecionar tabelas relacionadas ao kanban
-amb context agenda                              # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
+# Exemplos do Pipeline:
+amb pipeline specs/novo_dashboard.md               # Execução completa interativa (Design + Jules + QA)
+amb pipeline specs/fix_api.md --skip-stitch        # Tarefa de backend/engenharia pura (sem tela Stitch)
+amb pipeline specs/novo_dashboard.md -y            # Pipeline autônomo sem pausas de aprovação
+amb pipeline --resume-session 538227422414712240   # Reconectar a uma sessão remota do Jules
+
+# Demais ferramentas:
+amb validate src/components/Header.tsx             # Auditoria de regras arquiteturais
+amb schema kanban                                  # Inspecionar tabelas relacionadas ao kanban
+amb context agenda                                 # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
 ```
+
 
 ---
 

@@ -330,7 +330,19 @@ def cmd_validate(args):
 def cmd_pipeline(args):
     """Executa o pipeline completo Design-to-Deploy."""
     from pipeline import PipelineOrchestrator
-    PipelineOrchestrator.run(prompt_file=args.template)
+    PipelineOrchestrator.run(
+        prompt_file=args.template,
+        auto_approve=getattr(args, "auto_approve", False),
+        skip_stitch=getattr(args, "skip_stitch", False),
+        no_qa=getattr(args, "no_qa", False),
+        resume_session=getattr(args, "resume_session", None),
+        device_type=getattr(args, "device_type", "DESKTOP"),
+        edit_screen_id=getattr(args, "edit_screen", None),
+        screen_id=getattr(args, "screen_id", None),
+        sync_ds=getattr(args, "sync_ds", False),
+        starting_branch=getattr(args, "branch", "develop")
+    )
+
 
 
 def cmd_schema(args):
@@ -474,9 +486,19 @@ def main():
     p_val.set_defaults(func=cmd_validate)
 
     # 11. amb pipeline
-    p_pipe = subparsers.add_parser("pipeline", help="Executa o pipeline orquestrado Design-to-Deploy.")
-    p_pipe.add_argument("template", help="Caminho do arquivo markdown de especificação da tarefa.")
+    p_pipe = subparsers.add_parser("pipeline", help="Executa o pipeline orquestrado Design-to-Deploy ponta a ponta.")
+    p_pipe.add_argument("template", nargs="?", default=None, help="Caminho do arquivo markdown de especificação da tarefa.")
+    p_pipe.add_argument("--auto-approve", "-y", action="store_true", help="Pula confirmações manuais no Gatekeeper 1 de Design.")
+    p_pipe.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto à engenharia no Jules.")
+    p_pipe.add_argument("--no-qa", action="store_true", help="Não executa a verificação local pós-sessão de typecheck/build.")
+    p_pipe.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules.")
+    p_pipe.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default="DESKTOP", help="Tipo de dispositivo para renderização no Stitch.")
+    p_pipe.add_argument("--screen-id", "-s", help="ID de tela existente no Stitch para reaproveitar como base.")
+    p_pipe.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt.")
+    p_pipe.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar.")
+    p_pipe.add_argument("--branch", "-b", default="develop", help="Branch de início para o Jules (Padrão: develop).")
     p_pipe.set_defaults(func=cmd_pipeline)
+
 
     # 12. amb schema (alias: amb db)
     p_schema = subparsers.add_parser("schema", aliases=["db"], help="Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only).")
