@@ -80,47 +80,54 @@ class PromptParser:
 
 
 class QualityGatekeeper:
-    """Valida o código localmente após o término da sessão remota."""
+    """Valida o código localmente após o término da sessão remota com auto-detecção de stack."""
 
     @staticmethod
     def run_qa(repo_root: str) -> bool:
-        log("QA", "Executando suíte de verificação local (Typecheck + Build)...", Colors.CYAN)
-        
-        # 1. Typecheck
-        print(f"\n[{Colors.BOLD}QA-1/2{Colors.RESET}] npm run typecheck")
-        p_type = subprocess.run(
-            ["npm", "run", "typecheck"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=True
-        )
-        if p_type.returncode != 0:
-            print(p_type.stdout)
-            print(p_type.stderr)
-            log_error("QA", "Falha no typecheck do TypeScript!", hint="Corrija os erros de tipo antes de comitar.")
-            return False
-        print(f"{Colors.GREEN}✔ Typecheck passou com 0 erros.{Colors.RESET}")
+        log("QA", "Executando verificação de integridade local...", Colors.CYAN)
 
-        # 2. Build de Produção
-        print(f"\n[{Colors.BOLD}QA-2/2{Colors.RESET}] npm run build")
-        p_build = subprocess.run(
-            ["npm", "run", "build"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=True
-        )
-        if p_build.returncode != 0:
-            print(p_build.stdout)
-            print(p_build.stderr)
-            log_error("QA", "Falha no build de produção!", hint="Verifique conflitos de imports ou syntax errors.")
-            return False
-        print(f"{Colors.GREEN}✔ Build de produção concluído com sucesso!{Colors.RESET}")
+        def _run_qa_cmd(cmd_str: str, label: str) -> bool:
+            if not cmd_str.strip():
+                return True
+            print(f"\n[{Colors.BOLD}QA{Colors.RESET}] {cmd_str}")
+            parts = cmd_str.strip().split()
+            proc = subprocess.run(
+                parts, cwd=repo_root,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True
+            )
+            if proc.returncode != 0:
+                if proc.stdout.strip():
+                    print(proc.stdout)
+                if proc.stderr.strip():
+                    print(proc.stderr)
+                log_error("QA", f"Falha no passo: {label}!")
+                return False
+            print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
+            return True
+
+        from config import load_project_json
+        proj = load_project_json()
+        qa_cfg = proj.get("qa", {})
+
+        # Auto-detecção de stack
+        if not qa_cfg:
+            if os.path.exists(os.path.join(repo_root, "package.json")):
+                qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
+            elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
+                qa_cfg = {"python_syntax": "python -m py_compile cli.py"}
+            elif os.path.exists(os.path.join(repo_root, "go.mod")):
+                qa_cfg = {"go_build": "go build ./..."}
+            else:
+                qa_cfg = {}
+
+        if not qa_cfg:
+            print(f"{Colors.GREEN}✔ Nenhuma suíte de QA necessária para este repositório.{Colors.RESET}")
+            return True
+
+        for step_key, step_cmd in qa_cfg.items():
+            if not _run_qa_cmd(step_cmd, step_key):
+                return False
+
         return True
 
 
@@ -139,10 +146,22 @@ class PipelineOrchestrator:
         edit_screen_id: str = None,
         screen_id: str = None,
         sync_ds: bool = False,
-        starting_branch: str = "develop"
+        starting_branch: str = None
     ):
         repo_root = find_repo_root()
         repo_name = get_repo_name()
+
+        # Auto-detecta branch atual do Git local se não fornecida explicitamente
+        if not starting_branch or starting_branch in ["develop", "main"]:
+            try:
+                b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=repo_root, capture_output=True, text=True, check=False)
+                cur_branch = b_proc.stdout.strip()
+                if cur_branch:
+                    starting_branch = cur_branch
+            except Exception:
+                pass
+        starting_branch = starting_branch or "main"
+
         prompt_path = os.path.abspath(prompt_file)
         file_label = os.path.basename(prompt_path)
 
@@ -150,6 +169,7 @@ class PipelineOrchestrator:
         print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE UNIFICADO AMB_V2: {file_label}{Colors.RESET}")
         print(f"📁 Repositório Alvo: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {starting_branch})")
         print("=" * 75)
+
 
         # -------------------------------------------------------------
         # RESUME SESSION (Se solicitado)
