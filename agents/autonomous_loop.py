@@ -287,7 +287,11 @@ def run_autonomous_loop(
                 if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
                     log("GIT-MERGE", f"Verificando Pull Request da sessão {session_id}...", Colors.HEADER)
                     try:
-                        approve_and_merge_pr(session_id=session_id, target_branch=branch)
+                        merged = approve_and_merge_pr(session_id=session_id, target_branch=branch)
+                        if merged:
+                            log("GIT-SYNC", f"✔ Sincronização concluída com sucesso! origin/{branch} atualizado com as mudanças do Ciclo #{completed_cycles}.", Colors.GREEN)
+                            # Garante que o git local puxa e valida origin
+                            subprocess.run(["git", "pull", "origin", branch], cwd=repo_root, capture_output=True, shell=True)
                     except Exception as em:
                         log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
 
@@ -306,8 +310,10 @@ def run_autonomous_loop(
             log("LOOP", f"Limite de {max_cycles} ciclos atingido. Todas as personas foram executadas com sucesso!", Colors.GREEN)
             break
 
-        log("LOOP", f"Ciclo #{completed_cycles} concluído. Aguardando {delay_between_cycles}s para a próxima rodada...", Colors.DIM)
-        time.sleep(delay_between_cycles)
+        wait_seconds = max(delay_between_cycles, 10)
+        log("LOOP", f"Ciclo #{completed_cycles} concluído. Aguardando {wait_seconds}s para propagação do Git antes do Ciclo #{completed_cycles+1}...", Colors.CYAN)
+        time.sleep(wait_seconds)
+
 
 
 def main():
