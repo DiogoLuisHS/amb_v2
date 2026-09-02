@@ -40,14 +40,80 @@ from jules_client import JulesClient
 from antigravity_client import AntigravityClient
 
 
-def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict[str, Any], str, str, str]:
-    """Obtém a sessão, o prompt inicial, a conversa cronológica formatada e a última dúvida."""
+def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
+    """
+    Analisa a lista de atividades (da mais recente para a mais antiga)
+    e determina quem falou por último e qual foi a última pergunta/plano.
+    """
+    turn_info = {
+        "last_speaker": None,  # 'USER' | 'AGENT' | 'PLAN' | 'SYSTEM'
+        "last_user_msg": "",
+        "last_agent_msg": "",
+        "last_agent_msg_id": None,
+        "has_unapproved_plan": False,
+        "unapproved_plan_title": "",
+        "is_awaiting_user_action": False,
+    }
+    
+    if not acts:
+        return turn_info
+
+    for a in acts:
+        aid = a.get("id") or a.get("name")
+        
+        # 1. Mensagem do Usuário
+        if a.get("userMessage") or a.get("userMessaged"):
+            txt = (a.get("userMessage") or a.get("userMessaged") or {}).get("text", "")
+            if not turn_info["last_speaker"]:
+                turn_info["last_speaker"] = "USER"
+                turn_info["last_user_msg"] = txt.strip()
+                turn_info["is_awaiting_user_action"] = False
+                break
+        
+        # 2. Plano com aprovação pendente
+        plan = a.get("plan") or a.get("agentMessage", {}).get("plan")
+        if plan and plan.get("state") == "PENDING_USER_APPROVAL":
+            if not turn_info["last_speaker"]:
+                turn_info["last_speaker"] = "PLAN"
+                turn_info["has_unapproved_plan"] = True
+                turn_info["unapproved_plan_title"] = plan.get("title", "")
+                turn_info["last_agent_msg_id"] = aid
+                turn_info["is_awaiting_user_action"] = True
+                break
+                
+        # 3. Mensagem do Agente
+        if a.get("agentMessage") or a.get("agentMessaged"):
+            txt = (a.get("agentMessage") or a.get("agentMessaged") or {}).get("text", "")
+            if not turn_info["last_speaker"]:
+                turn_info["last_speaker"] = "AGENT"
+                turn_info["last_agent_msg"] = txt.strip()
+                turn_info["last_agent_msg_id"] = aid
+                turn_info["is_awaiting_user_action"] = True
+                break
+                
+        # 4. Progresso / Avaliação do Agente
+        if a.get("progressUpdated"):
+            p_desc = a["progressUpdated"].get("description", "")
+            if not turn_info["last_speaker"]:
+                turn_info["last_speaker"] = "AGENT"
+                turn_info["last_agent_msg"] = p_desc.strip()
+                turn_info["last_agent_msg_id"] = aid
+                turn_info["is_awaiting_user_action"] = True
+                break
+
+    return turn_info
+
+
+def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict[str, Any], str, str, str, Dict[str, Any]]:
+    """Obtém a sessão, o prompt inicial, a conversa cronológica formatada, a última dúvida e metadados do turno."""
     session = client.get_session(session_id)
     initial_prompt = session.get("prompt", "")
 
     acts_resp = client.list_activities(session_id=session_id, page_size=100)
     acts = acts_resp if isinstance(acts_resp, list) else acts_resp.get("activities", [])
     
+    turn_info = get_last_conversation_turn(acts)
+
     # A API retorna em ordem decrescente (mais recente primeiro) -> invertemos para cronológico
     chronological_acts = list(reversed(acts))
 
@@ -58,21 +124,20 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
         time_str = a.get("createTime", "")[:19].replace("T", " ")
         
         # Mensagem do Usuário
-        if a.get("userMessage"):
-            txt = a["userMessage"].get("text", "").strip()
+        if a.get("userMessage") or a.get("userMessaged"):
+            txt = (a.get("userMessage") or a.get("userMessaged") or {}).get("text", "").strip()
             chat_lines.append(f"[{time_str}] 👤 USUÁRIO:\n{txt}\n")
         
         # Mensagem do Jules
-        elif a.get("agentMessage"):
-            txt = a["agentMessage"].get("text", "").strip()
+        elif a.get("agentMessage") or a.get("agentMessaged"):
+            txt = (a.get("agentMessage") or a.get("agentMessaged") or {}).get("text", "").strip()
             chat_lines.append(f"[{time_str}] 🤖 AGENTE JULES:\n{txt}\n")
-            current_question = txt  # Mantém a última mensagem do agente como candidata à dúvida
+            current_question = txt
         
         # Comando Bash
         elif a.get("bashCommand"):
             cmd = a["bashCommand"].get("command", "")
             out = a["bashCommand"].get("output", "")
-            # Bug #3 fix: exibir até 800 chars do output para que Gemini veja erros de typecheck/build
             trunc_out = out[:800] + (f"\n...[+{len(out)-800} chars omitidos]" if len(out) > 800 else "")
             chat_lines.append(f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n")
         
@@ -93,7 +158,8 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
                 current_question = p_desc
 
     full_history = "\n".join(chat_lines)
-    return session, initial_prompt, full_history, current_question
+    return session, initial_prompt, full_history, current_question, turn_info
+
 
 
 def _filter_rules_for_jules(content: str) -> str:
@@ -188,13 +254,34 @@ Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do J
             return "Please proceed with the proposed implementation adhering to the repository rules, and open the Pull Request when ready."
 
 
-def advise_and_reply(session_id: str, auto_approve: bool = False):
+def advise_and_reply(session_id: str, auto_approve: bool = False, force: bool = False):
     """Fluxo interativo com exibição de histórico, pergunta e resposta assistida por IA."""
     j_client = JulesClient()
     log("JULES-ADVISOR", f"Carregando histórico completo da sessão {session_id}...", Colors.CYAN)
 
-    session, initial_prompt, chat_history, current_question = get_full_session_history(j_client, session_id)
+    session, initial_prompt, chat_history, current_question, turn_info = get_full_session_history(j_client, session_id)
     title = session.get("title", "Sem título")
+
+    # Proteção: se a última mensagem da sessão já foi do usuário, não responder novamente
+    if not force and not turn_info.get("is_awaiting_user_action", True):
+        last_u = turn_info.get("last_user_msg", "")
+        preview = (last_u[:80] + "...") if len(last_u) > 80 else last_u
+        if auto_approve:
+            log("JULES-ADVISOR", f"ℹ️ Sessão {session_id} já foi respondida recentemente (última msg: '{preview}'). Aguardando agente processar.", Colors.YELLOW)
+            return
+        else:
+            print("\n" + "=" * 75)
+            print(f"🤖 {Colors.BOLD}SESSÃO:{Colors.RESET} {title} ({session_id})")
+            print(f"📊 {Colors.BOLD}ESTADO:{Colors.RESET} {session.get('state')}")
+            print("=" * 75)
+            print(f"\n⚠️  {Colors.YELLOW}{Colors.BOLD}AVISO: A última mensagem desta sessão já foi enviada pelo usuário!{Colors.RESET}")
+            print(f"   {Colors.DIM}\"{last_u}\"{Colors.RESET}")
+            print(f"{Colors.YELLOW}O agente Jules ainda está processando e não fez uma nova pergunta.{Colors.RESET}\n")
+            
+            c_force = input("👉 Deseja forçar o envio de outra mensagem mesmo assim? [s/N]: ").strip().lower()
+            if c_force not in ["s", "sim", "y", "yes"]:
+                log("JULES-ADVISOR", "Operação abortada para evitar mensagens duplicadas.", Colors.CYAN)
+                return
 
     print("\n" + "=" * 75)
     print(f"🤖 {Colors.BOLD}SESSÃO:{Colors.RESET} {title} ({session_id})")
@@ -239,7 +326,7 @@ def advise_and_reply(session_id: str, auto_approve: bool = False):
             print("=" * 75)
             print(chat_history)
             print("=" * 75 + "\n")
-            return advise_and_reply(session_id=session_id, auto_approve=auto_approve)
+            return advise_and_reply(session_id=session_id, auto_approve=auto_approve, force=True)
         elif opt == "p":
             log("JULES-ADVISOR", f"Aprovando plano da sessão {session_id}...", Colors.CYAN)
             j_client.approve_plan(session_id)
@@ -266,7 +353,7 @@ auto_reply_session = advise_and_reply
 
 
 def get_pending_sessions(client: Optional[JulesClient] = None) -> list[dict]:
-    """Varre as sessões do repositório atual e retorna as que demandam feedback humano."""
+    """Varre as sessões do repositório atual e retorna apenas as que realmente demandam ação humana."""
     c = client or JulesClient()
     from config import get_repo_name
     current_repo = get_repo_name()
@@ -279,21 +366,30 @@ def get_pending_sessions(client: Optional[JulesClient] = None) -> list[dict]:
 
         if state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]:
             try:
-                _, _, _, context_txt = get_full_session_history(c, sid)
+                _, _, _, context_txt, turn_info = get_full_session_history(c, sid)
+                
+                # Se a última mensagem já foi do usuário, a sessão NÃO está pendente de resposta
+                if not turn_info.get("is_awaiting_user_action", True):
+                    continue
+
                 pending.append({
                     "session_id": sid,
                     "state": state,
                     "title": title,
-                    "question": context_txt
+                    "question": context_txt,
+                    "has_unapproved_plan": turn_info.get("has_unapproved_plan", False),
+                    "plan_title": turn_info.get("unapproved_plan_title", "")
                 })
             except Exception:
                 pending.append({
                     "session_id": sid,
                     "state": state,
                     "title": title,
-                    "question": "Aguardando feedback humano."
+                    "question": "Aguardando feedback humano.",
+                    "has_unapproved_plan": False
                 })
     return pending
+
 
 
 def run_auto_advisor(auto_approve: bool = False):

@@ -74,7 +74,18 @@ Configuração manual via `.amb/amb_project.json`:
 3. Aguarda 12s após `COMPLETED` para Jules popular o campo `outputs` com a URL do PR
 **Commit:** `8ea55ee`
 
+### Bug #10 — Resposta duplicada para chats que já haviam sido respondidos
+**Arquivos:** `agents/auto_reply.py`, `agents/autonomous_loop.py`, `dashboard/watchers/jules_watcher.py`
+**Causa:** Quando uma resposta era enviada, a API do Jules demorava alguns segundos para mudar o estado de `AWAITING_USER_FEEDBACK` para `IN_PROGRESS`. O `advisor` e o `watcher` listavam a sessão como pendente novamente e respondiam à pergunta anterior do agente, ignorando que a atividade mais recente na conversa já era um `userMessage` enviado pelo usuário.
+**Fix aplicado:**
+1. Implementada a função `get_last_conversation_turn(acts)` que analisa estritamente a última atividade de conversa.
+2. Se a última atividade for `userMessage`, `is_awaiting_user_action` é definido como `False`.
+3. `get_pending_sessions()` ignora sessões onde a última mensagem já foi do usuário.
+4. `advise_and_reply()` impede reenvios no modo `auto_approve` e exibe aviso de proteção no modo interativo.
+5. `monitor_and_assist_session()` e `jules_watcher.py` não disparam respostas nem alertas falsos se a bola estiver com o agente Jules.
+
 ---
+
 
 ## 🚀 Features Implementadas
 

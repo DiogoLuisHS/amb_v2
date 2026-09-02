@@ -88,45 +88,36 @@ class JulesWatcher:
 
                 # 2. Sessão com estado explícito de feedback ou aprovação de plano
                 if state in ["AWAITING_USER_FEEDBACK", "Awaiting User Feedback", "AWAITING_INPUT", "AWAITING_PLAN_APPROVAL"]:
-                    event_key = f"state_feedback:{session_id}"
+                    acts = activities_cache.get(session_id)
+                    if acts is None:
+                        try:
+                            act_res = self.client.list_activities(session_id=session_id, page_size=20)
+                            acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
+                        except Exception:
+                            acts = []
+
+                    from auto_reply import get_last_conversation_turn
+                    turn_info = get_last_conversation_turn(acts)
+
+                    # Se a última mensagem já foi do usuário, não alertar
+                    if not turn_info.get("is_awaiting_user_action", True):
+                        continue
+
+                    event_key = f"state_feedback:{session_id}:{turn_info.get('last_agent_msg_id')}"
                     if event_key not in self.notified_events:
                         self.notified_events.add(event_key)
                         
-                        last_msg = ""
-                        try:
-                            acts = activities_cache.get(session_id)
-
-                            # Fallback para caso `list_activities_for_sessions` não esteja disponível (ou erro nela)
-                            if acts is None:
-                                act_res = self.client.list_activities(session_id=session_id, page_size=20)
-                                acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
-
-                            for a in reversed(acts):
-                                for key in ["agentMessage", "agentMessaged", "userFeedbackRequired"]:
-                                    if key in a:
-                                        val = a[key]
-                                        if isinstance(val, str) and val.strip():
-                                            last_msg = val.strip()
-                                            break
-                                        elif isinstance(val, dict):
-                                            for subk in ["agentMessage", "text", "message", "question", "prompt", "description"]:
-                                                if subk in val and isinstance(val[subk], str) and val[subk].strip():
-                                                    last_msg = val[subk].strip()
-                                                    break
-                                if last_msg:
-                                    break
-                        except Exception:
-                            pass
-
+                        last_msg = turn_info.get("last_agent_msg", "")
                         msg_detail = f"❓ Pergunta/Proposta do Agente:\n\"{last_msg.strip()}\"\n" if last_msg else "O agente finalizou o turno/mudança e aguarda sua instrução para prosseguir.\n"
 
                         notify_attention(
                             source="Google Jules",
                             title=f"Sessão aguardando sua resposta: '{title}' ({session_id})",
                             details=f"{msg_detail}Estado: {state}\nPainel: https://jules.google.com/session/{session_id}",
-                            action_command=f"python amb_v2/agents/auto_reply.py --session-id {session_id}"
+                            action_command=f"amb jules reply -s {session_id}"
                         )
                         alerts.append({"type": "awaiting_feedback", "session_id": session_id, "text": last_msg})
+
                 # 3. Bug #7 fix: Sessão COMPLETED mas PR pode estar aguardando merge
                 if state in ["COMPLETED", "SUCCEEDED"]:
                     event_key = f"completed:{session_id}"
