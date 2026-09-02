@@ -40,10 +40,65 @@ from jules_client import JulesClient
 from antigravity_client import AntigravityClient
 
 
+def extract_activity_text(activity: dict, role: str = "agent") -> str:
+    """Extrai com precisão o texto de mensagens da API do Jules para qualquer formato retornado."""
+    if not activity or not isinstance(activity, dict):
+        return ""
+
+    if role == "agent":
+        if "agentMessaged" in activity:
+            val = activity["agentMessaged"]
+            if isinstance(val, dict):
+                res = val.get("agentMessage") or val.get("text") or val.get("message") or ""
+                if isinstance(res, str) and res.strip():
+                    return res.strip()
+            elif isinstance(val, str) and val.strip():
+                return val.strip()
+
+        if "agentMessage" in activity:
+            val = activity["agentMessage"]
+            if isinstance(val, dict):
+                res = val.get("text") or val.get("agentMessage") or val.get("message") or ""
+                if isinstance(res, str) and res.strip():
+                    return res.strip()
+            elif isinstance(val, str) and val.strip():
+                return val.strip()
+
+        if "userFeedbackRequired" in activity:
+            val = activity["userFeedbackRequired"]
+            if isinstance(val, dict):
+                res = val.get("question") or val.get("text") or val.get("message") or ""
+                if isinstance(res, str) and res.strip():
+                    return res.strip()
+            elif isinstance(val, str) and val.strip():
+                return val.strip()
+
+    elif role == "user":
+        if "userMessaged" in activity:
+            val = activity["userMessaged"]
+            if isinstance(val, dict):
+                res = val.get("userMessage") or val.get("text") or val.get("message") or ""
+                if isinstance(res, str) and res.strip():
+                    return res.strip()
+            elif isinstance(val, str) and val.strip():
+                return val.strip()
+
+        if "userMessage" in activity:
+            val = activity["userMessage"]
+            if isinstance(val, dict):
+                res = val.get("text") or val.get("userMessage") or val.get("message") or ""
+                if isinstance(res, str) and res.strip():
+                    return res.strip()
+            elif isinstance(val, str) and val.strip():
+                return val.strip()
+
+    return ""
+
+
 def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
     """
     Analisa a lista de atividades (da mais recente para a mais antiga)
-    e determina quem falou por último e qual foi a última pergunta/plano.
+    e determina quem falou por último e qual foi a última pergunta/plano real.
     """
     turn_info = {
         "last_speaker": None,  # 'USER' | 'AGENT' | 'PLAN' | 'SYSTEM'
@@ -62,41 +117,37 @@ def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
         aid = a.get("id") or a.get("name")
         
         # 1. Mensagem do Usuário
-        if a.get("userMessage") or a.get("userMessaged"):
-            txt = (a.get("userMessage") or a.get("userMessaged") or {}).get("text", "")
+        user_txt = extract_activity_text(a, role="user")
+        if user_txt:
             if not turn_info["last_speaker"]:
                 turn_info["last_speaker"] = "USER"
-                turn_info["last_user_msg"] = txt.strip()
+                turn_info["last_user_msg"] = user_txt
                 turn_info["is_awaiting_user_action"] = False
                 break
         
         # 2. Plano com aprovação pendente
-        plan = a.get("plan") or a.get("agentMessage", {}).get("plan")
+        plan = a.get("plan") or a.get("agentMessage", {}).get("plan") if isinstance(a.get("agentMessage"), dict) else None
+        if not plan and "planGenerated" in a:
+            p_gen = a["planGenerated"].get("plan")
+            if p_gen and p_gen.get("state") == "PENDING_USER_APPROVAL":
+                plan = p_gen
+
         if plan and plan.get("state") == "PENDING_USER_APPROVAL":
             if not turn_info["last_speaker"]:
                 turn_info["last_speaker"] = "PLAN"
                 turn_info["has_unapproved_plan"] = True
                 turn_info["unapproved_plan_title"] = plan.get("title", "")
                 turn_info["last_agent_msg_id"] = aid
+                turn_info["last_agent_msg"] = f"Plano proposto: {plan.get('title', '')}"
                 turn_info["is_awaiting_user_action"] = True
                 break
                 
-        # 3. Mensagem do Agente
-        if a.get("agentMessage") or a.get("agentMessaged"):
-            txt = (a.get("agentMessage") or a.get("agentMessaged") or {}).get("text", "")
+        # 3. Mensagem do Agente / Feedback Requerido
+        agent_txt = extract_activity_text(a, role="agent")
+        if agent_txt:
             if not turn_info["last_speaker"]:
                 turn_info["last_speaker"] = "AGENT"
-                turn_info["last_agent_msg"] = txt.strip()
-                turn_info["last_agent_msg_id"] = aid
-                turn_info["is_awaiting_user_action"] = True
-                break
-                
-        # 4. Progresso / Avaliação do Agente
-        if a.get("progressUpdated"):
-            p_desc = a["progressUpdated"].get("description", "")
-            if not turn_info["last_speaker"]:
-                turn_info["last_speaker"] = "AGENT"
-                turn_info["last_agent_msg"] = p_desc.strip()
+                turn_info["last_agent_msg"] = agent_txt
                 turn_info["last_agent_msg_id"] = aid
                 turn_info["is_awaiting_user_action"] = True
                 break
@@ -118,22 +169,22 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
     chronological_acts = list(reversed(acts))
 
     chat_lines = []
-    current_question = ""
+    current_question = turn_info.get("last_agent_msg", "")
 
     for a in chronological_acts:
         time_str = a.get("createTime", "")[:19].replace("T", " ")
         
         # Mensagem do Usuário
-        if a.get("userMessage") or a.get("userMessaged"):
-            txt = (a.get("userMessage") or a.get("userMessaged") or {}).get("text", "").strip()
-            chat_lines.append(f"[{time_str}] 👤 USUÁRIO:\n{txt}\n")
+        user_txt = extract_activity_text(a, role="user")
+        if user_txt:
+            chat_lines.append(f"[{time_str}] 👤 USUÁRIO:\n{user_txt}\n")
         
         # Mensagem do Jules
-        elif a.get("agentMessage") or a.get("agentMessaged"):
-            txt = (a.get("agentMessage") or a.get("agentMessaged") or {}).get("text", "").strip()
-            chat_lines.append(f"[{time_str}] 🤖 AGENTE JULES:\n{txt}\n")
-            current_question = txt
-        
+        agent_txt = extract_activity_text(a, role="agent")
+        if agent_txt:
+            chat_lines.append(f"[{time_str}] 🤖 AGENTE JULES:\n{agent_txt}\n")
+            current_question = agent_txt
+
         # Comando Bash
         elif a.get("bashCommand"):
             cmd = a["bashCommand"].get("command", "")
@@ -142,23 +193,23 @@ def get_full_session_history(client: JulesClient, session_id: str) -> Tuple[Dict
             chat_lines.append(f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n")
         
         # Plano do Agente
-        elif a.get("plan"):
-            plan_title = a["plan"].get("title", "")
-            steps = a["plan"].get("steps", [])
+        elif a.get("plan") or a.get("planGenerated"):
+            p_obj = a.get("plan") or a.get("planGenerated", {}).get("plan") or {}
+            plan_title = p_obj.get("title", "")
+            steps = p_obj.get("steps", [])
             step_lines = "\n".join([f"   - [{'x' if s.get('state') == 'COMPLETED' else ' '}] {s.get('description', '')}" for s in steps])
             chat_lines.append(f"[{time_str}] 📋 PLANO PROPOSTO: {plan_title}\n{step_lines}\n")
-            current_question = f"Plano proposto: {plan_title}\n{step_lines}"
 
         # Progresso ou Avaliação do Agente
         elif a.get("progressUpdated"):
             p_title = a["progressUpdated"].get("title", "")
             p_desc = a["progressUpdated"].get("description", "")
             chat_lines.append(f"[{time_str}] 📊 PROGRESSO/AVALIAÇÃO: {p_title}\n{p_desc}\n")
-            if p_desc:
-                current_question = p_desc
 
     full_history = "\n".join(chat_lines)
     return session, initial_prompt, full_history, current_question, turn_info
+
+
 
 
 
