@@ -68,6 +68,7 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# AMB temporary diaries / artifacts
-.amb/diarios/
+# AMB temporary cache / artifacts
+.amb/cache/
 scratch/
+
