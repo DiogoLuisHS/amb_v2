@@ -351,6 +351,7 @@ class PipelineOrchestrator:
         plan_approved = False
 
         log("JULES-MONITOR", f"Streaming de atividades da sessão {session_id}...", Colors.CYAN)
+        time.sleep(3)
 
         while True:
             try:
@@ -358,10 +359,10 @@ class PipelineOrchestrator:
                 state = session.get("state", "UNKNOWN")
 
                 act_data = client.list_activities(session_id=session_id, page_size=50)
-                activities = act_data.get("activities", [])
-                activities.reverse()
+                activities = act_data if isinstance(act_data, list) else act_data.get("activities", [])
+                activities_chronological = list(reversed(activities))
 
-                for act in activities:
+                for act in activities_chronological:
                     aid = act.get("name") or act.get("id") or str(act.get("createTime"))
                     if aid not in seen_ids:
                         seen_ids.add(aid)
@@ -377,8 +378,8 @@ class PipelineOrchestrator:
                             txt = (act.get("agentMessaged") or act.get("agentMessage") or {}).get("text") or desc
                             print(f"[{Colors.CYAN}AGENTE{Colors.RESET}] {txt}")
                         # 3. Plano Gerado
-                        elif "planGenerated" in act:
-                            plan = act.get("planGenerated", {}).get("plan", {})
+                        elif "planGenerated" in act or "plan" in act:
+                            plan = act.get("planGenerated", {}).get("plan") or act.get("plan", {})
                             print(f"\n{Colors.BOLD}{Colors.GREEN}📋 PLANO FORMULADO PELO AGENTE:{Colors.RESET}")
                             print(json.dumps(plan, indent=2))
                             if not plan_approved:
@@ -388,17 +389,15 @@ class PipelineOrchestrator:
                                     plan_approved = True
                                 except Exception as ep:
                                     log_error("JULES", f"Falha ao aprovar plano: {ep}")
-                        # 4. Dúvida do Agente
-                        elif "userFeedbackRequired" in act:
+                        # 4. Dúvida do Agente / Feedback
+                        elif "userFeedbackRequired" in act or state in ["AWAITING_USER_FEEDBACK", "AWAITING_INPUT"]:
                             q = act.get("userFeedbackRequired", {}).get("question") or desc
-                            print(f"\n[{Colors.BOLD}{Colors.RED}❓ DÚVIDA DO AGENTE JULES{Colors.RESET}] {q}")
-                            # Auto-resposta com Antigravity
-                            client_agy = AntigravityClient()
-                            reply = client_agy.generate_text(
-                                prompt=f"O agente Jules perguntou durante a codificação: '{q}'. Dê a resposta técnica correta seguindo as diretrizes e padrões do projeto."
-                            )
-                            print(f"[{Colors.GREEN}RESPOSTA ENVIADA{Colors.RESET}] {reply}")
-                            client.send_message(session_id, reply)
+                            print(f"\n[{Colors.BOLD}{Colors.YELLOW}❓ DÚVIDA DO AGENTE JULES{Colors.RESET}] {q}")
+                            try:
+                                from auto_reply import advise_and_reply
+                                advise_and_reply(session_id=session_id, auto_approve=True)
+                            except Exception as er:
+                                log_error("ANTIGRAVITY", f"Falha ao auto-responder com IA: {er}")
                         else:
                             if desc:
                                 print(f"[{Colors.DIM}{orig}{Colors.RESET}] {desc}")
@@ -418,8 +417,13 @@ class PipelineOrchestrator:
                 print(f"\n{Colors.YELLOW}Monitoramento pausado. A sessão continua executando na nuvem do Jules.{Colors.RESET}")
                 return
             except Exception as e:
-                log_error("MONITOR", f"Erro temporário de polling: {e}")
-                time.sleep(6)
+                err_str = str(e)
+                if "404" in err_str or "Not Found" in err_str:
+                    log("JULES-MONITOR", "Aguardando provisionamento dos recursos na nuvem do Jules...", Colors.DIM)
+                else:
+                    log_error("MONITOR", f"Aviso de polling: {e}")
+                time.sleep(5)
+
 
         # -------------------------------------------------------------
         # GATEKEEPER 2: QA LOCAL
