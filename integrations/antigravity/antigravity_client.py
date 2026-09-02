@@ -148,7 +148,27 @@ class AntigravityClient:
 
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Gera texto utilizando Gemini 3.7/3.6 via REST e fallback final para o CLI Antigravity (agy)."""
+        """Gera texto utilizando Gemini 3.7/3.6 com controle de autorização prévia e fallback agy."""
+        from config import is_gemini_confirmation_required
+
+        # Verificação de Autorização Prévia (Configurável no Setup / .env / amb_project.json)
+        if is_gemini_confirmation_required():
+            print("\n" + "=" * 65)
+            print(f"🛡️  {Colors.BOLD}{Colors.YELLOW}[AUTORIZAÇÃO GEMINI NECESSÁRIA]{Colors.RESET}")
+            print(f"📦 Modelo Configurado: {Colors.CYAN}{self.model}{Colors.RESET}")
+            preview = prompt.strip().replace("\n", " ")[:160] + ("..." if len(prompt) > 160 else "")
+            print(f"💬 Prompt Preview: \"{preview}\"")
+            print("=" * 65)
+            try:
+                ans = input(f"{Colors.BOLD}❓ Deseja autorizar o envio desta requisição ao Gemini? [s/N]: {Colors.RESET}").strip().lower()
+                if ans not in ["s", "y", "sim", "yes"]:
+                    print(f"{Colors.YELLOW}🚫 Requisição ao Gemini não autorizada. Operação cancelada.{Colors.RESET}\n")
+                    raise ApiExecutionError("Chamada ao Gemini cancelada pelo usuário (autorização negada).")
+                print(f"{Colors.GREEN}✔ Requisição autorizada. Enviando para o Gemini...{Colors.RESET}\n")
+            except (EOFError, KeyboardInterrupt):
+                print(f"\n{Colors.YELLOW}🚫 Requisição ao Gemini cancelada.{Colors.RESET}\n")
+                raise ApiExecutionError("Chamada ao Gemini cancelada.")
+
         if self.api_key:
             try:
                 return self._generate_via_api(prompt, system_instruction)
@@ -163,6 +183,7 @@ class AntigravityClient:
         if cli_out:
             return cli_out
         return self._generate_via_api(prompt, system_instruction)
+
 
 
 

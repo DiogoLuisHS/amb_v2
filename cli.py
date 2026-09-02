@@ -95,6 +95,22 @@ def cmd_dashboard(args):
     start_dashboard(port=args.port)
 
 
+def cmd_config(args):
+    """Gerencia preferências e controles do AMB_V2."""
+    from config import set_gemini_confirmation, is_gemini_confirmation_required, Colors
+    if getattr(args, "gemini_confirm", None) is not None:
+        enable = args.gemini_confirm.lower() in ["on", "true", "1", "yes", "sim", "ativar"]
+        set_gemini_confirmation(enable)
+        status_msg = f"{Colors.GREEN}ATIVADA (Exige confirmação interativa antes de cada requisição ao Gemini){Colors.RESET}" if enable else f"{Colors.YELLOW}DESATIVADA (Chamadas ao Gemini automáticas){Colors.RESET}"
+        print(f"\n🛡️ Autorização prévia do Gemini: {status_msg}\n")
+    else:
+        status = is_gemini_confirmation_required()
+        status_msg = f"{Colors.GREEN}ATIVADA (Exige confirmação manual){Colors.RESET}" if status else f"{Colors.DIM}DESATIVADA (Chamadas automáticas){Colors.RESET}"
+        print(f"\n🛡️ Status da Autorização do Gemini: {status_msg}")
+        print(f"👉 Para alterar: amb config --gemini-confirm on (ou off)\n")
+
+
+
 # -------------------------------------------------------------
 # 3. AGENT & PERSONAS
 # -------------------------------------------------------------
@@ -386,6 +402,12 @@ def main():
     # 2. amb check
     p_check = subparsers.add_parser("check", aliases=["status"], help="Valida chaves e configurações do projeto ativo.")
     p_check.set_defaults(func=cmd_check)
+
+    # 2.1 amb config
+    p_cfg = subparsers.add_parser("config", aliases=["settings", "pref"], help="Configura preferências de IA, quotas e autorizações do AMB_V2.")
+    p_cfg.add_argument("--gemini-confirm", choices=["on", "off", "true", "false"], help="Ativa (on) ou desativa (off) a exigência de autorização manual a cada chamada ao Gemini.")
+    p_cfg.set_defaults(func=cmd_config)
+
 
     # 3. amb monitor
     p_mon = subparsers.add_parser("monitor", aliases=["watch", "sentinel"], help="Sentinela em tempo real (Jules + Render) com suporte a auto-resposta Gemini.")
