@@ -17,8 +17,10 @@ import os
 import sys
 import time
 import argparse
+import subprocess
 from pathlib import Path
 from typing import List, Optional
+
 
 # Bootstrap dinâmico de caminhos amb_v2
 _cur = os.path.dirname(os.path.abspath(__file__))
