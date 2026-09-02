@@ -72,9 +72,16 @@ class AntigravityClient:
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
-        # Lista de modelos para tentativa (modelo configurado primeiro, seguido de alternativas robustas)
+        # Lista de modelos oficiais verificados na API do Google
         models_to_try = [self.model]
-        for fallback_m in ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro"]:
+        for fallback_m in [
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.1-pro-preview",
+            "gemini-2.5-pro",
+            "gemini-flash-latest"
+        ]:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
@@ -124,7 +131,7 @@ class AntigravityClient:
                         msg = f"{msg} - {err_text}"
 
                     last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
-                    # Se for 503 (alta demanda temporária) ou 429, tenta o próximo modelo ou retry
+                    # Se for 503 (alta demanda temporária), 429 (rate limit) ou 404 (modelo indisponível/preview), tenta o próximo modelo
                     if e.code in [503, 429]:
                         import time
                         time.sleep(1.0)
@@ -136,6 +143,7 @@ class AntigravityClient:
                     break
 
         raise last_err or ApiExecutionError("Falha na geração de texto com os modelos Gemini disponíveis.")
+
 
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
