@@ -186,14 +186,16 @@ def approve_and_merge_pr(
                             p_res = subprocess.run(["git", "apply", "--whitespace=fix", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
                             if os.path.exists(p_part_path):
                                 os.remove(p_part_path)
-                            if p_res.returncode != 0:
-                                all_applied = False
-                        if all_applied:
-                            apply_res.returncode = 0
+                        patch_success = all_applied
+                        if not patch_success:
+                            log_error("GIT-SYNC", f"Falha ao aplicar patch via git apply:\n{apply_res.stderr}")
+                    else:
+                        patch_success = True
                     
-                    if apply_res.returncode == 0:
+                    if patch_success:
                         subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=True)
                         subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=True)
+
 
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
                         
