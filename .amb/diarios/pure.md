@@ -1,10 +1,9 @@
-### 📅 [2026-09-02] Refatoração: cli.py (Pure Architect DRY/SRP)
+### 📅 [2026-09-02] Refatoração: cli.py
 - **Alvo:** `cli.py`
-- **Ação SRP:** Eliminada a redundância gigantesca de declarações `cmd_*` e inicialização de argumentos que ainda estava duplicada dentro de `cli.py`, delegando a responsabilidade para a função `create_parser()` importada do submódulo `cli_modules/cli_parsers.py`.
-- **Melhoria DRY:** Centralizadas as rotas da CLI, deixando o `cli.py` com a responsabilidade apenas de carregar configurações globais, registrar o `sys.path` e chamar o parser. O arquivo foi drasticamente reduzido (de ~540 linhas para ~50 linhas).
-- **Status de QA:** 0 erros de sintaxe/tipagem (Ruff check all pass) e comandos CLI roteando corretamente.
+- **Ação SRP:** Extraídos os handlers dos comandos para `cli_modules/cli_handlers.py` e a lógica do parser para `cli_modules/cli_parsers.py`. O arquivo `cli.py` foi simplificado para ser apenas um ponto de entrada (roteador delegando execução).
+- **Melhoria DRY:** Removida a duplicação completa dos blocos argparse e functions `cmd_*`. Arquivo enxuto de mais de 500 para ~60 linhas.
+- **Status de QA:** 0 erros de sintaxe/tipagem e testes validados (`pytest test_cli.py` passando e cli `--help` funcionando sem regressão).
 
-# 🧹 Pure Architect Diary
 
 ### 📅 [2024-05-18] Refatoração: config/setup_project.py
 - **Alvo:** `config/setup_project.py`
