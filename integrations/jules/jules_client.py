@@ -94,9 +94,23 @@ class JulesClient:
         return res.get("sources", [])
 
     # 2. Sessions
-    def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: str = "main") -> Dict[str, Any]:
-        from config import get_repo_name
+    def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: Optional[str] = None) -> Dict[str, Any]:
+        from config import get_repo_name, find_repo_root
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
+        
+        # Auto-detecta branch ativa do repositório local se não especificada
+        if not base_branch or base_branch in ["develop", "main"]:
+            try:
+                import subprocess
+                root = find_repo_root()
+                b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=root, capture_output=True, text=True, check=False)
+                cur_b = b_proc.stdout.strip()
+                if cur_b:
+                    base_branch = cur_b
+            except Exception:
+                pass
+        base_branch = base_branch or "main"
+
         payload = {
             "prompt": prompt,
             "sourceContext": {
@@ -109,6 +123,7 @@ class JulesClient:
         if title:
             payload["title"] = title
         return self._request("POST", "sessions", data=payload)
+
 
     def get_session(self, session_id: str) -> Dict[str, Any]:
         path = session_id if session_id.startswith("sessions/") else f"sessions/{session_id}"

@@ -106,9 +106,11 @@ def cmd_agent(args):
             role=args.role,
             all_personas=getattr(args, "all", False),
             prompt_file=args.task if (args.task and os.path.exists(args.task)) else None,
-            max_cycles=getattr(args, "max_cycles", None)
+            max_cycles=getattr(args, "max_cycles", None),
+            branch=getattr(args, "branch", None)
         )
         return
+
 
     import local_agent_runner as runner
     personas_dir = runner.get_personas_directory(args.personas_dir)
@@ -412,8 +414,10 @@ def main():
     p_agent.add_argument("--dispatch-jules", "-j", action="store_true", help="Despacha para o Google Jules na nuvem.")
     p_agent.add_argument("--loop", "-c", "--continuous", action="store_true", help="Executa o ciclo contínuo e autônomo de personas.")
     p_agent.add_argument("--max-cycles", type=int, help="Limite de ciclos no modo loop (se omitido, roda continuamente).")
+    p_agent.add_argument("--branch", "-b", help="Branch de início para o Jules (se omitido, auto-detecta a branch ativa do Git).")
     p_agent.add_argument("--personas-dir", help="Pasta customizada de personas.")
     p_agent.set_defaults(func=cmd_agent)
+
 
     # 7. amb jules
     p_jules = subparsers.add_parser("jules", help="Comandos de integração com o Google Jules.")

@@ -163,13 +163,25 @@ def run_autonomous_loop(
     modules: Optional[List[str]] = None,
     max_cycles: Optional[int] = None,
     delay_between_cycles: int = 8,
-    branch: str = "develop",
+    branch: Optional[str] = None,
     no_auto_merge: bool = False
 ):
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para uma ou todas as personas."""
     repo_name = get_repo_name()
+    repo_root = find_repo_root()
     client = JulesClient()
     source_name = f"sources/github/{repo_name}"
+
+    # Auto-detecta branch atual do Git local se não fornecida explicitamente
+    if not branch or branch in ["develop", "main"]:
+        try:
+            b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=repo_root, capture_output=True, text=True, check=False)
+            cur_b = b_proc.stdout.strip()
+            if cur_b:
+                branch = cur_b
+        except Exception:
+            pass
+    branch = branch or "main"
 
     personas_dir = get_personas_directory()
     discovered = discover_personas(personas_dir)
@@ -191,6 +203,7 @@ def run_autonomous_loop(
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
     print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}")
     print("=" * 75 + "\n")
+
 
     completed_cycles = 0
 
