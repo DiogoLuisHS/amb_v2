@@ -209,53 +209,6 @@ def get_repo_name() -> str:
     )
 
 
-def is_gemini_confirmation_required() -> bool:
-    """Verifica se a confirmação manual antes de cada chamada ao Gemini está ativada (padrão: False)."""
-    val = get_env("REQUIRE_GEMINI_CONFIRMATION") or get_env("GEMINI_REQUIRE_CONFIRMATION")
-    if val is not None:
-        return str(val).lower() in ["true", "1", "yes", "sim", "on"]
-    p_meta = load_project_json()
-    if "require_gemini_confirmation" in p_meta:
-        return bool(p_meta["require_gemini_confirmation"])
-    return False
-
-
-def set_gemini_confirmation(enabled: bool) -> None:
-    """Ativa ou desativa a exigência de confirmação prévia a cada chamada ao Gemini no .env e amb_project.json."""
-    root = find_repo_root()
-    env_path = os.path.join(root, ".env")
-    
-    # 1. Atualiza .env
-    lines = []
-    found = False
-    if os.path.exists(env_path):
-        with open(env_path, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                if line.strip().startswith("REQUIRE_GEMINI_CONFIRMATION=") or line.strip().startswith("GEMINI_REQUIRE_CONFIRMATION="):
-                    lines.append(f"REQUIRE_GEMINI_CONFIRMATION={'true' if enabled else 'false'}\n")
-                    found = True
-                else:
-                    lines.append(line)
-    if not found:
-        lines.append(f"\n# Controle de Cota e Autorização do Gemini\nREQUIRE_GEMINI_CONFIRMATION={'true' if enabled else 'false'}\n")
-    
-    with open(env_path, "w", encoding="utf-8") as f:
-        f.writelines(lines)
-    os.environ["REQUIRE_GEMINI_CONFIRMATION"] = "true" if enabled else "false"
-
-    # 2. Atualiza amb_project.json
-    p_json_path = os.path.join(root, ".amb", "amb_project.json")
-    if os.path.exists(p_json_path):
-        try:
-            with open(p_json_path, "r", encoding="utf-8") as pf:
-                data = json.load(pf)
-            data["require_gemini_confirmation"] = enabled
-            with open(p_json_path, "w", encoding="utf-8") as pf:
-                json.dump(data, pf, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
-
-
 def main():
     """Valida e exibe o checklist visual de configurações do repositório ativo."""
     print(f"{Colors.BOLD}{Colors.CYAN}=== AMB_V2 - VALIDAÇÃO DE AMBIENTE E CONFIGURAÇÕES ==={Colors.RESET}\n")
@@ -290,13 +243,8 @@ def main():
         else:
             print(f"  ⚠️  {desc:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
 
-    gemini_confirm = is_gemini_confirmation_required()
-    status_str = f"{Colors.GREEN}ATIVADA (Exige confirmação manual antes de cada chamada){Colors.RESET}" if gemini_confirm else f"{Colors.DIM}DESATIVADA (Chamadas automáticas){Colors.RESET}"
-    print(f"\n  🛡️  Autorização Prévia do Gemini: {status_str}")
-
     print(f"\n{Colors.DIM}Para configurar ou auto-detectar o projeto, execute: amb setup (ou python amb_v2/config/setup_project.py){Colors.RESET}")
 
 
 if __name__ == "__main__":
     main()
-

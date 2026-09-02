@@ -1,0 +1,13 @@
+{
+  "repository": "DiogoLuisHS/amb_v2",
+  "stitch_project_id": "",
+  "render_service_id": "",
+  "stack": {
+    "type": "python",
+    "frameworks": [],
+    "package_manager": "pip/poetry",
+    "has_render_yaml": false,
+    "rules_dir": null
+  },
+  "technical_summary": "Projeto python com stack padrão utilizando pip/poetry."
+}

@@ -19,10 +19,12 @@ import os
 import sys
 import re
 import json
+import time
 import argparse
 import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any
+
 
 # Bootstrap dinâmico de caminhos amb_v2
 _cur = os.path.dirname(os.path.abspath(__file__))
@@ -162,10 +164,37 @@ def approve_and_merge_pr(
                     )
                     if os.path.exists(patch_path):
                         os.remove(patch_path)
+
+                    # Fallback robusto: se falhar por arquivos vazios ou novos no patch global, aplica arquivo por arquivo
+                    if apply_res.returncode != 0:
+                        parts = diff.split("diff --git ")
+                        all_applied = True
+                        for p_idx, p in enumerate(parts[1:], 1):
+                            header = p.split("\n")[0]
+                            f_rel = header.split(" b/")[-1].strip()
+                            single_p = "diff --git " + p
+                            if "@@" not in single_p and "new file mode" in single_p:
+                                t_path = os.path.join(repo_root, f_rel)
+                                os.makedirs(os.path.dirname(t_path), exist_ok=True)
+                                if not os.path.exists(t_path):
+                                    with open(t_path, "w", encoding="utf-8") as tf:
+                                        pass
+                                continue
+                            p_part_path = os.path.join(repo_root, f".tmp_part_{p_idx}.patch")
+                            with open(p_part_path, "w", encoding="utf-8") as ppf:
+                                ppf.write(single_p)
+                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
+                            if os.path.exists(p_part_path):
+                                os.remove(p_part_path)
+                            if p_res.returncode != 0:
+                                all_applied = False
+                        if all_applied:
+                            apply_res.returncode = 0
                     
                     if apply_res.returncode == 0:
                         subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=True)
                         subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=True)
+
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
                         
                         # QA Local adaptativo à stack
