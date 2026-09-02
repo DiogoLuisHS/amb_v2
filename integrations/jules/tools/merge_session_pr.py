@@ -117,17 +117,24 @@ def approve_and_merge_pr(
 
     resolved_pr = pr_number
 
-    # 1. Identifica o PR
-    if not resolved_pr and session_id:
-        log("GIT-SYNC", f"Buscando PR vinculado à sessão {session_id}...", Colors.CYAN)
-        resolved_pr = detect_pr_from_session(session_id)
+    # 1. Identifica o PR com retry para permitir propagação no GitHub
+    for attempt in range(3):
+        if not resolved_pr and session_id:
+            log("GIT-SYNC", f"Buscando PR vinculado à sessão {session_id} (tentativa {attempt+1}/3)...", Colors.CYAN)
+            resolved_pr = detect_pr_from_session(session_id)
 
-    if not resolved_pr and (auto_latest or not session_id):
-        log("GIT-SYNC", f"Buscando último PR aberto no repositório {repo_name}...", Colors.CYAN)
-        latest = get_latest_open_pr(repo_name)
-        if latest:
-            resolved_pr = latest.get("number")
-            log("GIT-SYNC", f"PR detectado: #{resolved_pr} - {latest.get('title')}", Colors.GREEN)
+        if not resolved_pr and (auto_latest or not session_id):
+            log("GIT-SYNC", f"Buscando último PR aberto no repositório {repo_name} (tentativa {attempt+1}/3)...", Colors.CYAN)
+            latest = get_latest_open_pr(repo_name)
+            if latest:
+                resolved_pr = latest.get("number")
+                log("GIT-SYNC", f"PR detectado: #{resolved_pr} - {latest.get('title')}", Colors.GREEN)
+
+        if resolved_pr:
+            break
+        if attempt < 2:
+            time.sleep(5)
+
 
     if not resolved_pr and session_id:
         log("GIT-SYNC", "Nenhum PR aberto no GitHub. Verificando patches diretos no session outputs...", Colors.CYAN)
@@ -161,35 +168,32 @@ def approve_and_merge_pr(
                         subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=True)
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
                         
-                        # QA Local
+                        # QA Local adaptativo à stack
                         log("QA-VALIDATION", "Executando verificação de integridade pós-patch...", Colors.CYAN)
-                        p_type = subprocess.run(
-                            ["npm", "run", "typecheck"],
-                            cwd=repo_root,
-                            capture_output=True,
-                            text=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            shell=True
-                        )
-                        if p_type.returncode != 0:
-                            log_error("QA", "Falha de typecheck pós-patch!", hint="Erros detectados no TypeScript.")
-                            return False
-                        print(f"{Colors.GREEN}✔ Typecheck: 0 erros.{Colors.RESET}")
+                        from config import load_project_json
+                        proj = load_project_json()
+                        qa_cfg = proj.get("qa", {})
+                        if not qa_cfg:
+                            if os.path.exists(os.path.join(repo_root, "package.json")):
+                                qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
+                            elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")) or os.path.exists(os.path.join(repo_root, "setup.py")):
+                                qa_cfg = {"build": "python -m py_compile cli.py"}
+                            elif os.path.exists(os.path.join(repo_root, "go.mod")):
+                                qa_cfg = {"build": "go build ./..."}
+                            else:
+                                qa_cfg = {}
 
-                        p_build = subprocess.run(
-                            ["npm", "run", "build"],
-                            cwd=repo_root,
-                            capture_output=True,
-                            text=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            shell=True
-                        )
-                        if p_build.returncode != 0:
-                            log_error("QA", "Falha de build pós-patch!", hint="Erros detectados no bundle de produção.")
+                        qa_passed = True
+                        for step_key, step_cmd in qa_cfg.items():
+                            p_step = subprocess.run(step_cmd.split(), cwd=repo_root, capture_output=True, text=True, shell=True)
+                            if p_step.returncode != 0:
+                                log_error("QA", f"Falha no {step_key} pós-patch: {p_step.stderr.strip() or p_step.stdout.strip()}")
+                                qa_passed = False
+                                break
+                            print(f"{Colors.GREEN}✔ {step_key}: concluído com sucesso!{Colors.RESET}")
+
+                        if not qa_passed:
                             return False
-                        print(f"{Colors.GREEN}✔ Build de produção concluído com sucesso!{Colors.RESET}")
 
                         # Push to GitHub
                         log("GIT-PUSH", f"Enviando alterações validadas para origin/{target_branch}...", Colors.CYAN)
@@ -206,6 +210,7 @@ def approve_and_merge_pr(
                         return True
         except Exception as e:
             log_error("GIT-SYNC", f"Falha ao processar patch da sessão: {e}")
+
 
     if not resolved_pr:
         log("GIT-SYNC", "Nenhum Pull Request aberto pela sessão (sessão diagnóstica/informativa sem alterações de código).", Colors.DIM)
