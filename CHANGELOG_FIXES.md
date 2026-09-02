@@ -84,6 +84,22 @@ Configuração manual via `.amb/amb_project.json`:
 4. `advise_and_reply()` impede reenvios no modo `auto_approve` e exibe aviso de proteção no modo interativo.
 5. `monitor_and_assist_session()` e `jules_watcher.py` não disparam respostas nem alertas falsos se a bola estiver com o agente Jules.
 
+### Bug #11 — QualityGatekeeper no Pipeline hardcoded para `npm`
+**Arquivo:** `pipeline/pipeline.py`
+**Causa:** `QualityGatekeeper.run_qa` executava `npm run typecheck` fixo mesmo em projetos Python ou Go, quebrando o término do pipeline no Gatekeeper 2.
+**Fix:** Adicionada auto-detecção de stack (Node/Python/Go) e suporte a `.amb/amb_project.json`.
+
+### Bug #12 — Branch `develop` inexistente causando `FAILED` no clone do Jules
+**Arquivos:** `pipeline/pipeline.py`, `agents/autonomous_loop.py`, `integrations/jules/jules_client.py`, `cli.py`
+**Causa:** Branch padrão estava hardcoded em `"develop"`. Repositórios com branch principal `main` falhavam no clone do Jules com `Remote branch develop not found in upstream origin`.
+**Fix:** Auto-detecção dinâmica da branch ativa do repositório local (`git branch --show-current`) e exposição de `--branch` no `amb agent`.
+
+### Bug #13 — Payload aninhado do Jules (`agentMessaged.agentMessage`) e sobrescrita por `progressUpdated`
+**Arquivo:** `agents/auto_reply.py`
+**Causa:** A API do Jules retorna mensagens aninhadas (`agentMessaged: { agentMessage: "..." }`) que não possuíam o campo `.get("text")`. O parser falhava em capturar a mensagem e acabava caindo no log do `progressUpdated` anterior.
+**Fix:** Implementado `extract_activity_text()` polimórfico cobrindo todas as variações de payload do Jules e isolamento dos eventos de progresso para que nunca sobrescrevam mensagens ativas.
+
+
 ---
 
 
