@@ -80,7 +80,7 @@ class AntigravityClient:
 
         last_err = None
         for current_m in models_to_try:
-            for attempt in range(2):
+            for attempt in range(3):
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_m}:generateContent?key={self.api_key}"
                 headers = {"Content-Type": "application/json"}
 
@@ -105,7 +105,7 @@ class AntigravityClient:
                 req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
 
                 try:
-                    with urllib.request.urlopen(req, timeout=30) as resp:
+                    with urllib.request.urlopen(req, timeout=35) as resp:
                         resp_data = json.loads(resp.read().decode("utf-8"))
                         candidates = resp_data.get("candidates", [])
                         if candidates:
@@ -124,10 +124,18 @@ class AntigravityClient:
                         msg = f"{msg} - {err_text}"
 
                     last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
-                    # Se for 503 (alta demanda temporária) ou 429 (rate limit por minuto), aguarda brevemente para tentar retry
-                    if e.code in [503, 429] and attempt == 0:
+
+                    # Se for 429 (Rate Limit por minuto) ou 503 (alta demanda)
+                    if e.code in [429, 503] and attempt < 2:
                         import time
-                        time.sleep(2.0)
+                        import re
+                        retry_match = re.search(r"Please retry in (\d+(\.\d+)?)s", err_text, re.IGNORECASE)
+                        if retry_match:
+                            wait_sec = min(float(retry_match.group(1)) + 1.0, 35.0)
+                        else:
+                            wait_sec = 3.0 * (attempt + 1)
+                        log("ANTIGRAVITY", f"Limite temporário de requisições ({current_m}). Aguardando {int(wait_sec)}s para liberação da cota...", Colors.YELLOW)
+                        time.sleep(wait_sec)
                         continue
                     else:
                         break
@@ -136,6 +144,7 @@ class AntigravityClient:
                     break
 
         raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini 3.7/3.6.")
+
 
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
