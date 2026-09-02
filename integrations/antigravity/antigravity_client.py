@@ -40,9 +40,10 @@ from config import Colors, log, log_error, get_env, require_env, ApiExecutionErr
 class AntigravityClient:
     """Client cognitivo que usa a CLI oficial `agy` ou a API direta do Gemini."""
 
-    def __init__(self, model: str = "gemini-2.5-flash"):
-        self.model = model
+    def __init__(self, model: Optional[str] = None):
+        self.model = model or get_env("GEMINI_MODEL") or "gemini-3.7-flash"
         self.api_key = get_env("GEMINI_API_KEY")
+
 
     def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
         """Tenta inferência via CLI agy se disponível no PATH."""
@@ -64,61 +65,74 @@ class AntigravityClient:
         return None
 
     def _generate_via_api(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Executa chamada direta à REST API do Google Gemini."""
+        """Executa chamada direta à REST API do Google Gemini com fallback automático de modelos."""
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-        headers = {"Content-Type": "application/json"}
+        models_to_try = [self.model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        # Remove duplicados preservando ordem
+        models_to_try = list(dict.fromkeys([m for m in models_to_try if m]))
 
-        payload = {
-            "contents": [
-                {
-                    "parts": [{"text": prompt}]
+        last_error = None
+        for mod in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={self.api_key}"
+            headers = {"Content-Type": "application/json"}
+
+            payload = {
+                "contents": [
+                    {
+                        "parts": [{"text": prompt}]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "maxOutputTokens": 4096
                 }
-            ],
-            "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 4096
-            }
-        }
-
-        if system_instruction:
-            payload["systemInstruction"] = {
-                "parts": [{"text": system_instruction}]
             }
 
-        data_bytes = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+            if system_instruction:
+                payload["systemInstruction"] = {
+                    "parts": [{"text": system_instruction}]
+                }
 
-        try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
-                resp_data = json.loads(resp.read().decode("utf-8"))
-                candidates = resp_data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "").strip()
-                raise ApiExecutionError("Resposta vazia retornada pelo modelo Gemini.")
-        except urllib.error.HTTPError as e:
-            err_text = e.read().decode("utf-8")
-            msg = f"HTTP {e.code}: {e.reason}"
+            data_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+
             try:
-                err_j = json.loads(err_text)
-                if "error" in err_j:
-                    msg = f"{msg} - {err_j['error'].get('message', err_text)}"
-            except Exception:
-                msg = f"{msg} - {err_text}"
-            raise ApiExecutionError(f"Erro na chamada do Gemini/Antigravity: {msg}", hint="Verifique se sua GEMINI_API_KEY é válida.")
-        except Exception as e:
-            raise ApiExecutionError(f"Falha de conexão com a API do Gemini: {e}")
+                with urllib.request.urlopen(req, timeout=45) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+                    candidates = resp_data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+            except urllib.error.HTTPError as e:
+                err_text = e.read().decode("utf-8")
+                msg = f"HTTP {e.code}: {e.reason}"
+                try:
+                    err_j = json.loads(err_text)
+                    if "error" in err_j:
+                        msg = f"{msg} - {err_j['error'].get('message', err_text)}"
+                except Exception:
+                    msg = f"{msg} - {err_text}"
+                last_error = msg
+                continue
+            except Exception as e:
+                last_error = str(e)
+                continue
+
+        raise ApiExecutionError(f"Erro na chamada do Gemini/Antigravity: {last_error}", hint="Verifique se sua GEMINI_API_KEY é válida.")
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Gera texto utilizando CLI agy ou fallback para API REST oficial."""
+        """Gera texto utilizando CLI agy ou fallback para API REST oficial com fallback gracioso."""
         cli_out = self._generate_via_agy_cli(prompt, system_instruction)
         if cli_out:
             return cli_out
-        return self._generate_via_api(prompt, system_instruction)
+        try:
+            return self._generate_via_api(prompt, system_instruction)
+        except Exception as e:
+            log("ANTIGRAVITY", f"Aviso na síntese via LLM ({e}). Utilizando especificação original estruturada.", Colors.YELLOW)
+            return prompt
 
     def synthesize_prompt(self, raw_idea: str, role: str = "general") -> str:
         """Sintetiza um prompt formal para execução autônoma."""
