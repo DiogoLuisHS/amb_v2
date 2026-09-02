@@ -72,14 +72,13 @@ class AntigravityClient:
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
-        # Lista de modelos oficiais verificados na API do Google
+        # Lista de modelos oficiais Flash com suporte a Free Tier e alta velocidade
         models_to_try = [self.model]
         for fallback_m in [
             "gemini-3.7-flash",
             "gemini-3.6-flash",
             "gemini-3.5-flash",
-            "gemini-3.1-pro-preview",
-            "gemini-2.5-pro",
+            "gemini-2.5-flash",
             "gemini-flash-latest"
         ]:
             if fallback_m not in models_to_try:
@@ -131,11 +130,12 @@ class AntigravityClient:
                         msg = f"{msg} - {err_text}"
 
                     last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
-                    # Se for 503 (alta demanda temporária), 429 (rate limit) ou 404 (modelo indisponível/preview), tenta o próximo modelo
-                    if e.code in [503, 429]:
+                    # Se for 503 (alta demanda temporária), aguarda 1s e tenta retry
+                    if e.code == 503:
                         import time
                         time.sleep(1.0)
                         continue
+                    # Se for 429 ou 404 (cota zerada ou modelo indisponível), pula direto para o próximo modelo da lista
                     else:
                         break
                 except Exception as e:
@@ -143,6 +143,7 @@ class AntigravityClient:
                     break
 
         raise last_err or ApiExecutionError("Falha na geração de texto com os modelos Gemini disponíveis.")
+
 
 
 
