@@ -154,7 +154,7 @@ def approve_and_merge_pr(
                     with open(patch_path, "w", encoding="utf-8") as pf:
                         pf.write(diff)
                     apply_res = subprocess.run(
-                        ["git", "apply", "--whitespace=fix", patch_path],
+                        ["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", patch_path],
                         cwd=repo_root,
                         capture_output=True,
                         text=True,
@@ -183,9 +183,12 @@ def approve_and_merge_pr(
                             p_part_path = os.path.join(repo_root, f".tmp_part_{p_idx}.patch")
                             with open(p_part_path, "w", encoding="utf-8") as ppf:
                                 ppf.write(single_p)
-                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
+                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
                             if os.path.exists(p_part_path):
                                 os.remove(p_part_path)
+                            if p_res.returncode != 0:
+                                all_applied = False
+
                         patch_success = all_applied
                         if not patch_success:
                             log_error("GIT-SYNC", f"Falha ao aplicar patch via git apply:\n{apply_res.stderr}")
