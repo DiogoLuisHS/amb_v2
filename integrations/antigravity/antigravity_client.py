@@ -72,15 +72,9 @@ class AntigravityClient:
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
-        # Lista de modelos oficiais Flash com suporte a Free Tier e alta velocidade
+        # Apenas modelos modernos de última geração (3.7 e 3.6)
         models_to_try = [self.model]
-        for fallback_m in [
-            "gemini-3.7-flash",
-            "gemini-3.6-flash",
-            "gemini-3.5-flash",
-            "gemini-2.5-flash",
-            "gemini-flash-latest"
-        ]:
+        for fallback_m in ["gemini-3.7-flash", "gemini-3.6-flash"]:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
@@ -135,24 +129,23 @@ class AntigravityClient:
                         import time
                         time.sleep(1.0)
                         continue
-                    # Se for 429 ou 404 (cota zerada ou modelo indisponível), pula direto para o próximo modelo da lista
+                    # Se for 429 ou 404, pula direto para o próximo modelo moderno
                     else:
                         break
                 except Exception as e:
                     last_err = ApiExecutionError(f"Falha de conexão com a API do Gemini ({current_m}): {e}")
                     break
 
-        raise last_err or ApiExecutionError("Falha na geração de texto com os modelos Gemini disponíveis.")
-
-
+        raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini 3.7/3.6.")
 
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Gera texto utilizando API REST direta do Gemini (alta velocidade) com fallback para CLI agy."""
+        """Gera texto utilizando Gemini 3.7/3.6 via REST e fallback final para o CLI Antigravity (agy)."""
         if self.api_key:
             try:
                 return self._generate_via_api(prompt, system_instruction)
             except Exception as e:
+                log("ANTIGRAVITY", f"Chamada REST indisponível ({e}). Tentando fallback para CLI agy...", Colors.YELLOW)
                 cli_out = self._generate_via_agy_cli(prompt, system_instruction)
                 if cli_out:
                     return cli_out
@@ -162,6 +155,7 @@ class AntigravityClient:
         if cli_out:
             return cli_out
         return self._generate_via_api(prompt, system_instruction)
+
 
 
     def synthesize_prompt(self, raw_idea: str, role: str = "general") -> str:
