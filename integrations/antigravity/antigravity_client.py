@@ -124,12 +124,11 @@ class AntigravityClient:
                         msg = f"{msg} - {err_text}"
 
                     last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
-                    # Se for 503 (alta demanda temporária), aguarda 1s e tenta retry
-                    if e.code == 503:
+                    # Se for 503 (alta demanda temporária) ou 429 (rate limit por minuto), aguarda brevemente para tentar retry
+                    if e.code in [503, 429] and attempt == 0:
                         import time
-                        time.sleep(1.0)
+                        time.sleep(2.0)
                         continue
-                    # Se for 429 ou 404, pula direto para o próximo modelo moderno
                     else:
                         break
                 except Exception as e:
@@ -155,6 +154,7 @@ class AntigravityClient:
         if cli_out:
             return cli_out
         return self._generate_via_api(prompt, system_instruction)
+
 
 
 
