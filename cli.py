@@ -10,10 +10,13 @@ está aberto, configura os paths do Python e invoca o parser de CLI.
 import os
 import sys
 
-# Injeta todos os submódulos de amb_v2 no sys.path
+# Injeta a raiz do AMB_V2 e todos os submódulos no sys.path
 _AMB_ROOT = os.path.abspath(os.path.dirname(__file__))
+if _AMB_ROOT not in sys.path:
+    sys.path.insert(0, _AMB_ROOT)
+
 for _sub in [
-    "config", "agents", "architecture", "pipeline", "dashboard", "dashboard/watchers",
+    "config", "config/setup_modules", "agents", "architecture", "pipeline", "dashboard", "dashboard/watchers",
     "integrations/jules", "integrations/jules/tools",
     "integrations/stitch", "integrations/stitch/tools",
     "integrations/antigravity", "integrations/antigravity/tools",
@@ -23,9 +26,9 @@ for _sub in [
     _p = os.path.normpath(os.path.join(_AMB_ROOT, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
+from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError  # noqa: E402
+from cli_modules.cli_parsers import create_parser  # noqa: E402
 
-from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError # noqa: E402
-from cli_modules.cli_parsers import create_parser # noqa: E402
 
 def banner():
     print(f"\n{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}")
