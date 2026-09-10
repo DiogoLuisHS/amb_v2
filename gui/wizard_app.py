@@ -8,7 +8,10 @@ import sys
 # Adiciona o diretório raiz ao sys.path para conseguir importar os parsers
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cli_modules.cli_parsers import create_parser
-from config.config import find_repo_root, get_repo_name
+try:
+    from config import find_repo_root, get_repo_name
+except ImportError:
+    from config.config import find_repo_root, get_repo_name
 
 class DynamicWizard(tk.Tk):
     def __init__(self):
