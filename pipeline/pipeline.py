@@ -111,6 +111,7 @@ class PipelineOrchestrator:
     @classmethod
     def run(
         cls,
+        prompt_file: str = None,
         stitch_prompt_file: str = None,
         jules_prompt_file: str = None,
         auto_approve: bool = False,
@@ -137,18 +138,6 @@ class PipelineOrchestrator:
                 pass
         starting_branch = starting_branch or "main"
 
-        file_label = ""
-        if stitch_prompt_file:
-            file_label += os.path.basename(stitch_prompt_file) + " "
-        if jules_prompt_file:
-            file_label += os.path.basename(jules_prompt_file)
-
-        print("\n" + "=" * 75)
-        print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE UNIFICADO AMB_V2: {file_label}{Colors.RESET}")
-        print(f"📁 Repositório Alvo: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {starting_branch})")
-        print("=" * 75)
-
-
         # -------------------------------------------------------------
         # RESUME SESSION (Se solicitado)
         # -------------------------------------------------------------
@@ -158,19 +147,43 @@ class PipelineOrchestrator:
             return
 
         # -------------------------------------------------------------
-        # ETAPA 1: LEITURA DOS ARQUIVOS
+        # ETAPA 1: LEITURA DOS ARQUIVOS DE PROMPT
         # -------------------------------------------------------------
         log("ETAPA 1/6", f"📄 Lendo arquivos de prompt...", Colors.HEADER)
         
         stitch_prompt = ""
+        jules_prompt = ""
+        file_label = ""
+
+        # Arquivos dedicados (--stitch-prompt / --jules-prompt)
         if stitch_prompt_file and os.path.exists(stitch_prompt_file):
             with open(stitch_prompt_file, "r", encoding="utf-8", errors="replace") as f:
                 stitch_prompt = f.read().strip()
-                
-        jules_prompt = ""
+            file_label += os.path.basename(stitch_prompt_file) + " "
+
         if jules_prompt_file and os.path.exists(jules_prompt_file):
             with open(jules_prompt_file, "r", encoding="utf-8", errors="replace") as f:
                 jules_prompt = f.read().strip()
+            file_label += os.path.basename(jules_prompt_file)
+
+        # Arquivo unificado (prompt_file posicional ou legado)
+        if prompt_file and os.path.exists(prompt_file):
+            if not file_label:
+                file_label = os.path.basename(prompt_file)
+            with open(prompt_file, "r", encoding="utf-8", errors="replace") as f:
+                raw_content = f.read().strip()
+            p_stitch, p_jules = cls._parse_single_prompt(raw_content)
+            if not stitch_prompt:
+                stitch_prompt = p_stitch
+            if not jules_prompt:
+                jules_prompt = p_jules
+
+        file_label = file_label.strip() or "Tarefa Não Identificada"
+
+        print("\n" + "=" * 75)
+        print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE UNIFICADO AMB_V2: {file_label}{Colors.RESET}")
+        print(f"📁 Repositório Alvo: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {starting_branch})")
+        print("=" * 75)
 
         log("PARSER", f"Prompt Visual: {len(stitch_prompt)} chars | Prompt Dev: {len(jules_prompt)} chars", Colors.DIM)
 
@@ -266,55 +279,61 @@ class PipelineOrchestrator:
                 screen_title=screen_title
             )
 
-        # 2. Leitura das regras do repositório
+        # 2. Leitura e extração segura e limpa das regras do repositório
         rules_dir = os.path.join(repo_root, ".antigravity", "rules")
         if not os.path.exists(rules_dir):
             rules_dir = os.path.join(repo_root, ".gemini", "rules")
 
-        rules_summary = ""
-        if os.path.exists(rules_dir):
-            for rf in sorted(os.listdir(rules_dir)):
-                if rf.endswith(".md"):
-                    try:
-                        with open(os.path.join(rules_dir, rf), "r", encoding="utf-8", errors="replace") as f:
-                            rules_summary += f"\n--- [{rf}] ---\n" + f.read()[:600]
-                    except Exception:
-                        pass
+        rules_summary = cls._extract_clean_rules(rules_dir)
 
         # 3. Montagem do Prompt Executivo Consolidado
-        # GARANTIA CRÍTICA: O jules_prompt do desenvolvedor é preservado 100% NA ÍNTEGRA.
+        # GARANTIA CRÍTICA: O jules_prompt e o stitch_prompt são preservados 100% integrais
         prompt_sections = [
-            "# 🚀 ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE (DESIGN-TO-DEPLOY)",
+            "# 🚀 ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE FULLSTACK (DESIGN-TO-DEPLOY)",
             f"**Repositório**: `{repo_name}`",
             f"**Branch de Trabalho**: `{starting_branch}`",
             f"**Arquivo de Especificação**: `{file_label.strip()}`",
             "",
             "---",
             "",
-            "## 🎯 1. REQUISITOS DE ENGENHARIA & IMPLEMENTAÇÃO (INTEGRAL)",
+            "## 🎯 1. REQUISITOS DE ENGENHARIA & BACKEND (INTEGRAL)",
             jules_prompt if jules_prompt else "Implementar funcionalidade conforme padrões do repositório.",
             "",
         ]
 
-        if not skip_stitch and (current_screen_id or stitch_summary or screenshot_url):
+        if not skip_stitch and (current_screen_id or stitch_summary or screenshot_url or stitch_prompt):
             meta_items = []
             if current_screen_id:
-                meta_items.append(f"- **Screen ID**: `{current_screen_id}`")
+                meta_items.append(f"- **Screen ID (Stitch)**: `{current_screen_id}`")
             if screen_title:
                 meta_items.append(f"- **Título da Tela**: {screen_title}")
             if screenshot_url:
-                meta_items.append(f"- **Screenshot de Referência**: {screenshot_url}")
+                meta_items.append(f"- **Screenshot de Referência Visual**: {screenshot_url}")
 
-            prompt_sections.extend([
+            stitch_section_parts = [
                 "---",
                 "",
-                "## 🎨 2. CONSOLIDAÇÃO VISUAL DO GOOGLE STITCH (UI & DESIGN)",
-                "\n".join(meta_items) if meta_items else "",
+                "## 🎨 2. ESPECIFICAÇÃO DE INTERFACE, UI & FRONTEND (STITCH SPEC)",
+                "> ⚠️ **DIRETRIZ FULLSTACK OBRIGATÓRIA PARA O PLANO DO JULES**:",
+                "> Você DEVE planejar e implementar TANTO a camada de backend/dados (Seção 1) QUANTO os componentes de interface no frontend descritos nesta seção.",
+                "> Crie ou atualize todos os arquivos de componentes de UI (páginas, abas, modais, formulários, rotas frontend) necessários para refletir fielmente o design.",
                 "",
-                "### Resumo Arquitetural da UI / Componentes:",
-                stitch_summary if stitch_summary else (stitch_prompt if stitch_prompt else "Seguir design system do projeto."),
-                "",
-            ])
+            ]
+
+            if meta_items:
+                stitch_section_parts.append("### Metadados do Mockup Stitch:\n" + "\n".join(meta_items) + "\n")
+
+            if stitch_summary:
+                stitch_section_parts.append(
+                    "### 🏛️ Arquitetura Visual Sintetizada (Layout & Componentes):\n" + stitch_summary.strip() + "\n"
+                )
+
+            if stitch_prompt:
+                stitch_section_parts.append(
+                    "### 📐 Especificação Detalhada da UI & Wireframe (Integral):\n" + stitch_prompt.strip() + "\n"
+                )
+
+            prompt_sections.extend(stitch_section_parts)
 
         prompt_sections.extend([
             "---",
@@ -323,6 +342,7 @@ class PipelineOrchestrator:
             "- **Separação Estrita de Responsabilidades (SRP)**: Cada módulo, serviço e componente deve possuir responsabilidade única.",
             "- **Tipagem Estrita**: TypeScript rigoroso, interfaces explícitas, 0 `any`.",
             "- **Integridade Local**: Todo o código implementado deve passar no typecheck e no build sem erros.",
+            "",
             rules_summary if rules_summary else "",
         ])
 
@@ -331,6 +351,8 @@ class PipelineOrchestrator:
         log("PIPELINE", f"Prompt consolidado para o Jules gerado com sucesso!", Colors.GREEN)
         print(f"  📊 {Colors.BOLD}Estatísticas do Prompt Consolidado:{Colors.RESET}")
         print(f"     • Prompt de Engenharia (Jules): {len(jules_prompt)} caracteres (100% preservado)")
+        if stitch_prompt:
+            print(f"     • Prompt Visual (Stitch): {len(stitch_prompt)} caracteres (100% preservado)")
         if stitch_summary:
             print(f"     • Resumo Arquitetural do Stitch: {len(stitch_summary)} caracteres (ultra-denso)")
         print(f"     • Prompt Final para o Jules: {len(executive_prompt)} caracteres (~{len(executive_prompt.split())} palavras)\n")
@@ -379,6 +401,84 @@ class PipelineOrchestrator:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
             QualityGatekeeper.run_qa(repo_root)
 
+    @staticmethod
+    def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
+        """Extrai seção visual e seção de engenharia de um único arquivo markdown se presentes."""
+        stitch_prompt = ""
+        jules_prompt = ""
+
+        # Divide por seções estruturadas se presentes
+        parts = re.split(r"(?i)#+\s*(?:1\.\s*)?(?:🎨\s*)?especificação\s+visual", markdown_text)
+        if len(parts) > 1:
+            sub = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", parts[1])
+            stitch_prompt = sub[0].strip()
+            if len(sub) > 1:
+                jules_prompt = sub[1].strip()
+        else:
+            parts_jules = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", markdown_text)
+            if len(parts_jules) > 1:
+                stitch_prompt = parts_jules[0].strip()
+                jules_prompt = parts_jules[1].strip()
+            else:
+                stitch_prompt = markdown_text.strip()
+                jules_prompt = markdown_text.strip()
+
+        return stitch_prompt, jules_prompt
+
+    @classmethod
+    def _extract_clean_rules(cls, rules_dir: str, max_chars_per_file: int = 1500) -> str:
+        """
+        Lê e extrai regras do repositório garantindo:
+        1. Formatação Markdown 100% íntegra (fechamento de blocos ```, sem cortes no meio de palavras).
+        2. Limite saudável de caracteres por arquivo para não inflar desnecessariamente o prompt.
+        3. Preservação de tópicos, diretrizes e convenções arquiteturais.
+        """
+        if not rules_dir or not os.path.exists(rules_dir):
+            return ""
+
+        extracted = []
+        for rf in sorted(os.listdir(rules_dir)):
+            if not rf.endswith(".md"):
+                continue
+            fpath = os.path.join(rules_dir, rf)
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read().strip()
+                if not content:
+                    continue
+
+                if len(content) <= max_chars_per_file:
+                    clean_text = content
+                else:
+                    slice_point = max_chars_per_file
+                    newline_idx = content.rfind("\n\n", 0, slice_point)
+                    if newline_idx > max_chars_per_file // 2:
+                        slice_point = newline_idx
+                    else:
+                        line_idx = content.rfind("\n", 0, slice_point)
+                        if line_idx > max_chars_per_file // 2:
+                            slice_point = line_idx
+                        else:
+                            space_idx = content.rfind(" ", 0, slice_point)
+                            if space_idx > 0:
+                                slice_point = space_idx
+
+                    clean_text = content[:slice_point].rstrip() + "\n..."
+
+                # Garantir que não existam code blocks abertos (```)
+                fence_count = clean_text.count("```")
+                if fence_count % 2 != 0:
+                    clean_text += "\n```"
+
+                extracted.append(f"### 📋 Regras: {rf}\n{clean_text}")
+            except Exception:
+                pass
+
+        if not extracted:
+            return ""
+
+        return "\n\n".join(extracted)
+
     @classmethod
     def _clean_html_for_summary(cls, html: str) -> str:
         """Remove scripts, styles pesados, SVGs gigantes e base64 para focar na semântica da interface."""
@@ -426,14 +526,21 @@ DOM Semântico Limpo da Tela:
         try:
             summary = client_agy.generate_text(prompt=prompt_input, system_instruction=system_instruction)
             if summary and len(summary.strip()) > 30:
-                return summary.strip()
+                clean_sum = summary.strip()
+                # Garante integridade de code blocks
+                if clean_sum.count("```") % 2 != 0:
+                    clean_sum += "\n```"
+                return clean_sum
         except Exception as e:
             log("STITCH", f"Aviso na síntese de UI via IA ({e}). Usando resumo estruturado de fallback.", Colors.YELLOW)
 
         # Fallback caso IA não responda
         fallback_lines = []
         if stitch_prompt:
-            fallback_lines.append(f"- **Especificação Visual Original**: {stitch_prompt[:400]}")
+            fallback_text = stitch_prompt[:500].rstrip()
+            if len(stitch_prompt) > 500:
+                fallback_text += "..."
+            fallback_lines.append(f"- **Especificação Visual Original**: {fallback_text}")
         fallback_lines.extend([
             "- **Layout**: Interface modular baseada nos componentes descritos na especificação de design.",
             "- **Diretrizes de Estilo**: Respeitar a identidade visual e tokens do repositório.",
@@ -444,8 +551,10 @@ DOM Semântico Limpo da Tela:
 
 def main():
     parser = argparse.ArgumentParser(description="Pipeline Autônomo Design-to-Code (AMB_V2)")
-    parser.add_argument("prompt_file", nargs="?", help="Caminho do arquivo markdown de prompt (ex: amb_v2/pipeline/prompts/09_fase0_arvore_hipoteses.md)")
-    parser.add_argument("--auto-approve", action="store_true", help="Pula confirmações manuais no Gatekeeper 1 de Design")
+    parser.add_argument("prompt_file", nargs="?", help="Caminho do arquivo markdown de prompt unificado")
+    parser.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch")
+    parser.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo a especificação de engenharia para o Jules")
+    parser.add_argument("--auto-approve", "-y", action="store_true", help="Pula confirmações manuais no Gatekeeper 1 de Design")
     parser.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto ao Jules")
     parser.add_argument("--no-qa", action="store_true", help="Não executa a verificação local de typecheck/build ao final")
     parser.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules")
@@ -453,17 +562,19 @@ def main():
     parser.add_argument("--screen-id", help="ID de tela existente no Stitch para reaproveitar")
     parser.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt")
     parser.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar")
-    parser.add_argument("--branch", default="develop", help="Branch de início para o Jules (Padrão: develop)")
+    parser.add_argument("--branch", "-b", help="Branch de início para o Jules (Padrão: detecta a atual ou develop)")
 
     args = parser.parse_args()
 
-    if not args.prompt_file and not args.resume_session:
+    if not args.prompt_file and not args.stitch_prompt and not args.jules_prompt and not args.resume_session:
         parser.print_help()
         sys.exit(0)
 
     try:
         PipelineOrchestrator.run(
             prompt_file=args.prompt_file,
+            stitch_prompt_file=args.stitch_prompt,
+            jules_prompt_file=args.jules_prompt,
             auto_approve=args.auto_approve,
             skip_stitch=args.skip_stitch,
             no_qa=args.no_qa,

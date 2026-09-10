@@ -131,15 +131,32 @@ class StitchClient:
         if not resolved_file or not os.path.exists(resolved_file):
             raise ApiExecutionError("Arquivo design.md não encontrado para sincronização de Design Tokens.")
 
-        with open(resolved_file, "r", encoding="utf-8") as f:
-            md_content = f.read()
+        import base64
+        with open(resolved_file, "rb") as f:
+            b64_content = base64.b64encode(f.read()).decode("utf-8")
 
-        payload = {
+        log("STITCH-DS", f"Enviando {resolved_file} para o projeto {project_id}...", Colors.CYAN)
+        upload_payload = {
             "projectId": project_id,
-            "designMd": md_content
+            "designMdBase64": b64_content
         }
-        log("STITCH-DS", f"Sincronizando {resolved_file} com o projeto {project_id}...", Colors.CYAN)
-        res = self._run_node_command("create_design_system_from_design_md", payload)
+        upload_res = self._run_node_command("upload_design_md", upload_payload)
+        
+        instance_id = upload_res.get("id")
+        source_screen = upload_res.get("sourceScreen")
+        if not instance_id or not source_screen:
+            return upload_res
+
+        log("STITCH-DS", f"Criando e aplicando Design System a partir de {resolved_file}...", Colors.CYAN)
+        ds_payload = {
+            "projectId": project_id,
+            "selectedScreenInstance": {
+                "id": instance_id,
+                "sourceScreen": source_screen
+            },
+            "deviceType": "DESKTOP"
+        }
+        res = self._run_node_command("create_design_system_from_design_md", ds_payload)
         return res
 
 
