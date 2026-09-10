@@ -72,9 +72,9 @@ class AntigravityClient:
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
-        # Apenas modelos modernos de última geração (3.7, 3.6, 3.5, 3.1-pro-preview)
+        # Apenas modelos modernos de última geração
         models_to_try = [self.model]
-        for fallback_m in ["gemini-3.7-flash", "gemini-3.6-flash","gemini-3.5-flash","gemini-3.1-pro-preview"]:
+        for fallback_m in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash","gemini-3.1-pro-preview"]:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
@@ -125,18 +125,10 @@ class AntigravityClient:
 
                     last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
 
-                    # Se for 429 (Rate Limit por minuto) ou 503 (alta demanda)
-                    if e.code in [429, 503] and attempt < 2:
-                        import time
-                        import re
-                        retry_match = re.search(r"Please retry in (\d+(\.\d+)?)s", err_text, re.IGNORECASE)
-                        if retry_match:
-                            wait_sec = min(float(retry_match.group(1)) + 1.0, 35.0)
-                        else:
-                            wait_sec = 3.0 * (attempt + 1)
-                        log("ANTIGRAVITY", f"Limite temporário de requisições ({current_m}). Aguardando {int(wait_sec)}s para liberação da cota...", Colors.YELLOW)
-                        time.sleep(wait_sec)
-                        continue
+                    # Se for 429 (Rate Limit por minuto) ou 503 (alta demanda) pula para o próximo fallback
+                    if e.code in [429, 503]:
+                        log("ANTIGRAVITY", f"Limite ou instabilidade no modelo ({current_m}). Tentando fallback...", Colors.YELLOW)
+                        break
                     else:
                         break
                 except Exception as e:
