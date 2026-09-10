@@ -47,9 +47,9 @@ for _sub in [
         sys.path.insert(0, _p)
 
 from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, require_env, AmbError, ConfigurationError
-from stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
-from jules_client import JulesClient
-from antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
+from integrations.stitch.stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
+from integrations.jules.jules_client import JulesClient
+from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
 
 
 class PromptParser:
@@ -347,7 +347,7 @@ class PipelineOrchestrator:
     def _monitor_jules_session(cls, session_id: str, repo_root: str, no_qa: bool = False):
         """Monitora as atividades do Jules, responde a planos e dúvidas com IA e executa o QA ao término."""
         client = JulesClient()
-        from autonomous_loop import monitor_and_assist_session
+        from agents.autonomous_loop import monitor_and_assist_session
         
         final_state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
 
