@@ -72,3 +72,5 @@ Thumbs.db
 .amb/cache/
 scratch/
 
+
+node_modules/
