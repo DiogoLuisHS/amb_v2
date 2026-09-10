@@ -41,7 +41,7 @@ class AntigravityClient:
     """Client cognitivo que usa a CLI oficial `agy` ou a API direta do Gemini."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or get_env("GEMINI_MODEL") or "gemini-3.7-flash"
+        self.model = model or get_env("GEMINI_MODEL") or "gemini-3.8-flash"
         self.api_key = get_env("GEMINI_API_KEY")
 
     def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
@@ -135,12 +135,12 @@ class AntigravityClient:
                     last_err = ApiExecutionError(f"Falha de conexão com a API do Gemini ({current_m}): {e}")
                     break
 
-        raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini 3.7/3.6.")
+        raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini.")
 
 
 
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Gera texto utilizando Gemini 3.7/3.6 via REST e fallback final para o CLI Antigravity (agy)."""
+        """Gera texto utilizando os modelos Gemini modernos via REST e fallback final para o CLI Antigravity (agy)."""
         if self.api_key:
             try:
                 return self._generate_via_api(prompt, system_instruction)
