@@ -135,7 +135,7 @@ amb agent --all --loop --schedule "*/30 * * * *" --max-cycles 10  # A cada 30min
 **Problema:** Um único `amb agent --loop` só trabalha em um projeto por vez. Para usuários com múltiplos projetos ativos, é necessário abrir múltiplos terminais com contextos separados.
 **Proposta:**
 ```bash
-amb agent --all --loop --repos nexushub_v2,frontend_app,api_service
+amb agent --all --loop --repos backend_api,frontend_app,auth_service
 ```
 Cada projeto rodaria em uma `Thread` separada, com log unificado e dashboard consolidado.
 

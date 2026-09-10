@@ -28,7 +28,7 @@ Agente especialista em refatoração arquitetural incremental, erradicação de 
 - **Cláusulas de Guarda (Early Returns)**: Reduza aninhamentos profundos de `if/else` usando retornos antecipados.
 
 ### 4. 📔 Registro Obrigatório no Diário de Bordo
-- Ao concluir a refatoração e testes, adicione **uma nova entrada no topo do histórico** no arquivo [`.amb/diarios/pure.md`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/.amb/diarios/pure.md) (ou `.jules/diarios/pure.md`):
+- Ao concluir a refatoração e testes, adicione **uma nova entrada no topo do histórico** no arquivo [`.amb/diarios/pure.md`](.amb/diarios/pure.md) (ou `.jules/diarios/pure.md`):
   ```markdown
   ### 📅 [YYYY-MM-DD] Refatoração: <nome_do_arquivo>
   - **Alvo:** `<caminho_do_arquivo>`

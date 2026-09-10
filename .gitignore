@@ -53,6 +53,10 @@ cover/
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+credentials*.json
+service_account*.json
 venv/
 env/
 ENV/
