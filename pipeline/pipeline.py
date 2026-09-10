@@ -52,32 +52,6 @@ from integrations.jules.jules_client import JulesClient
 from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
 
 
-class PromptParser:
-    """Extrai seção visual e seção de engenharia do arquivo markdown."""
-
-    @staticmethod
-    def parse_markdown(markdown_text: str) -> tuple[str, str]:
-        stitch_prompt = ""
-        jules_prompt = ""
-
-        # Divide por seções estruturadas
-        parts = re.split(r"(?i)#+\s*(?:1\.\s*)?(?:🎨\s*)?especificação\s+visual", markdown_text)
-        if len(parts) > 1:
-            sub = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", parts[1])
-            stitch_prompt = sub[0].strip()
-            if len(sub) > 1:
-                jules_prompt = sub[1].strip()
-        else:
-            parts_jules = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", markdown_text)
-            if len(parts_jules) > 1:
-                stitch_prompt = parts_jules[0].strip()
-                jules_prompt = parts_jules[1].strip()
-            else:
-                stitch_prompt = markdown_text.strip()
-                jules_prompt = markdown_text.strip()
-
-        return stitch_prompt, jules_prompt
-
 
 class QualityGatekeeper:
     """Valida o código localmente após o término da sessão remota com auto-detecção de stack."""
@@ -137,7 +111,8 @@ class PipelineOrchestrator:
     @classmethod
     def run(
         cls,
-        prompt_file: str,
+        stitch_prompt_file: str = None,
+        jules_prompt_file: str = None,
         auto_approve: bool = False,
         skip_stitch: bool = False,
         no_qa: bool = False,
@@ -162,8 +137,11 @@ class PipelineOrchestrator:
                 pass
         starting_branch = starting_branch or "main"
 
-        prompt_path = os.path.abspath(prompt_file)
-        file_label = os.path.basename(prompt_path)
+        file_label = ""
+        if stitch_prompt_file:
+            file_label += os.path.basename(stitch_prompt_file) + " "
+        if jules_prompt_file:
+            file_label += os.path.basename(jules_prompt_file)
 
         print("\n" + "=" * 75)
         print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE UNIFICADO AMB_V2: {file_label}{Colors.RESET}")
@@ -180,16 +158,20 @@ class PipelineOrchestrator:
             return
 
         # -------------------------------------------------------------
-        # ETAPA 1: PARSING DO PROMPT
+        # ETAPA 1: LEITURA DOS ARQUIVOS
         # -------------------------------------------------------------
-        log("ETAPA 1/6", f"📄 Lendo arquivo de prompt: {file_label}", Colors.HEADER)
-        if not os.path.exists(prompt_path):
-            raise AmbError(f"Arquivo de prompt não encontrado: {prompt_path}")
+        log("ETAPA 1/6", f"📄 Lendo arquivos de prompt...", Colors.HEADER)
+        
+        stitch_prompt = ""
+        if stitch_prompt_file and os.path.exists(stitch_prompt_file):
+            with open(stitch_prompt_file, "r", encoding="utf-8", errors="replace") as f:
+                stitch_prompt = f.read().strip()
+                
+        jules_prompt = ""
+        if jules_prompt_file and os.path.exists(jules_prompt_file):
+            with open(jules_prompt_file, "r", encoding="utf-8", errors="replace") as f:
+                jules_prompt = f.read().strip()
 
-        with open(prompt_path, "r", encoding="utf-8", errors="replace") as f:
-            raw_content = f.read()
-
-        stitch_prompt, jules_prompt = PromptParser.parse_markdown(raw_content)
         log("PARSER", f"Prompt Visual: {len(stitch_prompt)} chars | Prompt Dev: {len(jules_prompt)} chars", Colors.DIM)
 
         # Sincronização de Design System se solicitado

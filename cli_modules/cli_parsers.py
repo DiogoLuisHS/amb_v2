@@ -1,6 +1,6 @@
 import argparse
 from cli_modules.cli_handlers import (
-    cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_dashboard,
+    cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_render, cmd_validate,
     cmd_pipeline, cmd_schema, cmd_context
 )
@@ -47,10 +47,9 @@ def create_parser():
     p_adv.add_argument("--auto-approve", "-y", action="store_true", help="Responde todas as sessões pendentes em lote.")
     p_adv.set_defaults(func=cmd_advisor)
 
-    # 5. amb dashboard (web SPA)
-    p_dash = subparsers.add_parser("dashboard", aliases=["web", "ui"], help="Inicia o servidor e SPA do Dashboard Web em tempo real.")
-    p_dash.add_argument("--port", "-p", type=int, default=3333, help="Porta HTTP do servidor (padrão: 3333).")
-    p_dash.set_defaults(func=cmd_dashboard)
+    # 5. amb gui
+    p_gui = subparsers.add_parser("gui", aliases=["ui", "wizard"], help="Abre o Assistente Gráfico (UI) para montagem interativa de comandos.")
+    p_gui.set_defaults(func=cmd_gui)
 
     # 6. amb agent
     p_agent = subparsers.add_parser("agent", aliases=["persona"], help="Executor de personas autônomas de manutenção.")
@@ -138,19 +137,19 @@ def create_parser():
     p_val.set_defaults(func=cmd_validate)
 
     # 11. amb pipeline
-    p_pipe = subparsers.add_parser("pipeline", help="Executa o pipeline orquestrado Design-to-Deploy ponta a ponta.")
-    p_pipe.add_argument("template", nargs="?", default=None, help="Caminho do arquivo markdown de especificação da tarefa.")
-    p_pipe.add_argument("--auto-approve", "-y", action="store_true", help="Pula confirmações manuais no Gatekeeper 1 de Design.")
-    p_pipe.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto à engenharia no Jules.")
-    p_pipe.add_argument("--no-qa", action="store_true", help="Não executa a verificação local pós-sessão de typecheck/build.")
-    p_pipe.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules.")
-    p_pipe.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default="DESKTOP", help="Tipo de dispositivo para renderização no Stitch.")
-    p_pipe.add_argument("--screen-id", "-s", help="ID de tela existente no Stitch para reaproveitar como base.")
-    p_pipe.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt.")
-    p_pipe.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar.")
-    p_pipe.add_argument("--branch", "-b", default="develop", help="Branch de início para o Jules (Padrão: develop).")
+    p_pipe = subparsers.add_parser("pipeline", aliases=["run", "deploy"], help="Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub).")
+    p_pipe.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch.")
+    p_pipe.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo a especificação de engenharia para o Jules.")
+    p_pipe.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar o monitoramento sem criar nova.")
+    p_pipe.add_argument("--skip-stitch", action="store_true", help="Pula a geração de UI no Stitch, indo direto ao Jules.")
+    p_pipe.add_argument("--no-qa", action="store_true", help="Desabilita o teste QA local automático no final.")
+    p_pipe.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos no Jules automaticamente.")
+    p_pipe.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET"], default="DESKTOP", help="Tipo de dispositivo para geração do Stitch.")
+    p_pipe.add_argument("--edit-screen-id", help="Refina uma tela existente no Stitch em vez de criar uma nova.")
+    p_pipe.add_argument("--screen-id", help="Utiliza uma tela já existente no Stitch como ponto de partida (não recria).")
+    p_pipe.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais antes de gerar a tela.")
+    p_pipe.add_argument("--branch", "-b", help="Branch alvo para PR e checkout (default: detecta a atual).")
     p_pipe.set_defaults(func=cmd_pipeline)
-
 
     # 12. amb schema (alias: amb db)
     p_schema = subparsers.add_parser("schema", aliases=["db"], help="Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only).")

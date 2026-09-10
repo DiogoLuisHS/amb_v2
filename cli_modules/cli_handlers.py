@@ -57,10 +57,10 @@ def cmd_advisor(args):
     run_auto_advisor(auto_approve=args.auto_approve)
 
 
-def cmd_dashboard(args):
-    """Inicia a UI/SPA do Dashboard Web em tempo real."""
-    from dashboard_server import start_dashboard
-    start_dashboard(port=args.port)
+def cmd_gui(args):
+    """Inicia o Assistente Gráfico (Tkinter UI)."""
+    from gui.wizard_app import start_wizard
+    start_wizard()
 
 
 def cmd_config(args):
@@ -326,16 +326,17 @@ def cmd_pipeline(args):
     """Executa o pipeline completo Design-to-Deploy."""
     from pipeline import PipelineOrchestrator
     PipelineOrchestrator.run(
-        prompt_file=args.template,
+        stitch_prompt_file=getattr(args, "stitch_prompt", None),
+        jules_prompt_file=getattr(args, "jules_prompt", None),
         auto_approve=getattr(args, "auto_approve", False),
         skip_stitch=getattr(args, "skip_stitch", False),
         no_qa=getattr(args, "no_qa", False),
         resume_session=getattr(args, "resume_session", None),
-        device_type=getattr(args, "device_type", "DESKTOP"),
-        edit_screen_id=getattr(args, "edit_screen", None),
+        device_type=getattr(args, "device", "DESKTOP"),
+        edit_screen_id=getattr(args, "edit_screen_id", None),
         screen_id=getattr(args, "screen_id", None),
         sync_ds=getattr(args, "sync_ds", False),
-        starting_branch=getattr(args, "branch", "develop")
+        starting_branch=getattr(args, "branch", None)
     )
 
 
