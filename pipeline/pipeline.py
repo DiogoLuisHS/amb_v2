@@ -250,11 +250,23 @@ class PipelineOrchestrator:
                     return
 
         # -------------------------------------------------------------
-        # ETAPA 4: SÍNTESE COGNITIVA COM ANTIGRAVITY SDK
+        # ETAPA 4: SÍNTESE COGNITIVA E CONSOLIDAÇÃO DO PROMPT PARA O JULES
         # -------------------------------------------------------------
-        log("ETAPA 4/6", "🧠 Síntese Cognitiva e Validação Arquitetural...", Colors.HEADER)
+        log("ETAPA 4/6", "🧠 Síntese Cognitiva e Consolidação do Prompt para o Jules...", Colors.HEADER)
         
-        # Leitura das regras do repositório
+        # 1. Resumo estruturado de alta densidade do Stitch (Design)
+        stitch_summary = ""
+        if not skip_stitch and (stitch_html or stitch_prompt):
+            log("ANTIGRAVITY", "Consolidando e sintetizando especificação visual do Stitch com IA...", Colors.CYAN)
+            client_agy = AntigravityClient()
+            stitch_summary = cls._synthesize_stitch_ui(
+                client_agy=client_agy,
+                stitch_prompt=stitch_prompt,
+                stitch_html=stitch_html,
+                screen_title=screen_title
+            )
+
+        # 2. Leitura das regras do repositório
         rules_dir = os.path.join(repo_root, ".antigravity", "rules")
         if not os.path.exists(rules_dir):
             rules_dir = os.path.join(repo_root, ".gemini", "rules")
@@ -269,32 +281,59 @@ class PipelineOrchestrator:
                     except Exception:
                         pass
 
-        # Compilação do Prompt de Engenharia de Alta Densidade
-        dev_spec = f"""# ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE
-## Contexto da Tarefa: {file_label}
+        # 3. Montagem do Prompt Executivo Consolidado
+        # GARANTIA CRÍTICA: O jules_prompt do desenvolvedor é preservado 100% NA ÍNTEGRA.
+        prompt_sections = [
+            "# 🚀 ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE (DESIGN-TO-DEPLOY)",
+            f"**Repositório**: `{repo_name}`",
+            f"**Branch de Trabalho**: `{starting_branch}`",
+            f"**Arquivo de Especificação**: `{file_label.strip()}`",
+            "",
+            "---",
+            "",
+            "## 🎯 1. REQUISITOS DE ENGENHARIA & IMPLEMENTAÇÃO (INTEGRAL)",
+            jules_prompt if jules_prompt else "Implementar funcionalidade conforme padrões do repositório.",
+            "",
+        ]
 
-### 1. Requisitos de Implementação e Funcionalidades:
-{jules_prompt}
+        if not skip_stitch and (current_screen_id or stitch_summary or screenshot_url):
+            meta_items = []
+            if current_screen_id:
+                meta_items.append(f"- **Screen ID**: `{current_screen_id}`")
+            if screen_title:
+                meta_items.append(f"- **Título da Tela**: {screen_title}")
+            if screenshot_url:
+                meta_items.append(f"- **Screenshot de Referência**: {screenshot_url}")
 
-### 2. Estrutura e Fidelidade Visual (Stitch DOM):
-{stitch_html[:8000] if stitch_html else "Utilizar estrutura e tokens definidos no Design System do projeto."}
+            prompt_sections.extend([
+                "---",
+                "",
+                "## 🎨 2. CONSOLIDAÇÃO VISUAL DO GOOGLE STITCH (UI & DESIGN)",
+                "\n".join(meta_items) if meta_items else "",
+                "",
+                "### Resumo Arquitetural da UI / Componentes:",
+                stitch_summary if stitch_summary else (stitch_prompt if stitch_prompt else "Seguir design system do projeto."),
+                "",
+            ])
 
-### 3. Regras Arquiteturais Mandatórias do Projeto:
-- Respeitar estritamente a separação de responsabilidades (SRP).
-- Seguir os padrões e convenções de código definidos nas regras do repositório.
-- Manter validação de tipos estrita e compilação sem erros no build do projeto.
-"""
+        prompt_sections.extend([
+            "---",
+            "",
+            "## 🛡️ 3. DIRETRIZES ARQUITETURAIS MANDATÓRIAS",
+            "- **Separação Estrita de Responsabilidades (SRP)**: Cada módulo, serviço e componente deve possuir responsabilidade única.",
+            "- **Tipagem Estrita**: TypeScript rigoroso, interfaces explícitas, 0 `any`.",
+            "- **Integridade Local**: Todo o código implementado deve passar no typecheck e no build sem erros.",
+            rules_summary if rules_summary else "",
+        ])
 
-        log("ANTIGRAVITY", "Validando e sintetizando prompt técnico estruturado...", Colors.CYAN)
-        client_agy = AntigravityClient()
-        executive_prompt = client_agy.generate_text(
-            prompt=dev_spec,
-            system_instruction=(
-                "Você é o Arquiteto de Software Principal do projeto. "
-                "Transforme as especificações visuais e de engenharia em um plano de ação detalhado para o agente Google Jules. "
-                "Preserve todos os requisitos de domínio, componentes e regras."
-            )
-        )
+        executive_prompt = "\n".join(filter(lambda s: s is not None, prompt_sections)).strip()
+
+        log("PIPELINE", f"Prompt consolidado para o Jules gerado com sucesso!", Colors.GREEN)
+        print(f"  📊 {Colors.BOLD}Estatísticas do Prompt Consolidado:{Colors.RESET}")
+        print(f"     • Prompt de Engenharia (Jules): {len(jules_prompt)} caracteres (100% preservado)")
+        if stitch_summary:
+            print(f"     • Resumo Arquitetural do Stitch: {len(stitch_summary)} caracteres (ultra-denso)")
+        print(f"     • Prompt Final para o Jules: {len(executive_prompt)} caracteres (~{len(executive_prompt.split())} palavras)\n")
 
         # -------------------------------------------------------------
         # ETAPA 5: DESPACHO NO GOOGLE JULES (REST API)
@@ -339,6 +378,67 @@ class PipelineOrchestrator:
         if not no_qa:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
             QualityGatekeeper.run_qa(repo_root)
+
+    @classmethod
+    def _clean_html_for_summary(cls, html: str) -> str:
+        """Remove scripts, styles pesados, SVGs gigantes e base64 para focar na semântica da interface."""
+        import re
+        if not html:
+            return ""
+        # Remove comentários HTML
+        html = re.sub(r'<!--[\s\S]*?-->', '', html)
+        # Remove <script> tags
+        html = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', html, flags=re.IGNORECASE)
+        # Remove <style> tags
+        html = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', html, flags=re.IGNORECASE)
+        # Simplifica tags <svg> com paths gigantes
+        html = re.sub(r'<svg\b[^>]*>[\s\S]*?<\/svg>', '[Ícone SVG]', html, flags=re.IGNORECASE)
+        # Remove base64 data URLs
+        html = re.sub(r'data:image\/[a-zA-Z]+;base64,[^\s"\']+', '[Imagem Base64]', html)
+        # Limita espaços em branco consecutivos
+        html = re.sub(r'\s+', ' ', html).strip()
+        return html[:10000]
+
+    @classmethod
+    def _synthesize_stitch_ui(cls, client_agy: AntigravityClient, stitch_prompt: str, stitch_html: str, screen_title: str) -> str:
+        """Gera um resumo executivo da UI do Stitch em Markdown de alta densidade e concisão."""
+        cleaned_dom = cls._clean_html_for_summary(stitch_html)
+        
+        system_instruction = (
+            "Você é um Arquiteto de Software e Especialista em Design System / Frontend. "
+            "Sua missão é analisar o layout e os componentes visuais gerados no Stitch e sintetizá-los "
+            "em um RESUMO ARQUITETURAL EXECUTIVO DE ALTA DENSIDADE (máximo 200 a 350 palavras). "
+            "NÃO inclua código HTML nem CSS cru. Estruture obrigatoriamente nos seguintes tópicos: "
+            "1. Estrutura de Layout (grid, flex, containers, seções principais); "
+            "2. Componentes Identificados (cards, tabelas, modais, formulários, listas); "
+            "3. Elementos Interativos & Ações (botões primários/secundários, inputs, filtros, dropdowns); "
+            "4. Tokens de Design (paleta de cores predominante, tipografia, espaçamento e estados visuais). "
+            "Seja extremamente direto e denso para que um agente engenheiro (Jules) implemente a interface com fidelidade absoluta."
+        )
+
+        prompt_input = f"""Nome da Tela: {screen_title or 'Interface do Usuário'}
+Diretrizes Visuais do Stitch Prompt:
+{stitch_prompt if stitch_prompt else 'Conforme estrutura semântica abaixo.'}
+
+DOM Semântico Limpo da Tela:
+{cleaned_dom if cleaned_dom else 'Sem DOM extraído, basear-se estritamente no prompt de design.'}
+"""
+        try:
+            summary = client_agy.generate_text(prompt=prompt_input, system_instruction=system_instruction)
+            if summary and len(summary.strip()) > 30:
+                return summary.strip()
+        except Exception as e:
+            log("STITCH", f"Aviso na síntese de UI via IA ({e}). Usando resumo estruturado de fallback.", Colors.YELLOW)
+
+        # Fallback caso IA não responda
+        fallback_lines = []
+        if stitch_prompt:
+            fallback_lines.append(f"- **Especificação Visual Original**: {stitch_prompt[:400]}")
+        fallback_lines.extend([
+            "- **Layout**: Interface modular baseada nos componentes descritos na especificação de design.",
+            "- **Diretrizes de Estilo**: Respeitar a identidade visual e tokens do repositório.",
+        ])
+        return "\n".join(fallback_lines)
 
 
 

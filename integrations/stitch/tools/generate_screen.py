@@ -16,7 +16,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--prompt", "-p", required=True)
     p.add_argument("--device", "-d", default="DESKTOP")
-    p.add_argument("--model", "-m", default="GEMINI_3_1_PRO")
+    p.add_argument("--model", "-m", default="GEMINI_3_8_FLASH")
     args = p.parse_args()
     try:
         res = generate_screen(prompt=args.prompt, device_type=args.device, model_id=args.model)

@@ -61,7 +61,7 @@ class StitchClient:
         self,
         prompt: str,
         device_type: str = "DESKTOP",
-        model_id: str = "GEMINI_3_1_PRO",
+        model_id: str = "GEMINI_3_8_FLASH",
         design_system: Optional[str] = None
     ) -> Dict[str, Any]:
         """Gera uma nova tela visual a partir de uma descrição textual."""
