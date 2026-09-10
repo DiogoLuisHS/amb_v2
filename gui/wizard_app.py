@@ -240,28 +240,27 @@ class DynamicWizard(tk.Tk):
         ttk.Label(container, text="Parâmetros do Ambiente (.env)", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 15))
 
         self.env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
-        self.env_vars = {}
+        
+        # Define as chaves padrão garantindo que sempre existam na UI
+        self.env_vars = {
+            "GEMINI_API_KEY": "",
+            "JULES_API_KEY": "",
+            "STITCH_API_KEY": "",
+            "STITCH_PROJECT_ID": "",
+            "RENDER_API_KEY": "",
+            "GITHUB_REPOSITORY": "",
+            "TURSO_DATABASE_URL": "",
+            "TURSO_AUTH_TOKEN": "",
+        }
         self.env_entries = {}
 
-        # Carregar .env atual
+        # Carregar .env atual e sobrescrever valores
         if os.path.exists(self.env_path):
             with open(self.env_path, "r", encoding="utf-8") as f:
                 for line in f:
                     if "=" in line and not line.strip().startswith("#"):
                         k, v = line.split("=", 1)
                         self.env_vars[k.strip()] = v.strip()
-        else:
-            # Fallback se não existir
-            self.env_vars = {
-                "GEMINI_API_KEY": "",
-                "JULES_API_KEY": "",
-                "STITCH_API_KEY": "",
-                "STITCH_PROJECT_ID": "",
-                "RENDER_API_KEY": "",
-                "GITHUB_REPOSITORY": "",
-                "TURSO_DATABASE_URL": "",
-                "TURSO_AUTH_TOKEN": "",
-            }
 
         # Cria a UI de entradas
         form_frame = ttk.Frame(container)
