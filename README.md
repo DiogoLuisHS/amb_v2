@@ -47,9 +47,9 @@ amb prompt --synthesize "Criar painel de métricas financeiras com gráficos e f
 
 ---
 
-### 📡 2.2. Sentinela, Advisor & Dashboard Web (`monitor`, `advisor`, `dashboard`)
+### 📡 2.2. Sentinela, Advisor & Assistente Gráfico (`monitor`, `advisor`, `gui`)
 
-Vigilância em tempo real das sessões do Jules e deploys do Render, com auto-resposta via Gemini e UI Web em tempo real.
+Vigilância em tempo real das sessões do Jules e deploys do Render, auto-resposta via Gemini e Assistente Gráfico nativo para montagem de comandos e gestão de variáveis do `.env`.
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
@@ -60,14 +60,14 @@ Vigilância em tempo real das sessões do Jules e deploys do Render, com auto-re
 | `amb monitor --interval <N>` | — | Define o intervalo de polling em segundos (padrão: 15s). |
 | `amb advisor` | `ask` | Menu interativo cognitivo para revisar e responder chats com pendência no Jules. |
 | `amb advisor --auto-approve` | `-y` | Responde todas as dúvidas pendentes em lote com IA sem pedir confirmação. |
-| `amb dashboard` | `web`, `ui` | Inicia o servidor Web SPA em tempo real na porta 3333 (ou `--port <N>`). |
+| `amb gui` | `ui`, `wizard` | Abre o Assistente Gráfico Interativo (Tkinter) com Runner dinâmico e Gestor de `.env` do projeto ativo. |
 
 ```bash
 # Exemplos:
 amb monitor -1                  # Checagem instantânea de status
 amb monitor -y                  # Sentinela autônomo (vigia e auto-responde no Jules)
 amb advisor                     # Menu interativo para responder chats pendentes
-amb dashboard --port 3333       # Inicia a interface Web em http://localhost:3333
+amb gui                         # Abre a interface gráfica nativa (Runner + .env)
 ```
 
 ---
@@ -194,15 +194,21 @@ amb render deploy
 
 Ferramentas avançadas para governança de código, orquestração Design-to-Deploy e inteligência de monorepo.
 
+> [!TIP]
+> **Separação de Responsabilidade no Pipeline (SRP)**: O comando `amb pipeline` agora aceita arquivos dedicados para Stitch (Design visual com `-s`) e Jules (Engenharia de software com `-j`), garantindo especificações limpas e focadas.
+
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb pipeline <spec.md>` | — | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** em 6 etapas. |
-| `amb pipeline <spec.md> --skip-stitch` | — | Pula a etapa visual do Stitch e vai direto para a engenharia no Jules. |
-| `amb pipeline <spec.md> -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
-| `amb pipeline <spec.md> --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: `develop`). |
-| `amb pipeline <spec.md> --device-type <D>`| — | Dispositivo alvo para o Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
-| `amb pipeline <spec.md> --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar. |
+| `amb pipeline -s <stitch.md> -j <jules.md>` | `run`, `deploy` | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** com prompts separados para Stitch e Jules. |
+| `amb pipeline -j <jules.md> --skip-stitch` | — | Pula a etapa visual do Stitch e vai direto para a engenharia no Jules. |
+| `amb pipeline -s <s.md> -j <j.md> -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
+| `amb pipeline -s <s.md> -j <j.md> --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: detecta a atual). |
+| `amb pipeline -s <s.md> -j <j.md> --device <D>`| `-d` | Dispositivo alvo para o Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
+| `amb pipeline -s <s.md> -j <j.md> --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar. |
+| `amb pipeline --edit-screen-id <id>` | — | Refina uma tela existente no Stitch em vez de criar uma nova. |
+| `amb pipeline --screen-id <id>` | — | Utiliza uma tela já existente no Stitch como ponto de partida (não recria). |
 | `amb pipeline --resume-session <id>` | `-r` | Retoma o monitoramento ao vivo e QA de uma sessão Jules já iniciada. |
+| `amb pipeline --no-qa` | — | Desabilita o teste QA local automático no final da execução. |
 | `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.antigravity/rules/`. |
 | `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
 | `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
@@ -210,10 +216,10 @@ Ferramentas avançadas para governança de código, orquestração Design-to-Dep
 
 ```bash
 # Exemplos do Pipeline:
-amb pipeline specs/novo_dashboard.md               # Execução completa interativa (Design + Jules + QA)
-amb pipeline specs/fix_api.md --skip-stitch        # Tarefa de backend/engenharia pura (sem tela Stitch)
-amb pipeline specs/novo_dashboard.md -y            # Pipeline autônomo sem pausas de aprovação
-amb pipeline --resume-session 538227422414712240   # Reconectar a uma sessão remota do Jules
+amb pipeline -s specs/login_ui.md -j specs/login_eng.md        # Execução completa (Design no Stitch + Engenharia no Jules)
+amb pipeline -j specs/fix_api.md --skip-stitch                 # Tarefa de backend/engenharia pura (sem tela Stitch)
+amb pipeline -s specs/painel.md -j specs/painel_eng.md -y      # Pipeline autônomo sem pausas de aprovação
+amb pipeline --resume-session 538227422414712240               # Reconectar a uma sessão remota do Jules
 
 # Demais ferramentas:
 amb validate src/components/Header.tsx             # Auditoria de regras arquiteturais
@@ -236,7 +242,7 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Vigilância** | `amb monitor -1` | `python dashboard/unified_monitor.py --check-once` |
 | **Vigilância** | `amb monitor -y` | `python dashboard/unified_monitor.py --auto-approve` |
 | **Vigilância** | `amb advisor` | `python dashboard/auto_advisor.py` |
-| **Vigilância** | `amb dashboard` | `python dashboard/dashboard_server.py` |
+| **Interface** | `amb gui` (ou `amb ui`) | `python gui/wizard_app.py` |
 | **Personas** | `amb agent --list` | `python agents/local_agent_runner.py --list` |
 | **Personas** | `amb agent --role <nome>` | `python agents/local_agent_runner.py --role <nome>` |
 | **Personas** | `amb agent --role <nome> -j` | `python agents/local_agent_runner.py --role <nome> -j` |
@@ -310,7 +316,9 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 | [`SUGGESTIONS.md`](./SUGGESTIONS.md) | Sugestões de melhoria pendentes organizadas por MoSCoW (MUST/SHOULD/COULD/WON'T). |
 | [`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md) | Histórico de bugs corrigidos e features implementadas com causa raiz e commits. |
 | [`config/README.md`](./config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
-| [`dashboard/README.md`](./dashboard/README.md) | Documentação do Dashboard Web e Monitor Unificado. |
+| [`gui/README.md`](./gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
+| [`pipeline/README.md`](./pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
+| [`dashboard/README.md`](./dashboard/README.md) | Documentação do Sentinela e Monitor Unificado. |
 
 
 ---
@@ -324,6 +332,9 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 ├── config/
 │   ├── config.py                    # Gerenciador central de .env, validações e caminhos
 │   └── setup_project.py             # Assistente de provisionamento e stack
+├── gui/
+│   ├── README.md                    # Documentação do Assistente Gráfico
+│   └── wizard_app.py                # Assistente Gráfico Nativo (Tkinter) dinâmico e gestor de .env
 ├── architecture/
 │   ├── db_schema_reader.py          # Leitor de schemas e banco de dados (Read-Only)
 │   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
@@ -332,7 +343,6 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 │   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
 │   └── local_agent_runner.py        # Executor dinâmico de personas
 ├── dashboard/
-│   ├── dashboard_server.py          # Servidor e SPA do Dashboard Web em tempo real (Porta 3333)
 │   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
 │   └── watchers/                    # Watchers especializados do Jules e Render
 ├── integrations/
@@ -350,5 +360,6 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 │       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)
 │       └── tools/                   # Facades retrocompatíveis
 └── pipeline/
+    ├── README.md                    # Documentação da arquitetura do pipeline
     └── pipeline.py                  # Orquestrador Design-to-Deploy ponta a ponta
 ```

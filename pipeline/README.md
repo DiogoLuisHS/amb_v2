@@ -4,14 +4,19 @@ Pipeline unificado e modular para desenvolvimento autônomo de interfaces e func
 
 ---
 
-## 🏛️ Arquitetura do Fluxo
+## 🏛️ Arquitetura do Fluxo (Separação de Responsabilidade - SRP)
+
+O pipeline divide as tarefas em duas especificações complementares e dedicadas:
+1. **Stitch Prompt (`-s` / `--stitch-prompt`)**: Foco exclusivo em design, layout visual, hierarquia de componentes e design tokens.
+2. **Jules Prompt (`-j` / `--jules-prompt`)**: Foco em engenharia de software, integração de APIs, regras de negócio, testes e validação arquitetural.
 
 ```mermaid
 graph TD
-    A["📄 Prompt da Tarefa (.amb/prompts/ ou template_tarefa.md)"] --> B["🎨 Google Stitch SDK (Geração/Refinamento Visual)"]
+    A1["🎨 Stitch Prompt (-s spec_ui.md)"] --> B["🎨 Google Stitch SDK (Geração/Refinamento Visual)"]
     B --> C["🚪 Gatekeeper 1: Decisão de Design (Aprovar / Refinar / Variantes)"]
     C -->|Aprovar| D["🧠 Antigravity Synthesizer (Injeção de DOM, Tokens e Regras do Projeto)"]
     C -->|Refinar| B
+    A2["⚙️ Jules Prompt (-j spec_eng.md)"] --> D
     D --> E["⚡ Google Jules Cloud (Desenvolvimento & Codificação Remota)"]
     E --> F["📡 Monitoramento de Atividades & Auto-Reply de Dúvidas"]
     F --> G["🛡️ Gatekeeper 2: QA Local (Typecheck + Build)"]
@@ -24,26 +29,43 @@ graph TD
 
 ## 📖 Como Executar
 
-### 🔹 1. Execução Padrão de uma Tarefa (Fluxo Completo)
+### 🔹 1. Execução Completa (Design + Engenharia)
 ```bash
-# Via CLI unificada amb
-amb pipeline amb_v2/pipeline/prompts/template_tarefa.md
-
-# Ou apontando para qualquer especificação em .amb/prompts/
-amb pipeline .amb/prompts/minha_tela.md
+amb pipeline -s specs/tela_login.md -j specs/auth_feature.md
 ```
 
-### 🔹 2. Utilizar Tela Já Existente no Stitch (`--screen-id`)
+### 🔹 2. Tarefa de Engenharia / Backend Puro (`--skip-stitch`)
 ```bash
-amb pipeline template_tarefa.md --screen-id <SCREEN_ID>
+amb pipeline -j specs/fix_api_endpoint.md --skip-stitch
 ```
 
-### 🔹 3. Retomar Monitoramento de Sessão Ativa do Jules (`--resume-session`)
+### 🔹 3. Modo 100% Autônomo (`--auto-approve` / `-y`)
+Executa o pipeline sem pausas interativas de aprovação visual no Gatekeeper 1:
 ```bash
-amb pipeline template_tarefa.md --resume-session <SESSION_ID>
+amb pipeline -s specs/dashboard_ui.md -j specs/dashboard_eng.md -y
 ```
 
-### 🔹 4. Pular a Etapa do Stitch (`--skip-stitch`)
+### 🔹 4. Refinar Tela Existente no Stitch (`--edit-screen-id`)
+Aplica modificações visuais em uma tela já gerada previamente no Stitch:
 ```bash
-amb pipeline template_tarefa.md --skip-stitch
+amb pipeline -s specs/refinamento.md -j specs/tarefa.md --edit-screen-id <SCREEN_ID>
 ```
+
+### 🔹 5. Reutilizar Tela Existente como Base (`--screen-id`)
+Aproveita a tela existente sem disparar nova geração no Stitch:
+```bash
+amb pipeline -s specs/spec.md -j specs/tarefa.md --screen-id <SCREEN_ID>
+```
+
+### 🔹 6. Retomar Sessão Ativa do Jules (`--resume-session` / `-r`)
+Reconecta ao monitoramento e QA de uma sessão remota já em andamento:
+```bash
+amb pipeline --resume-session 538227422414712240
+```
+
+### 🔹 7. Opções Adicionais
+- `--device, -d`: Tipo de dispositivo (`DESKTOP`, `MOBILE`, `TABLET`).
+- `--branch, -b`: Branch de destino para PR e checkout (padrão: branch atual).
+- `--sync-ds`: Sincroniza design tokens locais (`design.md`) antes da geração.
+- `--no-qa`: Desabilita a rodada de typecheck e build local no final.
+

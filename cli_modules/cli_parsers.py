@@ -48,7 +48,7 @@ def create_parser():
     p_adv.set_defaults(func=cmd_advisor)
 
     # 5. amb gui
-    p_gui = subparsers.add_parser("gui", aliases=["ui", "wizard"], help="Abre o Assistente Gráfico (UI) para montagem interativa de comandos.")
+    p_gui = subparsers.add_parser("gui", aliases=["ui", "wizard"], help="Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).")
     p_gui.set_defaults(func=cmd_gui)
 
     # 6. amb agent
@@ -137,7 +137,7 @@ def create_parser():
     p_val.set_defaults(func=cmd_validate)
 
     # 11. amb pipeline
-    p_pipe = subparsers.add_parser("pipeline", aliases=["run", "deploy"], help="Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub).")
+    p_pipe = subparsers.add_parser("pipeline", aliases=["run", "deploy"], help="Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub) com prompts separados para Design e Engenharia.")
     p_pipe.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch.")
     p_pipe.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo a especificação de engenharia para o Jules.")
     p_pipe.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar o monitoramento sem criar nova.")

@@ -1,6 +1,9 @@
-# 📡 Módulo de Monitoramento, Sentinela & Dashboard Web (`dashboard`)
+# 📡 Módulo de Monitoramento & Sentinela (`dashboard`)
 
-Este módulo vigia ativamente os serviços do ecossistema (Google Jules, Google Stitch, Google Antigravity e Render Cloud), emitindo alertas imediatos, respondendo dúvidas no piloto automático e servindo o Dashboard Web em tempo real.
+Este módulo vigia ativamente os serviços do ecossistema (Google Jules, Google Stitch, Google Antigravity e Render Cloud), emitindo alertas imediatos e respondendo dúvidas no piloto automático.
+
+> [!NOTE]
+> Para a interface gráfica interativa e gerenciador de `.env`, utilize o assistente nativo `amb gui` (módulo [`gui/`](../gui/README.md)).
 
 ---
 
@@ -9,7 +12,6 @@ Este módulo vigia ativamente os serviços do ecossistema (Google Jules, Google 
 ```
 dashboard/
 ├── README.md                      # 📖 Este guia
-├── dashboard_server.py            # 🖥️ Servidor Web SPA em tempo real (Porta 3333)
 ├── unified_monitor.py             # 📡 Sentinela contínuo em tempo real (com --auto-approve e --interactive)
 └── watchers/                      # 👁️ Sentinelas Isolados (SRP)
     ├── jules_watcher.py           # Monitor de sessões, atividades e feedback do Jules
@@ -21,29 +23,26 @@ dashboard/
 
 ## 🚀 Como Executar via CLI (`amb`):
 
-### 1. Iniciar o Dashboard Web SPA:
-```bash
-amb dashboard
-# Ou em porta customizada:
-amb dashboard --port 8080
-```
-
-### 2. Rodar o Sentinela Contínuo:
+### 1. Rodar o Sentinela Contínuo:
 ```bash
 amb monitor
 ```
 
-### 3. Rodar o Sentinela no Piloto Automático (Auto-Reply com Gemini):
+### 2. Rodar o Sentinela no Piloto Automático (Auto-Reply com Gemini):
 ```bash
 amb monitor --auto-approve
+# ou com alias:
+amb monitor -y
 ```
 
-### 4. Checagem Rápida de 1 Rodada:
+### 3. Checagem Rápida de 1 Rodada:
 ```bash
 amb monitor --check-once
+# ou com alias:
+amb monitor -1
 ```
 
-### 5. Menu Cognitivo de Resolução de Pendências:
+### 4. Menu Cognitivo de Resolução de Pendências:
 ```bash
 amb advisor
 # Ou:
