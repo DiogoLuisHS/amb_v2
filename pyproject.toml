@@ -17,3 +17,8 @@ amb = "cli:main"
 
 [tool.setuptools]
 py-modules = ["cli"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "scratch*"]

@@ -270,9 +270,53 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Render Cloud**| `amb render logs` | `python integrations/render/tools/fetch_logs.py` |
 | **Render Cloud**| `amb render deploy` | `python integrations/render/tools/trigger_deploy.py` |
 | **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
-| **Pipeline** | `amb pipeline <spec.md>` | `python pipeline/pipeline.py <spec.md>` |
+| **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |
 | **Arquitetura** | `amb context <modulo>` | `python architecture/ai_context_builder.py` |
+
+---
+
+## 📂 4. Estrutura do Repositório
+
+```text
+📁 amb_v2/
+├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
+├── cli.py                           # CLI global unificada (Single Source of Truth)
+├── cli_modules/                     # Handlers e parsers modulares da CLI (SRP)
+├── config/
+│   ├── config.py                    # Gerenciador central de .env, validações e caminhos
+│   └── setup_project.py             # Assistente de provisionamento e stack
+├── gui/
+│   ├── README.md                    # Documentação do Assistente Gráfico
+│   └── wizard_app.py                # Assistente Gráfico Nativo (Tkinter) dinâmico e gestor de .env
+├── architecture/
+│   ├── db_schema_reader.py          # Leitor de schemas e banco de dados (Read-Only)
+│   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
+├── agents/
+│   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico turn-by-turn
+│   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
+│   └── local_agent_runner.py        # Executor dinâmico de personas
+├── dashboard/
+│   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
+│   └── watchers/                    # Watchers especializados do Jules e Render
+├── integrations/
+│   ├── antigravity/
+│   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
+│   │   └── tools/                   # Facades retrocompatíveis
+│   ├── jules/
+│   │   ├── jules_client.py          # Client REST API oficial do Jules
+│   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
+│   ├── render/
+│   │   ├── render_client.py         # Client oficial Render Cloud API
+│   │   └── tools/                   # Facades retrocompatíveis
+│   └── stitch/
+│       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
+│       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)
+│       └── tools/                   # Facades retrocompatíveis
+└── pipeline/
+    ├── README.md                    # Documentação da arquitetura do pipeline
+    └── pipeline.py                  # Orquestrador Design-to-Deploy ponta a ponta
+```
 
 ---
 
@@ -320,46 +364,3 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 | [`pipeline/README.md`](./pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
 | [`dashboard/README.md`](./dashboard/README.md) | Documentação do Sentinela e Monitor Unificado. |
 
-
----
-
-## 📂 4. Estrutura do Repositório
-
-```text
-📁 amb_v2/
-├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
-├── cli.py                           # CLI global unificada (Single Source of Truth)
-├── config/
-│   ├── config.py                    # Gerenciador central de .env, validações e caminhos
-│   └── setup_project.py             # Assistente de provisionamento e stack
-├── gui/
-│   ├── README.md                    # Documentação do Assistente Gráfico
-│   └── wizard_app.py                # Assistente Gráfico Nativo (Tkinter) dinâmico e gestor de .env
-├── architecture/
-│   ├── db_schema_reader.py          # Leitor de schemas e banco de dados (Read-Only)
-│   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
-├── agents/
-│   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico turn-by-turn
-│   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
-│   └── local_agent_runner.py        # Executor dinâmico de personas
-├── dashboard/
-│   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
-│   └── watchers/                    # Watchers especializados do Jules e Render
-├── integrations/
-│   ├── antigravity/
-│   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
-│   │   └── tools/                   # Facades retrocompatíveis
-│   ├── jules/
-│   │   ├── jules_client.py          # Client REST API oficial do Jules
-│   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
-│   ├── render/
-│   │   ├── render_client.py         # Client oficial Render Cloud API
-│   │   └── tools/                   # Facades retrocompatíveis
-│   └── stitch/
-│       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
-│       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)
-│       └── tools/                   # Facades retrocompatíveis
-└── pipeline/
-    ├── README.md                    # Documentação da arquitetura do pipeline
-    └── pipeline.py                  # Orquestrador Design-to-Deploy ponta a ponta
-```
