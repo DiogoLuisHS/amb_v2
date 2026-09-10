@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import argparse
 import subprocess
 import os
@@ -8,16 +8,26 @@ import sys
 # Adiciona o diretório raiz ao sys.path para conseguir importar os parsers
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cli_modules.cli_parsers import create_parser
+from config.config import find_repo_root, get_repo_name
 
 class DynamicWizard(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("AMB_V2 - Dynamic Command Wizard")
-        self.geometry("800x700")
+        self.geometry("850x720")
         self.configure(padx=20, pady=20)
         
         self.result_command = None
         self.param_vars = {}  # Guarda as variáveis do Tkinter para cada ação
+        
+        # Identifica a raiz do projeto e arquivo .env de onde o comando foi invocado
+        self.project_root = find_repo_root()
+        self.env_path = os.path.join(self.project_root, ".env")
+        self.env_entries = {}
+
+        self.repo_name_var = tk.StringVar(value=self._detect_repo_name())
+        self.project_root_var = tk.StringVar(value=self.project_root)
+        self.env_path_var = tk.StringVar(value=self.env_path)
         
         # Parse tree
         self.parser = create_parser()
@@ -49,12 +59,41 @@ class DynamicWizard(tk.Tk):
         self._build_runner_tab()
         self._build_settings_tab()
 
+    def _detect_repo_name(self):
+        """Detecta o nome do repositório/projeto a partir do .env ou raiz."""
+        if os.path.exists(self.env_path):
+            try:
+                with open(self.env_path, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("GITHUB_REPOSITORY=") and not line_s.startswith("#"):
+                            val = line_s.split("=", 1)[1].strip()
+                            if val:
+                                return val
+            except Exception:
+                pass
+        try:
+            repo = get_repo_name()
+            if repo:
+                return repo
+        except Exception:
+            pass
+        return os.path.basename(self.project_root)
+
     # =========================================================
     # ABA 1: RUNNER
     # =========================================================
     def _build_runner_tab(self):
         container = ttk.Frame(self.tab_runner, padding=10)
         container.pack(fill="both", expand=True)
+
+        # Contexto do Projeto no Runner
+        proj_badge = ttk.Frame(container)
+        proj_badge.pack(fill="x", pady=(0, 10))
+        ttk.Label(proj_badge, text="Projeto:", font=("Segoe UI", 9, "bold")).pack(side="left")
+        ttk.Label(proj_badge, textvariable=self.repo_name_var, foreground="#0066cc", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(5, 15))
+        ttk.Label(proj_badge, text="Diretório:", font=("Segoe UI", 9, "bold")).pack(side="left")
+        ttk.Label(proj_badge, textvariable=self.project_root_var, foreground="#555555", font=("Segoe UI", 9)).pack(side="left", padx=(5, 0))
 
         # Seleção de Comando
         frame_cmd = ttk.Frame(container)
@@ -234,78 +273,192 @@ class DynamicWizard(tk.Tk):
     # ABA 2: SETTINGS (.env)
     # =========================================================
     def _build_settings_tab(self):
-        container = ttk.Frame(self.tab_settings, padding=20)
+        container = ttk.Frame(self.tab_settings, padding=15)
         container.pack(fill="both", expand=True)
 
-        ttk.Label(container, text="Parâmetros do Ambiente (.env)", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 15))
+        # Header do Projeto Ativo
+        header_frame = ttk.LabelFrame(container, text="Contexto do Projeto Ativo", padding=10)
+        header_frame.pack(fill="x", pady=(0, 10))
 
-        self.env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
-        
-        # Define as chaves padrão garantindo que sempre existam na UI
-        self.env_vars = {
-            "GEMINI_API_KEY": "",
-            "JULES_API_KEY": "",
-            "STITCH_API_KEY": "",
-            "STITCH_PROJECT_ID": "",
-            "RENDER_API_KEY": "",
-            "GITHUB_REPOSITORY": "",
-            "TURSO_DATABASE_URL": "",
-            "TURSO_AUTH_TOKEN": "",
-        }
-        self.env_entries = {}
+        # Linha 1: Nome do Repositório e botão de trocar pasta
+        row_top = ttk.Frame(header_frame)
+        row_top.pack(fill="x", pady=2)
+        ttk.Label(row_top, text="Repositório:", font=("Segoe UI", 9, "bold"), width=15).pack(side="left")
+        ttk.Label(row_top, textvariable=self.repo_name_var, font=("Segoe UI", 9, "bold"), foreground="#0066cc").pack(side="left")
+        ttk.Button(row_top, text="📁 Trocar Pasta do Projeto...", command=self._choose_project_dir).pack(side="right")
 
-        # Carregar .env atual e sobrescrever valores
+        # Linha 2: Diretório do Projeto
+        row_dir = ttk.Frame(header_frame)
+        row_dir.pack(fill="x", pady=2)
+        ttk.Label(row_dir, text="Diretório:", font=("Segoe UI", 9, "bold"), width=15).pack(side="left")
+        ttk.Label(row_dir, textvariable=self.project_root_var, wraplength=600).pack(side="left")
+
+        # Linha 3: Arquivo .env
+        row_env = ttk.Frame(header_frame)
+        row_env.pack(fill="x", pady=2)
+        ttk.Label(row_env, text="Arquivo .env:", font=("Segoe UI", 9, "bold"), width=15).pack(side="left")
+        ttk.Label(row_env, textvariable=self.env_path_var, foreground="#555555", wraplength=600).pack(side="left")
+
+        # Canvas Scrollável para os parâmetros do .env
+        ttk.Label(container, text="Parâmetros de Configuração (.env):", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 5))
+
+        self.env_canvas = tk.Canvas(container, highlightthickness=0)
+        env_scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.env_canvas.yview)
+        self.env_scrollable_frame = ttk.Frame(self.env_canvas)
+
+        self.env_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.env_canvas.configure(scrollregion=self.env_canvas.bbox("all"))
+        )
+
+        self.env_canvas_window = self.env_canvas.create_window((0, 0), window=self.env_scrollable_frame, anchor="nw")
+        self.env_canvas.configure(yscrollcommand=env_scrollbar.set)
+
+        self.env_canvas.bind(
+            "<Configure>",
+            lambda e: self.env_canvas.itemconfig(self.env_canvas_window, width=e.width)
+        )
+
+        self.env_canvas.pack(side="top", fill="both", expand=True)
+        env_scrollbar.pack(side="right", fill="y")
+
+        # Carrega os campos da pasta atual
+        self._load_env_fields()
+
+        # Botões de Ação
+        btn_bar = ttk.Frame(container)
+        btn_bar.pack(fill="x", pady=(10, 0))
+
+        ttk.Button(btn_bar, text="➕ Adicionar Variável", command=self._add_custom_env_var).pack(side="left")
+        ttk.Button(btn_bar, text="🔄 Recarregar", command=self._load_env_fields).pack(side="left", padx=5)
+        ttk.Button(btn_bar, text="💾 Salvar Configurações no .env", command=self.save_env).pack(side="right")
+
+    def _choose_project_dir(self):
+        chosen = filedialog.askdirectory(initialdir=self.project_root, title="Selecione a Pasta do Projeto")
+        if chosen:
+            self.project_root = os.path.abspath(chosen)
+            self.env_path = os.path.join(self.project_root, ".env")
+            self.project_root_var.set(self.project_root)
+            self.env_path_var.set(self.env_path)
+            self.repo_name_var.set(self._detect_repo_name())
+            self._load_env_fields()
+
+    def _load_env_fields(self):
+        # Limpa widgets existentes
+        for child in self.env_scrollable_frame.winfo_children():
+            child.destroy()
+
+        self.env_entries.clear()
+
+        # Dicionário com chaves ordenadas
+        env_data = {}
+
+        # 1. Carrega o .env do projeto atual se existir
         if os.path.exists(self.env_path):
-            with open(self.env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if "=" in line and not line.strip().startswith("#"):
-                        k, v = line.split("=", 1)
-                        self.env_vars[k.strip()] = v.strip()
+            try:
+                with open(self.env_path, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if "=" in line_s and not line_s.startswith("#"):
+                            k, v = line_s.split("=", 1)
+                            env_data[k.strip()] = v.strip()
+            except Exception as e:
+                messagebox.showwarning("Aviso", f"Erro ao ler .env do projeto: {e}")
 
-        # Cria a UI de entradas
-        form_frame = ttk.Frame(container)
-        form_frame.pack(fill="both", expand=True)
+        # 2. Garante que as chaves essenciais sempre estejam visíveis mesmo se ausentes no .env
+        core_keys = [
+            "TURSO_DATABASE_URL",
+            "TURSO_AUTH_TOKEN",
+            "PORT",
+            "NODE_ENV",
+            "STITCH_API_KEY",
+            "STITCH_PROJECT_ID",
+            "JULES_API_KEY",
+            "GEMINI_API_KEY",
+            "GITHUB_REPOSITORY",
+            "RENDER_API_KEY",
+        ]
+        for ck in core_keys:
+            if ck not in env_data:
+                env_data[ck] = ""
 
-        for key, val in self.env_vars.items():
-            row = ttk.Frame(form_frame)
-            row.pack(fill="x", pady=5)
-            
-            ttk.Label(row, text=key, width=25, font=("Segoe UI", 9, "bold")).pack(side="left")
-            str_var = tk.StringVar(value=val)
-            # Para senhas/API Keys ocultar os caracteres? Não, o usuário pediu pra poder alterar explícito.
-            ttk.Entry(row, textvariable=str_var).pack(side="left", fill="x", expand=True)
-            
-            self.env_entries[key] = str_var
+        # Renderiza cada variável
+        for key, val in env_data.items():
+            self._render_env_row(key, val)
 
-        # Salvar Botão
-        frame_btn = ttk.Frame(container)
-        frame_btn.pack(fill="x", pady=(20, 0))
-        ttk.Button(frame_btn, text="💾 Salvar Configurações", command=self.save_env).pack(side="right")
+    def _render_env_row(self, key, val):
+        row = ttk.Frame(self.env_scrollable_frame)
+        row.pack(fill="x", pady=4, padx=5)
+
+        lbl = ttk.Label(row, text=key, width=25, font=("Segoe UI", 9, "bold"), anchor="w")
+        lbl.pack(side="left")
+
+        val_var = tk.StringVar(value=val)
+        entry = ttk.Entry(row, textvariable=val_var)
+        entry.pack(side="left", fill="x", expand=True, padx=(5, 5))
+
+        self.env_entries[key] = (val_var, row)
+
+    def _add_custom_env_var(self):
+        var_name = simpledialog.askstring("Nova Variável", "Nome da variável de ambiente (ex: MINHA_CHAVE):", parent=self)
+        if var_name:
+            var_name = var_name.strip().replace(" ", "_").upper()
+            if var_name in self.env_entries:
+                messagebox.showwarning("Aviso", f"A variável '{var_name}' já existe na lista!", parent=self)
+            else:
+                self._render_env_row(var_name, "")
 
     def save_env(self):
-        # Atualiza dicionário em memória
-        for k, var in self.env_entries.items():
-            self.env_vars[k] = var.get().strip()
+        # Mapeia os novos valores
+        new_values = {}
+        for k, (var, _) in self.env_entries.items():
+            new_values[k] = var.get().strip()
 
-        # Lê o arquivo original para preservar formatação e comentários
+        written_keys = set()
         new_lines = []
+
         if os.path.exists(self.env_path):
-            with open(self.env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if "=" in line and not line.strip().startswith("#"):
-                        k = line.split("=", 1)[0].strip()
-                        if k in self.env_vars:
-                            new_lines.append(f"{k}={self.env_vars[k]}\n")
-                            continue
-                    new_lines.append(line)
-        else:
-            for k, v in self.env_vars.items():
+            try:
+                with open(self.env_path, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if "=" in line_s and not line_s.startswith("#"):
+                            k = line_s.split("=", 1)[0].strip()
+                            if k in new_values:
+                                new_lines.append(f"{k}={new_values[k]}\n")
+                                written_keys.add(k)
+                                continue
+                        new_lines.append(line)
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao ler arquivo .env atual: {e}")
+                return
+
+        # Adiciona quaisquer chaves que ainda não existiam no arquivo
+        for k, v in new_values.items():
+            if k not in written_keys:
                 new_lines.append(f"{k}={v}\n")
+                written_keys.add(k)
 
-        with open(self.env_path, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
+        try:
+            os.makedirs(os.path.dirname(self.env_path), exist_ok=True)
+            with open(self.env_path, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
 
-        messagebox.showinfo("Sucesso", "Configurações de ambiente salvas com sucesso no arquivo .env!")
+            # Atualiza variáveis no ambiente de processo
+            for k, v in new_values.items():
+                if v:
+                    os.environ[k] = v
+
+            # Atualiza o nome do repositório exibido caso tenha sido modificado
+            if "GITHUB_REPOSITORY" in new_values and new_values["GITHUB_REPOSITORY"]:
+                self.repo_name_var.set(new_values["GITHUB_REPOSITORY"])
+
+            messagebox.showinfo(
+                "Sucesso",
+                f"Configurações salvas com sucesso no arquivo .env!\n\nArquivo:\n{self.env_path}"
+            )
+        except Exception as e:
+            messagebox.showerror("Erro ao Salvar", f"Não foi possível gravar no arquivo .env:\n{e}")
 
 def start_wizard():
     app = DynamicWizard()
@@ -314,8 +467,8 @@ def start_wizard():
     app.mainloop()
     
     if app.result_command:
-        print(f"\n⚡ Executando comando gerado pelo Wizard:\n> {app.result_command}\n")
-        subprocess.run(app.result_command, shell=True)
+        print(f"\n⚡ Executando comando gerado pelo Wizard (no projeto {app.project_root}):\n> {app.result_command}\n")
+        subprocess.run(app.result_command, shell=True, cwd=app.project_root)
 
 if __name__ == "__main__":
     start_wizard()
