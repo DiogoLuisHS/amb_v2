@@ -127,6 +127,7 @@ Integração direta com o Google Jules para desenvolvimento remoto e gestão de 
 | `amb jules merge --auto-latest` | — | Detecta e faz merge do Pull Request aberto mais recente (incluindo Drafts). |
 | `amb jules merge -s <id> --branch <b>` | `-b` | Define o branch-alvo do merge (padrão: `develop`). |
 | `amb jules clean` | `cleanup` | Audita e remove na nuvem do Jules as sessões já integradas no Git (`-f` para forçar). |
+| `amb jules clean --failed` | — | Remove as sessões que terminaram em estado de erro fatal (FAILED). |
 
 > **💡 Publicação automática de Draft PRs:** o Jules sempre cria PRs como **Draft**. O pipeline `amb jules merge` executa `gh pr ready` automaticamente antes do merge, sem necessidade de intervenção manual.
 
@@ -138,7 +139,8 @@ amb jules create -p "Refatorar componentes de modal" -t "Modal Refactor"
 amb jules reply -s 17502412430766789460              # Responder dúvida com Gemini
 amb jules merge -s 17502412430766789460              # Merge do PR no GitHub + QA local
 amb jules merge -s 17502412430766789460 -b main      # Merge na branch main
-amb jules clean                                      # Limpar sessões antigas
+amb jules clean                                      # Auditar sessões e limpar PRs já mergeados
+amb jules clean --failed --force                     # Deletar sessões com erro fatal (FAILED)
 ```
 
 ---
