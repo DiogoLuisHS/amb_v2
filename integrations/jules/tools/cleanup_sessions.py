@@ -58,6 +58,7 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
     categorized = {
         "merged": [],
         "completed_no_pr": [],
+        "failed": [],
         "pending": [],
     }
 
@@ -82,7 +83,9 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
             "raw": s
         }
 
-        if is_merged:
+        if state == "FAILED":
+            categorized["failed"].append(item)
+        elif is_merged:
             categorized["merged"].append(item)
         elif state == "COMPLETED":
             categorized["completed_no_pr"].append(item)
@@ -115,6 +118,11 @@ def print_audit_report(categorized: Dict[str, List[Dict[str, Any]]]):
         print(f"\n⏳ {Colors.BOLD}{Colors.YELLOW}[3] SESSÕES ATIVAS / PENDENTES / EM PROGRESSO ({len(categorized['pending'])}):{Colors.RESET}")
         for it in categorized["pending"]:
             print(f"   • {Colors.YELLOW}⏳{Colors.RESET} [{it['state']}] ID: {Colors.DIM}{it['session_id']}{Colors.RESET} | {it['title'][:55]}")
+
+    if categorized["failed"]:
+        print(f"\n❌ {Colors.BOLD}{Colors.RED}[4] SESSÕES COM ERRO FATAL (FAILED) ({len(categorized['failed'])}):{Colors.RESET}")
+        for it in categorized["failed"]:
+            print(f"   • {Colors.RED}✖{Colors.RESET} ID: {Colors.DIM}{it['session_id']}{Colors.RESET} | {it['title'][:55]}")
 
     print("\n" + "=" * 78 + "\n")
 
@@ -179,6 +187,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Simula as ações sem executar exclusões reais.")
     parser.add_argument("--delete-merged", action="store_true", help="Exclui todas as sessões cujos PRs já foram mergeados no Git.")
     parser.add_argument("--delete-all-completed", action="store_true", help="Exclui todas as sessões concluídas (com e sem PR mergeado).")
+    parser.add_argument("--delete-failed", action="store_true", help="Exclui todas as sessões que falharam (FAILED).")
     parser.add_argument("--delete-id", help="Exclui uma sessão específica por ID.")
 
     args = parser.parse_args()
@@ -207,6 +216,8 @@ def main():
                 print(f"{Colors.RED}Erro ao buscar sessão {args.delete_id}:{Colors.RESET} {e}")
     elif args.delete_merged:
         execute_deletion(client, categorized["merged"], dry_run=args.dry_run)
+    elif args.delete_failed:
+        execute_deletion(client, categorized["failed"], dry_run=args.dry_run)
     elif args.delete_all_completed:
         all_completed = categorized["merged"] + categorized["completed_no_pr"]
         execute_deletion(client, all_completed, dry_run=args.dry_run)
@@ -214,7 +225,8 @@ def main():
         print(f"💡 Dica de Execução:")
         print(f"  • Simular exclusão de PRs integrados: python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-merged --dry-run")
         print(f"  • Excluir PRs já integrados no Git:   python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-merged")
-        print(f"  • Excluir todas as sessões concluídas: python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-all-completed\n")
+        print(f"  • Excluir todas as sessões concluídas: python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-all-completed")
+        print(f"  • Excluir sessões falhas (FAILED):     python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-failed\n")
 
 
 if __name__ == "__main__":

@@ -198,7 +198,16 @@ def cmd_jules(args):
 
     elif sub in ["clean", "cleanup"]:
         from cleanup_sessions import main as clean_main
-        sys.argv = ["cleanup_sessions.py"] + (["--force"] if getattr(args, "force", False) else [])
+        clean_args = ["cleanup_sessions.py"]
+        if getattr(args, "failed", False):
+            clean_args.append("--delete-failed")
+        else:
+            clean_args.append("--delete-merged")
+            
+        if not getattr(args, "force", False):
+            clean_args.append("--dry-run")
+            
+        sys.argv = clean_args
         clean_main()
 
     else:

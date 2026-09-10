@@ -96,6 +96,7 @@ def create_parser():
 
     j_clean = j_subs.add_parser("clean", aliases=["cleanup"], help="Audita e remove na nuvem sessões do Jules já integradas.")
     j_clean.add_argument("--force", "-f", action="store_true", help="Remove sem pedir confirmação.")
+    j_clean.add_argument("--failed", action="store_true", help="Remove todas as sessões que estão em estado de falha (FAILED).")
     p_jules.set_defaults(func=cmd_jules)
 
     # 8. amb stitch
