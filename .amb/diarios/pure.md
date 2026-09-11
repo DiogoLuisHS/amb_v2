@@ -1,3 +1,9 @@
+- **Date:** 2026-09-11
+- **Target:** `agents/auto_reply.py`
+- **SRP Action:** Extracted `_process_auto_approve_batch` and `_process_interactive_menu` from `run_auto_advisor`.
+- **DRY Improvement:** Eliminated recursive API calls in the "all" interactive option by calling the batch function directly.
+- **QA Status:** Linting and formatting passed. No regression in tests.
+
 ### 📅 [2026-09-02] Refatoração: cli.py
 - **Alvo:** `cli.py`
 - **Ação SRP:** Extraídos os handlers dos comandos para `cli_modules/cli_handlers.py` e a lógica do parser para `cli_modules/cli_parsers.py`. O arquivo `cli.py` foi simplificado para ser apenas um ponto de entrada (roteador delegando execução).
