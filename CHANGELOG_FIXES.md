@@ -178,4 +178,30 @@ amb agent --role relay --loop --max-cycles 5
   - Criados testes de mapeamento e isolamento de estado por `copy.deepcopy` em `AIContextBuilder`.
   - 100% dos testes validados e passando com `pytest`.
 
+### Inversão de Modo Padrão no Executor de Personas (`amb agent`)
+**Arquivos:** `agents/local_agent_runner.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`
+- **Motivação:** O comportamento padrão anterior requeria `--dispatch-jules` explícito para enviar à nuvem.
+- **Implementação:**
+  - O Google Jules passa a ser o despachante padrão para `amb agent --role <persona>` e `amb agent --all`.
+  - Adicionadas as flags `--agy` e `--local` para executar personas localmente via Antigravity CLI sem consumir cota do Jules.
+
+### Criação de Suíte Completa de Skills Especializadas do Antigravity
+**Diretório:** `.agents/skills/`
+- **Motivação:** Capacitar qualquer agente de IA ou desenvolvedor a atuar com maestria tanto nas ferramentas individuais quanto nas integrações cruzadas e no bootstrap em projetos consumidores.
+- **Implementação:**
+  - `amb-jules-specialist`: Ciclo de vida completo do Google Jules (sessões, streaming, auto-reply, merge de PRs).
+  - `amb-stitch-specialist`: Geração de UI, extração de código e design systems com Stitch.
+  - `amb-render-specialist`: Monitoramento de serviços e verificação de deploys pós-merge no Render.
+  - `amb-antigravity-specialist`: Personas locais (`agy`), calibração de prompts e diários de aprendizado.
+  - `amb-autonomous-pipeline`: O loop contínuo de 7 etapas (`amb agent --loop`).
+  - `amb-design-to-code`: Esteira Stitch ➔ Jules/AGY para codificação de protótipos em componentes de produção.
+  - `amb-context-architecture`: Mapeamento de repositórios em camadas (`LAYERS_CONFIG`) com `ai_context_builder.py`.
+  - `amb-consumer-bootstrap`: Guia e procedimentos para plugar e operar o `amb_v2` em qualquer projeto externo (`amb setup`).
+
+### Suporte a Arquivos de Prompt no Módulo Stitch
+**Arquivo:** `cli_modules/cli_handlers.py`
+- **Motivação:** Prompts longos passados via argumento na linha de comando sofriam risco de truncamento ou escape incorreto de aspas.
+- **Implementação:** Adicionado helper `_resolve_prompt` que lê automaticamente o conteúdo caso o parâmetro seja o caminho de um arquivo existente.
+
+
 

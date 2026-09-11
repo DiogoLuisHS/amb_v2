@@ -227,15 +227,23 @@ def cmd_stitch(args):
 
     client = StitchClient()
 
+    def _resolve_prompt(p: str) -> str:
+        if p and os.path.exists(p) and os.path.isfile(p):
+            with open(p, "r", encoding="utf-8", errors="replace") as f:
+                return f.read().strip()
+        return p
+
     if sub == "generate":
-        res = client.generate_screen(prompt=args.prompt)
+        prompt_text = _resolve_prompt(args.prompt)
+        res = client.generate_screen(prompt=prompt_text)
         sid = res.get("screenId") or "N/A"
         log("STITCH", f"Tela gerada com sucesso! ID: {sid}", Colors.GREEN)
         if res.get("screenshotUrl"):
             print(f"  • Screenshot: {res['screenshotUrl']}")
 
     elif sub == "refine":
-        res = client.edit_screen(screen_id=args.screen_id, prompt=args.prompt)
+        prompt_text = _resolve_prompt(args.prompt)
+        res = client.edit_screen(screen_id=args.screen_id, prompt=prompt_text)
         log("STITCH", f"Tela {args.screen_id} refinada com sucesso!", Colors.GREEN)
         if res.get("screenshotUrl"):
             print(f"  • Nova Screenshot: {res['screenshotUrl']}")
@@ -243,6 +251,10 @@ def cmd_stitch(args):
     elif sub == "get":
         res = client.get_screen(screen_id=args.screen_id)
         log("STITCH", f"Detalhes da tela {args.screen_id} obtidos com sucesso.", Colors.GREEN)
+        if res.get("screenshotUrl"):
+            print(f"  • Screenshot: {res['screenshotUrl']}")
+        if res.get("title"):
+            print(f"  • Título: {res['title']}")
 
     elif sub == "variants":
         res = client.generate_variants(screen_id=args.screen_id, prompt=args.prompt, variant_count=args.count)
