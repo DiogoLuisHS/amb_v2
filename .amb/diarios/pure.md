@@ -1,8 +1,15 @@
 - **Date:** 2026-09-11
-- **Target:** `agents/auto_reply.py`
-- **SRP Action:** Extracted `_process_auto_approve_batch` and `_process_interactive_menu` from `run_auto_advisor`.
-- **DRY Improvement:** Eliminated recursive API calls in the "all" interactive option by calling the batch function directly.
-- **QA Status:** Linting and formatting passed. No regression in tests.
+  - **Target:** `agents/autonomous_loop.py`
+  - **SRP Action:** Extracted inline AI context building, Jules session creation, and PR merge handling into private helper functions (`_build_ai_context`, `_dispatch_jules_session`, `_handle_pr_merge`).
+  - **DRY Improvement:** Improved readability of `run_autonomous_loop` by isolating distinct responsibilities.
+  - **QA Status:** Code formatted and linted. Tests run (0 tests exist).
+
+- **Date:** 2026-09-11
+  - **Target:** `agents/auto_reply.py`
+  - **SRP Action:** Extracted `_process_auto_approve_batch` and `_process_interactive_menu` from `run_auto_advisor`.
+  - **DRY Improvement:** Eliminated recursive API calls in the "all" interactive option by calling the batch function directly.
+  - **QA Status:** Linting and formatting passed. No regression in tests.
+
 
 ### 📅 [2026-09-02] Refatoração: cli.py
 - **Alvo:** `cli.py`

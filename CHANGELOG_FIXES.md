@@ -1,6 +1,6 @@
 # ✅ AMB_V2 — Changelog de Bugs Corrigidos & Features Implementadas
 
-> Atualizado em: 2026-08-30
+> Atualizado em: 2026-09-11
 
 Este documento registra todos os bugs corrigidos e features implementadas no ecossistema `amb_v2`.
 
@@ -127,3 +127,35 @@ amb agent --role relay --loop --max-cycles 5
 ### Publicação de Draft PRs Automática
 **Arquivo:** `integrations/jules/tools/merge_session_pr.py`
 **Implementação:** `gh pr ready <pr>` executado automaticamente no pipeline de merge antes do `gh pr review` e `gh pr merge`.
+
+---
+
+## 🧹 Refatorações & Code Health (2026-09-11)
+
+### Limpeza de Imports e Facade do Auto Advisor (PR #11)
+**Arquivo:** `dashboard/auto_advisor.py`
+- **Motivação:** Remoção de imports mortos (`run_auto_advisor`, `auto_reply_all_pending`, `interactive_advisor_menu`) que eram redundantes na facade do script.
+- **Implementação:** Mantido apenas `from auto_reply import main`, garantindo conformidade com linting e execução limpa.
+
+### Refatoração de Classificação Arquitetural em AIContextBuilder (PR #13)
+**Arquivo:** `architecture/ai_context_builder.py`
+- **Motivação:** Monolito condicional em `classify_and_order_files` e risco de poluição de estado entre chamadas sucessivas.
+- **Implementação:**
+  - Extração da configuração de camadas para constante de classe `LAYERS_CONFIG`.
+  - Uso de `copy.deepcopy` para inicialização isolada por execução.
+  - Criação do helper privado `_determine_file_layer(self, file: str)` delegando a responsabilidade de roteamento de camadas.
+
+### Decomposição Modular do Auto Advisor e Eliminação de Recursão (PR #14)
+**Arquivo:** `agents/auto_reply.py`
+- **Motivação:** `run_auto_advisor` acumulava controle de fluxo de aprovação em lote e menu interativo no terminal.
+- **Implementação:**
+  - Extraídos `_process_auto_approve_batch(pending)` e `_process_interactive_menu(pending)`.
+  - Eliminação de recursão e chamadas duplicadas à API do Jules quando a opção "Todos" ('A') é selecionada, reutilizando a lista `pending` já obtida em memória.
+
+### Refatoração SRP do Loop Autônomo (Inspirado no PR #12)
+**Arquivo:** `agents/autonomous_loop.py`
+- **Motivação:** `run_autonomous_loop` continha blocos extensos de lógica inline para injeção de contexto, despacho de sessão e merge de Git.
+- **Implementação:**
+  - Extraídas as funções auxiliares `_build_ai_context`, `_dispatch_jules_session` e `_handle_pr_merge`.
+  - O PR #12 original foi fechado e descartado para evitar a aplicação indesejada de reformatação global do Ruff em 45 arquivos alheios ao escopo, integrando-se apenas a refatoração estritamente necessária de forma atômica e limpa.
+
