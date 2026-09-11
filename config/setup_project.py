@@ -21,11 +21,20 @@ while _cur and os.path.basename(_cur) != "amb_v2":
 _AMB = _cur
 
 for _sub in [
-    "config", "config/setup_modules", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "config/setup_modules",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -51,12 +60,22 @@ def run_setup(interactive: bool = True):
     stack = ProjectAnalyzer.detect_stack(root)
 
     print(f"\n{Colors.BOLD}🔍 Resultados da Auto-Detecção:{Colors.RESET}")
-    print(f"  • Repositório Git:    {Colors.GREEN}{detected_repo or 'Não detectado'}{Colors.RESET}")
+    print(
+        f"  • Repositório Git:    {Colors.GREEN}{detected_repo or 'Não detectado'}{Colors.RESET}"
+    )
     print(f"  • Tipo de Projeto:    {Colors.GREEN}{stack['type']}{Colors.RESET}")
-    print(f"  • Gerenciador:        {Colors.GREEN}{stack['package_manager']}{Colors.RESET}")
-    print(f"  • Frameworks:         {Colors.GREEN}{', '.join(stack['frameworks']) or 'Genérico'}{Colors.RESET}")
-    print(f"  • Pasta de Regras:    {Colors.GREEN}{stack['rules_dir'] or 'Nenhuma detectada'}{Colors.RESET}")
-    print(f"  • Render Deploy:      {Colors.GREEN}{'Configurado (render.yaml)' if stack['has_render_yaml'] else 'Nenhum'}{Colors.RESET}\n")
+    print(
+        f"  • Gerenciador:        {Colors.GREEN}{stack['package_manager']}{Colors.RESET}"
+    )
+    print(
+        f"  • Frameworks:         {Colors.GREEN}{', '.join(stack['frameworks']) or 'Genérico'}{Colors.RESET}"
+    )
+    print(
+        f"  • Pasta de Regras:    {Colors.GREEN}{stack['rules_dir'] or 'Nenhuma detectada'}{Colors.RESET}"
+    )
+    print(
+        f"  • Render Deploy:      {Colors.GREEN}{'Configurado (render.yaml)' if stack['has_render_yaml'] else 'Nenhum'}{Colors.RESET}\n"
+    )
 
     current_repo = get_env("GITHUB_REPOSITORY", detected_repo or "")
     current_stitch_id = get_env("STITCH_PROJECT_ID", "")
@@ -64,9 +83,13 @@ def run_setup(interactive: bool = True):
 
     # 2. Interatividade se solicitado
     if interactive:
-        print(f"{Colors.YELLOW}Configuração Interativa de Metadados (pressione ENTER para manter o valor sugerido):{Colors.RESET}")
-        
-        in_repo = input(f"👉 Repositório GitHub (ex: owner/repo) [{current_repo}]: ").strip()
+        print(
+            f"{Colors.YELLOW}Configuração Interativa de Metadados (pressione ENTER para manter o valor sugerido):{Colors.RESET}"
+        )
+
+        in_repo = input(
+            f"👉 Repositório GitHub (ex: owner/repo) [{current_repo}]: "
+        ).strip()
         if in_repo:
             current_repo = in_repo
 
@@ -74,14 +97,19 @@ def run_setup(interactive: bool = True):
         if in_stitch:
             current_stitch_id = in_stitch
 
-        in_render = input(f"👉 Render Service ID (opcional) [{current_render_id}]: ").strip()
+        in_render = input(
+            f"👉 Render Service ID (opcional) [{current_render_id}]: "
+        ).strip()
         if in_render:
             current_render_id = in_render
 
     # 3. Provisionamento da Estrutura .amb/ e Personas Contextualizadas
-    log("SETUP", "Provisionando estrutura .amb/ e contextualizando personas...", Colors.CYAN)
+    log(
+        "SETUP",
+        "Provisionando estrutura .amb/ e contextualizando personas...",
+        Colors.CYAN,
+    )
     AmbProvisioner.provision_structure(root, stack, current_repo or "Projeto")
-
 
     # 4. Síntese Cognitiva
     log("SETUP", "Inferindo diretrizes e resumo técnico do projeto...", Colors.CYAN)
@@ -93,7 +121,7 @@ def run_setup(interactive: bool = True):
         "stitch_project_id": current_stitch_id,
         "render_service_id": current_render_id,
         "stack": stack,
-        "technical_summary": summary_spec
+        "technical_summary": summary_spec,
     }
 
     out_dir = os.path.join(root, ".amb")
@@ -120,12 +148,16 @@ def run_setup(interactive: bool = True):
                 f.write("# AMB_V2 - Variáveis de Ambiente do Projeto\n")
                 for k, v in env_updates.items():
                     f.write(f"{k}={v}\n")
-            log("SETUP", f"✅ Arquivo .env criado com sucesso em: {env_path}", Colors.GREEN)
+            log(
+                "SETUP",
+                f"✅ Arquivo .env criado com sucesso em: {env_path}",
+                Colors.GREEN,
+            )
         else:
             try:
                 with open(env_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                
+
                 existing_keys = set()
                 new_lines = []
                 for line in lines:
@@ -142,12 +174,20 @@ def run_setup(interactive: bool = True):
 
                 with open(env_path, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
-                log("SETUP", f"✅ Arquivo .env atualizado com as chaves do projeto.", Colors.GREEN)
+                log(
+                    "SETUP",
+                    f"✅ Arquivo .env atualizado com as chaves do projeto.",
+                    Colors.GREEN,
+                )
             except Exception as e:
                 log_error("SETUP", f"Não foi possível atualizar .env: {e}")
 
-    print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Setup do Projeto Concluído com Sucesso!{Colors.RESET}")
-    print(f"Estrutura .amb/ e Personas contextualizadas com base na stack {stack.get('type')}.")
+    print(
+        f"\n{Colors.BOLD}{Colors.GREEN}🎉 Setup do Projeto Concluído com Sucesso!{Colors.RESET}"
+    )
+    print(
+        f"Estrutura .amb/ e Personas contextualizadas com base na stack {stack.get('type')}."
+    )
     print(f"Configuração salva em: {out_json}")
     print(f"Você agora pode executar os comandos da CLI 'amb' normalmente.")
 
@@ -199,7 +239,9 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
 Ao finalizar, exiba o resumo da stack detectada e o status das chaves configuradas."""
 
     print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}{Colors.CYAN}📋 PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA (Copie e cole na sua IA):{Colors.RESET}")
+    print(
+        f"{Colors.BOLD}{Colors.CYAN}📋 PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA (Copie e cole na sua IA):{Colors.RESET}"
+    )
     print("=" * 75 + "\n")
     print(prompt_text)
     print("\n" + "=" * 75 + "\n")

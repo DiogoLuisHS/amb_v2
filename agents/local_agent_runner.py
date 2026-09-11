@@ -24,11 +24,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
 _AMB = _cur
 
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -43,7 +51,7 @@ def get_personas_directory(custom_dir: Optional[str] = None) -> str:
         return os.path.abspath(custom_dir)
 
     root = find_repo_root()
-    
+
     # 1. Prioridade Máxima: Pasta .amb/personas/ na raiz do projeto ativo
     amb_personas = os.path.join(root, ".amb", "personas")
     if os.path.exists(amb_personas) and os.path.isdir(amb_personas):
@@ -52,7 +60,11 @@ def get_personas_directory(custom_dir: Optional[str] = None) -> str:
     # 2. Pasta .amb/ direta
     amb_dir = os.path.join(root, ".amb")
     if os.path.exists(amb_dir) and os.path.isdir(amb_dir):
-        md_files = [f for f in os.listdir(amb_dir) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
+        md_files = [
+            f
+            for f in os.listdir(amb_dir)
+            if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"
+        ]
         if md_files:
             return os.path.abspath(amb_dir)
 
@@ -62,7 +74,11 @@ def get_personas_directory(custom_dir: Optional[str] = None) -> str:
         return os.path.abspath(jules_personas)
     jules_dir = os.path.join(root, ".jules")
     if os.path.exists(jules_dir) and os.path.isdir(jules_dir):
-        md_files = [f for f in os.listdir(jules_dir) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
+        md_files = [
+            f
+            for f in os.listdir(jules_dir)
+            if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"
+        ]
         if md_files:
             return os.path.abspath(jules_dir)
 
@@ -113,7 +129,11 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
                 title = m_title.group(1).strip()
 
             # Extrai resumo da primeira linha não vazia após o título
-            lines = [l.strip() for l in content.split("\n") if l.strip() and not l.startswith("#")]
+            lines = [
+                l.strip()
+                for l in content.split("\n")
+                if l.strip() and not l.startswith("#")
+            ]
             if lines:
                 summary = lines[0][:120] + ("..." if len(lines[0]) > 120 else "")
         except Exception:
@@ -125,7 +145,7 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
             "path": fpath,
             "title": title,
             "summary": summary,
-            "content": content
+            "content": content,
         }
 
     return personas
@@ -134,21 +154,31 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
 def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str):
     """Exibe no terminal a listagem dinâmica de todas as personas encontradas na pasta."""
     print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}{Colors.CYAN}🤖 PERSONAS DISPONÍVEIS NA PASTA ({len(personas)} encontradas){Colors.RESET}")
+    print(
+        f"{Colors.BOLD}{Colors.CYAN}🤖 PERSONAS DISPONÍVEIS NA PASTA ({len(personas)} encontradas){Colors.RESET}"
+    )
     print(f"📁 Diretório: {Colors.DIM}{personas_dir}{Colors.RESET}")
     print("=" * 75 + "\n")
 
     if not personas:
-        print(f"{Colors.YELLOW}Nenhuma persona (.md) encontrada em: {personas_dir}{Colors.RESET}")
-        print(f"Basta adicionar arquivos como '{personas_dir}/minha_persona.md' para ativá-las.\n")
+        print(
+            f"{Colors.YELLOW}Nenhuma persona (.md) encontrada em: {personas_dir}{Colors.RESET}"
+        )
+        print(
+            f"Basta adicionar arquivos como '{personas_dir}/minha_persona.md' para ativá-las.\n"
+        )
         return
 
     for key, p in personas.items():
-        print(f"  • {Colors.BOLD}{key:<12}{Colors.RESET} {Colors.GREEN}{p['title']}{Colors.RESET} (Arquivo: {p['filename']})")
+        print(
+            f"  • {Colors.BOLD}{key:<12}{Colors.RESET} {Colors.GREEN}{p['title']}{Colors.RESET} (Arquivo: {p['filename']})"
+        )
         print(f"    Missão: {Colors.DIM}{p['summary']}{Colors.RESET}\n")
 
     print(f"{Colors.YELLOW}Como Executar:{Colors.RESET}")
-    print(f"  • Uma Persona:       amb agent --role <nome>  (ou python amb_v2/agents/local_agent_runner.py --role <nome>)")
+    print(
+        f"  • Uma Persona:       amb agent --role <nome>  (ou python amb_v2/agents/local_agent_runner.py --role <nome>)"
+    )
     print(f"  • TODAS as Personas: amb agent --all")
     print(f"  • Despachar Jules:    amb agent --role <nome> --dispatch-jules\n")
 
@@ -156,7 +186,7 @@ def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str):
 def execute_single_persona(
     persona_data: Dict[str, str],
     task: Optional[str] = None,
-    dispatch_jules: bool = False
+    dispatch_jules: bool = False,
 ):
     """Executa ou despacha uma persona específica."""
     title = persona_data["title"]
@@ -190,17 +220,17 @@ def execute_single_persona(
     print(f"🤖 {Colors.BOLD}EXECUTANDO PERSONA:{Colors.RESET} {title}")
     print(f"📄 {Colors.BOLD}ARQUIVO:{Colors.RESET} {persona_data['filename']}")
     print(f"📁 {Colors.BOLD}LOCAL:{Colors.RESET} {persona_data['path']}")
-    print(f"🎯 {Colors.BOLD}MODO:{Colors.RESET} {'Google Jules Cloud VM' if dispatch_jules else 'Antigravity Local (agy CLI)'}")
+    print(
+        f"🎯 {Colors.BOLD}MODO:{Colors.RESET} {'Google Jules Cloud VM' if dispatch_jules else 'Antigravity Local (agy CLI)'}"
+    )
     print("=" * 75 + "\n")
 
     # MODO 1: Despacho para Cloud do Google Jules
     if dispatch_jules:
         from create_session import create_session
+
         log("AGENT", f"Despachando '{title}' para o Google Jules...", Colors.CYAN)
-        res = create_session(
-            prompt=full_prompt,
-            title=title
-        )
+        res = create_session(prompt=full_prompt, title=title)
         sid = res.get("name", "").split("/")[-1] or res.get("id")
         log("AGENT", f"🎉 Sessão do Jules criada com sucesso! ID: {sid}", Colors.GREEN)
         print(f"🔗 Painel Web: https://jules.google.com/session/{sid}")
@@ -215,26 +245,55 @@ def execute_single_persona(
             cwd=root,
             text=True,
             encoding="utf-8",
-            errors="replace"
+            errors="replace",
         )
         if proc.returncode != 0:
-            raise ApiExecutionError(f"Agente local encerrou com código {proc.returncode}")
+            raise ApiExecutionError(
+                f"Agente local encerrou com código {proc.returncode}"
+            )
         log("AGENT", f"✅ Execução de '{title}' finalizada com sucesso!", Colors.GREEN)
     except FileNotFoundError:
         raise ApiExecutionError(
             "CLI 'agy' não encontrada no PATH do sistema.",
-            hint="Certifique-se de que o Google Antigravity SDK / agy CLI está instalado e acessível no terminal."
+            hint="Certifique-se de que o Google Antigravity SDK / agy CLI está instalado e acessível no terminal.",
         )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Executor dinâmico de personas do repositório ativo (lê dinamicamente da pasta .amb/ ou .jules/).")
-    parser.add_argument("--role", "-r", help="Nome da persona a ser executada (ex: deadwood, beacon, bolt, sentry, relay, etc.).")
-    parser.add_argument("--all", "-a", action="store_true", help="Executa TODAS as personas encontradas na pasta sequencialmente.")
-    parser.add_argument("--task", "-t", help="Instrução ou escopo específico adicional para anexar ao prompt da persona.")
-    parser.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis na pasta e encerra.")
-    parser.add_argument("--dispatch-jules", "-j", action="store_true", help="Despacha para o Google Jules em vez de rodar localmente.")
-    parser.add_argument("--personas-dir", help="Caminho customizado da pasta de personas.")
+    parser = argparse.ArgumentParser(
+        description="Executor dinâmico de personas do repositório ativo (lê dinamicamente da pasta .amb/ ou .jules/)."
+    )
+    parser.add_argument(
+        "--role",
+        "-r",
+        help="Nome da persona a ser executada (ex: deadwood, beacon, bolt, sentry, relay, etc.).",
+    )
+    parser.add_argument(
+        "--all",
+        "-a",
+        action="store_true",
+        help="Executa TODAS as personas encontradas na pasta sequencialmente.",
+    )
+    parser.add_argument(
+        "--task",
+        "-t",
+        help="Instrução ou escopo específico adicional para anexar ao prompt da persona.",
+    )
+    parser.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="Lista todas as personas disponíveis na pasta e encerra.",
+    )
+    parser.add_argument(
+        "--dispatch-jules",
+        "-j",
+        action="store_true",
+        help="Despacha para o Google Jules em vez de rodar localmente.",
+    )
+    parser.add_argument(
+        "--personas-dir", help="Caminho customizado da pasta de personas."
+    )
 
     args = parser.parse_args()
 
@@ -253,7 +312,9 @@ def main():
             sys.exit(1)
 
         print("\n" + "=" * 75)
-        print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO EXECUÇÃO EM LOTE DE TODAS AS {len(personas)} PERSONAS{Colors.RESET}")
+        print(
+            f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO EXECUÇÃO EM LOTE DE TODAS AS {len(personas)} PERSONAS{Colors.RESET}"
+        )
         print("=" * 75)
 
         for idx, (key, p_data) in enumerate(personas.items(), 1):
@@ -264,12 +325,14 @@ def main():
                 execute_single_persona(
                     persona_data=p_data,
                     task=args.task,
-                    dispatch_jules=args.dispatch_jules
+                    dispatch_jules=args.dispatch_jules,
                 )
             except Exception as e:
                 log_error("AGENT", f"Falha na persona '{key}': {e}")
 
-        print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Execução em lote de todas as personas concluída!{Colors.RESET}\n")
+        print(
+            f"\n{Colors.BOLD}{Colors.GREEN}🎉 Execução em lote de todas as personas concluída!{Colors.RESET}\n"
+        )
         return
 
     # 3. Executar UMA persona específica
@@ -278,7 +341,7 @@ def main():
         log_error(
             "AGENT",
             f"Persona '{args.role}' não encontrada em {personas_dir}.",
-            hint=f"Personas disponíveis: {', '.join(personas.keys())}. Ou use --list para ver todas."
+            hint=f"Personas disponíveis: {', '.join(personas.keys())}. Ou use --list para ver todas.",
         )
         sys.exit(1)
 
@@ -286,7 +349,7 @@ def main():
         execute_single_persona(
             persona_data=personas[clean_role],
             task=args.task,
-            dispatch_jules=args.dispatch_jules
+            dispatch_jules=args.dispatch_jules,
         )
     except Exception as e:
         log_error("AGENT", str(e))

@@ -23,6 +23,7 @@ if sys.platform == "win32":
 
 class Colors:
     """Paleta ANSI para logs padronizados no terminal."""
+
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     CYAN = "\033[96m"
@@ -36,6 +37,7 @@ class Colors:
 
 class AmbError(Exception):
     """Exceção base para o ecossistema amb_v2 com diagnóstico detalhado."""
+
     def __init__(self, message: str, hint: Optional[str] = None):
         full_msg = f"{message}"
         if hint:
@@ -47,31 +49,43 @@ class AmbError(Exception):
 
 class ConfigurationError(AmbError):
     """Lançado quando uma chave de API, arquivo ou configuração mandatória está ausente."""
+
     pass
 
 
 class ApiExecutionError(AmbError):
     """Lançado quando uma chamada a uma das SDKs/APIs falha explicitamente."""
+
     pass
 
 
 def log(tag: str, message: str, color: str = Colors.RESET) -> None:
     """Imprime mensagem com timestamp e tag colorida."""
     timestamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] [{color}{Colors.BOLD}{tag}{Colors.RESET}] {message}", flush=True)
+    print(
+        f"[{timestamp}] [{color}{Colors.BOLD}{tag}{Colors.RESET}] {message}", flush=True
+    )
 
 
 def log_error(tag: str, message: str, hint: Optional[str] = None) -> None:
     """Imprime erro com formatação de alerta e dica de resolução."""
     timestamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] [{Colors.RED}{Colors.BOLD}ERRO::{tag}{Colors.RESET}] {message}", file=sys.stderr, flush=True)
+    print(
+        f"[{timestamp}] [{Colors.RED}{Colors.BOLD}ERRO::{tag}{Colors.RESET}] {message}",
+        file=sys.stderr,
+        flush=True,
+    )
     if hint:
-        print(f"[{timestamp}] [{Colors.YELLOW}{Colors.BOLD}DICA DE RESOLUÇÃO{Colors.RESET}] {hint}", file=sys.stderr, flush=True)
+        print(
+            f"[{timestamp}] [{Colors.YELLOW}{Colors.BOLD}DICA DE RESOLUÇÃO{Colors.RESET}] {hint}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def find_repo_root(start_dir: Optional[str] = None) -> str:
     """Localiza a raiz do repositório procurando por .git, .env ou package.json a partir do diretório atual.
-    
+
     Regra de prioridade:
     1. Preferência por .git (marcador definitivo de raiz de repositório)
     2. .env como marcador de projeto configurado
@@ -190,8 +204,13 @@ def require_env(key: str, hint: Optional[str] = None) -> str:
             "GEMINI_API_KEY": "Obtenha em https://aistudio.google.com/app/api-keys e adicione no .env (GEMINI_API_KEY=...)",
             "RENDER_API_KEY": "Obtenha em https://dashboard.render.com/u/settings#api-keys e adicione no .env (RENDER_API_KEY=...)",
         }
-        resolved_hint = hint or default_hints.get(key, f"Defina a variável '{key}' no arquivo .env ou execute python amb_v2/config/setup_project.py")
-        raise ConfigurationError(f"Variável mandatória ausente: '{key}'", hint=resolved_hint)
+        resolved_hint = hint or default_hints.get(
+            key,
+            f"Defina a variável '{key}' no arquivo .env ou execute python amb_v2/config/setup_project.py",
+        )
+        raise ConfigurationError(
+            f"Variável mandatória ausente: '{key}'", hint=resolved_hint
+        )
     return val
 
 
@@ -205,13 +224,15 @@ def get_repo_name() -> str:
         return p_meta["repository"]
     raise ConfigurationError(
         "Variável GITHUB_REPOSITORY não configurada.",
-        hint="Defina GITHUB_REPOSITORY=usuario/repo no seu arquivo .env"
+        hint="Defina GITHUB_REPOSITORY=usuario/repo no seu arquivo .env",
     )
 
 
 def main():
     """Valida e exibe o checklist visual de configurações do repositório ativo."""
-    print(f"{Colors.BOLD}{Colors.CYAN}=== AMB_V2 - VALIDAÇÃO DE AMBIENTE E CONFIGURAÇÕES ==={Colors.RESET}\n")
+    print(
+        f"{Colors.BOLD}{Colors.CYAN}=== AMB_V2 - VALIDAÇÃO DE AMBIENTE E CONFIGURAÇÕES ==={Colors.RESET}\n"
+    )
     root = find_repo_root()
     p_json_exists = (
         os.path.exists(os.path.join(root, ".amb", "amb_project.json"))
@@ -223,8 +244,12 @@ def main():
         or os.path.exists(os.path.join(os.path.dirname(__file__), "amb_project.json"))
     )
     print(f"📁 Raiz do Projeto: {root}")
-    print(f"📄 Arquivo .env: {'Encontrado' if os.path.exists(os.path.join(root, '.env')) else 'Não encontrado'}")
-    print(f"📄 Arquivo .amb/amb_project.json: {'Encontrado' if p_json_exists else 'Não encontrado'}\n")
+    print(
+        f"📄 Arquivo .env: {'Encontrado' if os.path.exists(os.path.join(root, '.env')) else 'Não encontrado'}"
+    )
+    print(
+        f"📄 Arquivo .amb/amb_project.json: {'Encontrado' if p_json_exists else 'Não encontrado'}\n"
+    )
 
     keys_to_check = [
         ("STITCH_API_KEY", "Google Stitch SDK"),
@@ -241,9 +266,13 @@ def main():
             masked = val[:4] + "..." + val[-4:] if len(val) > 10 else "***"
             print(f"  ✅ {desc:<30} ({key}): {Colors.GREEN}{masked}{Colors.RESET}")
         else:
-            print(f"  ⚠️  {desc:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
+            print(
+                f"  ⚠️  {desc:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}"
+            )
 
-    print(f"\n{Colors.DIM}Para configurar ou auto-detectar o projeto, execute: amb setup (ou python amb_v2/config/setup_project.py){Colors.RESET}")
+    print(
+        f"\n{Colors.DIM}Para configurar ou auto-detectar o projeto, execute: amb setup (ou python amb_v2/config/setup_project.py){Colors.RESET}"
+    )
 
 
 if __name__ == "__main__":

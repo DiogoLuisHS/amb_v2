@@ -1,3 +1,9 @@
+- Date: 2026-09-11
+  - Target: `agents/autonomous_loop.py`
+  - SRP Action: Extracted inline AI context building, Jules session creation, and PR merge handling into private helper functions (`_build_ai_context`, `_dispatch_jules_session`, `_handle_pr_merge`).
+  - DRY Improvement: Improved readability of `run_autonomous_loop` by isolating distinct responsibilities.
+  - QA Status: Code formatted and linted (ruff). Tests run (0 tests exist).
+
 ### 📅 [2026-09-02] Refatoração: cli.py
 - **Alvo:** `cli.py`
 - **Ação SRP:** Extraídos os handlers dos comandos para `cli_modules/cli_handlers.py` e a lógica do parser para `cli_modules/cli_parsers.py`. O arquivo `cli.py` foi simplificado para ser apenas um ponto de entrada (roteador delegando execução).

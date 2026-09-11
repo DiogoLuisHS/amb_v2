@@ -24,17 +24,33 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from config import Colors, log, log_error, get_env, require_env, ApiExecutionError, find_repo_root
+from config import (
+    Colors,
+    log,
+    log_error,
+    get_env,
+    require_env,
+    ApiExecutionError,
+    find_repo_root,
+)
 
 
 class AntigravityClient:
@@ -44,13 +60,20 @@ class AntigravityClient:
         self.model = model or get_env("GEMINI_MODEL") or "gemini-3.8-flash"
         self.api_key = get_env("GEMINI_API_KEY")
 
-    def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
+    def _generate_via_agy_cli(
+        self, prompt: str, system_instruction: Optional[str] = None
+    ) -> Optional[str]:
         """Tenta inferência via CLI agy se disponível no PATH."""
         import shutil
+
         if not shutil.which("agy"):
             return None
         try:
-            full_prompt = f"System: {system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
+            full_prompt = (
+                f"System: {system_instruction}\n\nUser: {prompt}"
+                if system_instruction
+                else prompt
+            )
             res = subprocess.run(
                 ["agy", "-p", full_prompt],
                 capture_output=True,
@@ -58,7 +81,7 @@ class AntigravityClient:
                 encoding="utf-8",
                 errors="replace",
                 timeout=10,
-                check=False
+                check=False,
             )
             if res.returncode == 0 and res.stdout.strip():
                 return res.stdout.strip()
@@ -66,15 +89,21 @@ class AntigravityClient:
             pass
         return None
 
-
-    def _generate_via_api(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    def _generate_via_api(
+        self, prompt: str, system_instruction: Optional[str] = None
+    ) -> str:
         """Executa chamada direta à REST API do Google Gemini com retry e fallback inteligente."""
         if not self.api_key:
             require_env("GEMINI_API_KEY")
 
         # Apenas modelos modernos de última geração
         models_to_try = [self.model]
-        for fallback_m in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash","gemini-3.1-pro-preview"]:
+        for fallback_m in [
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.1-pro-preview",
+        ]:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
@@ -85,15 +114,8 @@ class AntigravityClient:
                 headers = {"Content-Type": "application/json"}
 
                 payload = {
-                    "contents": [
-                        {
-                            "parts": [{"text": prompt}]
-                        }
-                    ],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "maxOutputTokens": 8192
-                    }
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 8192},
                 }
 
                 if system_instruction:
@@ -102,7 +124,9 @@ class AntigravityClient:
                     }
 
                 data_bytes = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+                req = urllib.request.Request(
+                    url, data=data_bytes, headers=headers, method="POST"
+                )
 
                 try:
                     with urllib.request.urlopen(req, timeout=35) as resp:
@@ -112,7 +136,9 @@ class AntigravityClient:
                             parts = candidates[0].get("content", {}).get("parts", [])
                             if parts:
                                 return parts[0].get("text", "").strip()
-                        raise ApiExecutionError("Resposta vazia retornada pelo modelo Gemini.")
+                        raise ApiExecutionError(
+                            "Resposta vazia retornada pelo modelo Gemini."
+                        )
                 except urllib.error.HTTPError as e:
                     err_text = e.read().decode("utf-8")
                     msg = f"HTTP {e.code}: {e.reason}"
@@ -127,25 +153,35 @@ class AntigravityClient:
 
                     # Se for 429 (Rate Limit por minuto) ou 503 (alta demanda) pula para o próximo fallback
                     if e.code in [429, 503]:
-                        log("ANTIGRAVITY", f"Limite ou instabilidade no modelo ({current_m}). Tentando fallback...", Colors.YELLOW)
+                        log(
+                            "ANTIGRAVITY",
+                            f"Limite ou instabilidade no modelo ({current_m}). Tentando fallback...",
+                            Colors.YELLOW,
+                        )
                         break
                     else:
                         break
                 except Exception as e:
-                    last_err = ApiExecutionError(f"Falha de conexão com a API do Gemini ({current_m}): {e}")
+                    last_err = ApiExecutionError(
+                        f"Falha de conexão com a API do Gemini ({current_m}): {e}"
+                    )
                     break
 
         raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini.")
 
-
-
-    def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    def generate_text(
+        self, prompt: str, system_instruction: Optional[str] = None
+    ) -> str:
         """Gera texto utilizando os modelos Gemini modernos via REST e fallback final para o CLI Antigravity (agy)."""
         if self.api_key:
             try:
                 return self._generate_via_api(prompt, system_instruction)
             except Exception as e:
-                log("ANTIGRAVITY", f"Chamada REST indisponível ({e}). Tentando fallback para CLI agy...", Colors.YELLOW)
+                log(
+                    "ANTIGRAVITY",
+                    f"Chamada REST indisponível ({e}). Tentando fallback para CLI agy...",
+                    Colors.YELLOW,
+                )
                 cli_out = self._generate_via_agy_cli(prompt, system_instruction)
                 if cli_out:
                     return cli_out
@@ -155,9 +191,6 @@ class AntigravityClient:
         if cli_out:
             return cli_out
         return self._generate_via_api(prompt, system_instruction)
-
-
-
 
     def synthesize_prompt(self, raw_idea: str, role: str = "general") -> str:
         """Sintetiza um prompt formal para execução autônoma."""
@@ -171,7 +204,12 @@ class AntigravityClient:
             for f in sorted(os.listdir(rules_dir)):
                 if f.endswith(".md"):
                     try:
-                        with open(os.path.join(rules_dir, f), "r", encoding="utf-8", errors="replace") as rf:
+                        with open(
+                            os.path.join(rules_dir, f),
+                            "r",
+                            encoding="utf-8",
+                            errors="replace",
+                        ) as rf:
                             rules_content += f"\n--- [{f}] ---\n" + rf.read()[:500]
                     except Exception:
                         pass
@@ -189,13 +227,19 @@ class AntigravityClient:
 Papel / Especialidade: {role}
 
 Regras Arquiteturais do Repositório:
-{rules_content or 'TypeScript estrito, SRP, componentes modulares, validação com build/typecheck.'}
+{rules_content or "TypeScript estrito, SRP, componentes modulares, validação com build/typecheck."}
 
 Gere o prompt executivo final pronto para despacho."""
         try:
-            return self.generate_text(prompt=prompt, system_instruction=system_instruction)
+            return self.generate_text(
+                prompt=prompt, system_instruction=system_instruction
+            )
         except Exception as e:
-            log("ANTIGRAVITY", f"Aviso: Síntese via IA indisponível temporariamente ({e}). Usando template executivo estruturado...", Colors.YELLOW)
+            log(
+                "ANTIGRAVITY",
+                f"Aviso: Síntese via IA indisponível temporariamente ({e}). Usando template executivo estruturado...",
+                Colors.YELLOW,
+            )
             return f"""# 🎯 ESCOPO TÉCNICO EXECUTIVO (AMB_V2)
 
 ## 📌 Contexto & Requisitos de Engenharia
@@ -209,14 +253,19 @@ Gere o prompt executivo final pronto para despacho."""
 {rules_content}
 """
 
-
     def validate_code(self, file_path: str) -> str:
         """Audita o código contra as diretrizes e regras arquiteturais do projeto."""
         root = find_repo_root()
-        full_path = os.path.abspath(os.path.join(root, file_path)) if not os.path.isabs(file_path) else file_path
+        full_path = (
+            os.path.abspath(os.path.join(root, file_path))
+            if not os.path.isabs(file_path)
+            else file_path
+        )
 
         if not os.path.exists(full_path):
-            raise ApiExecutionError(f"Arquivo não encontrado para validação: {full_path}")
+            raise ApiExecutionError(
+                f"Arquivo não encontrado para validação: {full_path}"
+            )
 
         with open(full_path, "r", encoding="utf-8", errors="replace") as f:
             code_content = f.read()
@@ -230,7 +279,12 @@ Gere o prompt executivo final pronto para despacho."""
             for rf in sorted(os.listdir(rules_dir)):
                 if rf.endswith(".md"):
                     try:
-                        with open(os.path.join(rules_dir, rf), "r", encoding="utf-8", errors="replace") as rule_file:
+                        with open(
+                            os.path.join(rules_dir, rf),
+                            "r",
+                            encoding="utf-8",
+                            errors="replace",
+                        ) as rule_file:
                             rules_text += f"\n--- [{rf}] ---\n" + rule_file.read()
                     except Exception:
                         pass
@@ -249,7 +303,7 @@ CÓDIGO:
 ```
 
 REGRAS ARQUITETURAIS:
-{rules_text or 'TypeScript estrito, SRP, componentes isolados, 0 any, 0 imports mortos.'}
+{rules_text or "TypeScript estrito, SRP, componentes isolados, 0 any, 0 imports mortos."}
 
 Aponte se o código está em conformidade. Se houver problemas, liste os pontos específicos para correção."""
         return self.generate_text(prompt=prompt, system_instruction=system_instruction)
@@ -259,8 +313,10 @@ Aponte se o código está em conformidade. Se houver problemas, liste os pontos 
 def synthesize_prompt(raw_idea: str, role: str = "general") -> str:
     return AntigravityClient().synthesize_prompt(raw_idea, role=role)
 
+
 def validate_code(file_path: str) -> str:
     return AntigravityClient().validate_code(file_path)
+
 
 if __name__ == "__main__":
     try:

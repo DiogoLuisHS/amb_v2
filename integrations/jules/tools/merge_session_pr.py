@@ -35,11 +35,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -71,7 +79,9 @@ def detect_pr_from_session(session_id: str) -> Optional[int]:
 
         # 2. Checa em activities
         act_res = client.list_activities(session_id=session_id, page_size=50)
-        activities = act_res if isinstance(act_res, list) else act_res.get("activities", [])
+        activities = (
+            act_res if isinstance(act_res, list) else act_res.get("activities", [])
+        )
         for act in activities:
             txt = str(act)
             match = re.search(r"github\.com/[^/]+/[^/]+/pull/(\d+)", txt)
@@ -86,20 +96,32 @@ def get_latest_open_pr(repo_name: str) -> Optional[Dict[str, Any]]:
     """Consulta os PRs abertos no repositório via GitHub CLI, incluindo drafts criados pelo Jules."""
     for draft_flag in [["--draft"], []]:
         proc = subprocess.run(
-            ["gh", "pr", "list", "--repo", repo_name, "--state", "open",
-             "--json", "number,title,url,headRefName,isDraft,createdAt"] + draft_flag,
+            [
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                repo_name,
+                "--state",
+                "open",
+                "--json",
+                "number,title,url,headRefName,isDraft,createdAt",
+            ]
+            + draft_flag,
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=True,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             try:
                 prs = json.loads(proc.stdout)
                 if prs:
                     # Ordena por mais recente e retorna o primeiro
-                    prs_sorted = sorted(prs, key=lambda p: p.get("createdAt", ""), reverse=True)
+                    prs_sorted = sorted(
+                        prs, key=lambda p: p.get("createdAt", ""), reverse=True
+                    )
                     return prs_sorted[0]
             except Exception:
                 pass
@@ -111,7 +133,7 @@ def approve_and_merge_pr(
     pr_number: Optional[int] = None,
     auto_latest: bool = False,
     target_branch: str = "develop",
-    auto_approve_review: bool = True
+    auto_approve_review: bool = True,
 ) -> bool:
     """Aprova o PR no GitHub, realiza o merge (squash), puxa localmente e roda o build."""
     repo_root = find_repo_root()
@@ -122,24 +144,39 @@ def approve_and_merge_pr(
     # 1. Identifica o PR com retry para permitir propagação no GitHub
     for attempt in range(3):
         if not resolved_pr and session_id:
-            log("GIT-SYNC", f"Buscando PR vinculado à sessão {session_id} (tentativa {attempt+1}/3)...", Colors.CYAN)
+            log(
+                "GIT-SYNC",
+                f"Buscando PR vinculado à sessão {session_id} (tentativa {attempt + 1}/3)...",
+                Colors.CYAN,
+            )
             resolved_pr = detect_pr_from_session(session_id)
 
         if not resolved_pr and (auto_latest or not session_id):
-            log("GIT-SYNC", f"Buscando último PR aberto no repositório {repo_name} (tentativa {attempt+1}/3)...", Colors.CYAN)
+            log(
+                "GIT-SYNC",
+                f"Buscando último PR aberto no repositório {repo_name} (tentativa {attempt + 1}/3)...",
+                Colors.CYAN,
+            )
             latest = get_latest_open_pr(repo_name)
             if latest:
                 resolved_pr = latest.get("number")
-                log("GIT-SYNC", f"PR detectado: #{resolved_pr} - {latest.get('title')}", Colors.GREEN)
+                log(
+                    "GIT-SYNC",
+                    f"PR detectado: #{resolved_pr} - {latest.get('title')}",
+                    Colors.GREEN,
+                )
 
         if resolved_pr:
             break
         if attempt < 2:
             time.sleep(5)
 
-
     if not resolved_pr and session_id:
-        log("GIT-SYNC", "Nenhum PR aberto no GitHub. Verificando patches diretos no session outputs...", Colors.CYAN)
+        log(
+            "GIT-SYNC",
+            "Nenhum PR aberto no GitHub. Verificando patches diretos no session outputs...",
+            Colors.CYAN,
+        )
         client = JulesClient()
         try:
             sess = client.get_session(session_id)
@@ -147,20 +184,34 @@ def approve_and_merge_pr(
             if outputs:
                 patch_info = outputs[0].get("changeSet", {}).get("gitPatch", {})
                 diff = patch_info.get("unidiffPatch", "")
-                commit_msg = patch_info.get("suggestedCommitMessage", f"chore(jules): integrate session {session_id}")
+                commit_msg = patch_info.get(
+                    "suggestedCommitMessage",
+                    f"chore(jules): integrate session {session_id}",
+                )
                 if diff:
-                    log("GIT-SYNC", "Patch detectado no session outputs. Aplicando localmente...", Colors.HEADER)
+                    log(
+                        "GIT-SYNC",
+                        "Patch detectado no session outputs. Aplicando localmente...",
+                        Colors.HEADER,
+                    )
                     patch_path = os.path.join(repo_root, ".tmp_jules.patch")
                     with open(patch_path, "w", encoding="utf-8") as pf:
                         pf.write(diff)
                     apply_res = subprocess.run(
-                        ["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", patch_path],
+                        [
+                            "git",
+                            "apply",
+                            "--whitespace=fix",
+                            "--ignore-space-change",
+                            "--ignore-whitespace",
+                            patch_path,
+                        ],
                         cwd=repo_root,
                         capture_output=True,
                         text=True,
                         encoding="utf-8",
                         errors="replace",
-                        shell=True
+                        shell=True,
                     )
                     if os.path.exists(patch_path):
                         os.remove(patch_path)
@@ -180,10 +231,25 @@ def approve_and_merge_pr(
                                     with open(t_path, "w", encoding="utf-8") as tf:
                                         pass
                                 continue
-                            p_part_path = os.path.join(repo_root, f".tmp_part_{p_idx}.patch")
+                            p_part_path = os.path.join(
+                                repo_root, f".tmp_part_{p_idx}.patch"
+                            )
                             with open(p_part_path, "w", encoding="utf-8") as ppf:
                                 ppf.write(single_p)
-                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
+                            p_res = subprocess.run(
+                                [
+                                    "git",
+                                    "apply",
+                                    "--whitespace=fix",
+                                    "--ignore-space-change",
+                                    "--ignore-whitespace",
+                                    p_part_path,
+                                ],
+                                cwd=repo_root,
+                                capture_output=True,
+                                text=True,
+                                shell=True,
+                            )
                             if os.path.exists(p_part_path):
                                 os.remove(p_part_path)
                             if p_res.returncode != 0:
@@ -191,26 +257,56 @@ def approve_and_merge_pr(
 
                         patch_success = all_applied
                         if not patch_success:
-                            log_error("GIT-SYNC", f"Falha ao aplicar patch via git apply:\n{apply_res.stderr}")
+                            log_error(
+                                "GIT-SYNC",
+                                f"Falha ao aplicar patch via git apply:\n{apply_res.stderr}",
+                            )
                     else:
                         patch_success = True
-                    
+
                     if patch_success:
-                        subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=True)
-                        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=True)
+                        subprocess.run(
+                            ["git", "add", "."],
+                            cwd=repo_root,
+                            capture_output=True,
+                            shell=True,
+                        )
+                        subprocess.run(
+                            ["git", "commit", "-m", commit_msg],
+                            cwd=repo_root,
+                            capture_output=True,
+                            shell=True,
+                        )
 
+                        print(
+                            f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n"
+                        )
 
-                        print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
-                        
                         # QA Local adaptativo à stack
-                        log("QA-VALIDATION", "Executando verificação de integridade pós-patch...", Colors.CYAN)
+                        log(
+                            "QA-VALIDATION",
+                            "Executando verificação de integridade pós-patch...",
+                            Colors.CYAN,
+                        )
                         from config import load_project_json
+
                         proj = load_project_json()
                         qa_cfg = proj.get("qa", {})
                         if not qa_cfg:
                             if os.path.exists(os.path.join(repo_root, "package.json")):
-                                qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-                            elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")) or os.path.exists(os.path.join(repo_root, "setup.py")):
+                                qa_cfg = {
+                                    "typecheck": "npm run typecheck",
+                                    "build": "npm run build",
+                                }
+                            elif (
+                                os.path.exists(
+                                    os.path.join(repo_root, "pyproject.toml")
+                                )
+                                or os.path.exists(
+                                    os.path.join(repo_root, "requirements.txt")
+                                )
+                                or os.path.exists(os.path.join(repo_root, "setup.py"))
+                            ):
                                 qa_cfg = {"build": "python -m py_compile cli.py"}
                             elif os.path.exists(os.path.join(repo_root, "go.mod")):
                                 qa_cfg = {"build": "go build ./..."}
@@ -219,18 +315,33 @@ def approve_and_merge_pr(
 
                         qa_passed = True
                         for step_key, step_cmd in qa_cfg.items():
-                            p_step = subprocess.run(step_cmd.split(), cwd=repo_root, capture_output=True, text=True, shell=True)
+                            p_step = subprocess.run(
+                                step_cmd.split(),
+                                cwd=repo_root,
+                                capture_output=True,
+                                text=True,
+                                shell=True,
+                            )
                             if p_step.returncode != 0:
-                                log_error("QA", f"Falha no {step_key} pós-patch: {p_step.stderr.strip() or p_step.stdout.strip()}")
+                                log_error(
+                                    "QA",
+                                    f"Falha no {step_key} pós-patch: {p_step.stderr.strip() or p_step.stdout.strip()}",
+                                )
                                 qa_passed = False
                                 break
-                            print(f"{Colors.GREEN}✔ {step_key}: concluído com sucesso!{Colors.RESET}")
+                            print(
+                                f"{Colors.GREEN}✔ {step_key}: concluído com sucesso!{Colors.RESET}"
+                            )
 
                         if not qa_passed:
                             return False
 
                         # Push to GitHub
-                        log("GIT-PUSH", f"Enviando alterações validadas para origin/{target_branch}...", Colors.CYAN)
+                        log(
+                            "GIT-PUSH",
+                            f"Enviando alterações validadas para origin/{target_branch}...",
+                            Colors.CYAN,
+                        )
                         subprocess.run(
                             ["git", "push", "origin", target_branch],
                             cwd=repo_root,
@@ -238,20 +349,27 @@ def approve_and_merge_pr(
                             text=True,
                             encoding="utf-8",
                             errors="replace",
-                            shell=True
+                            shell=True,
                         )
-                        print(f"{Colors.GREEN}✔ Alterações enviadas com sucesso para o GitHub!{Colors.RESET}\n")
+                        print(
+                            f"{Colors.GREEN}✔ Alterações enviadas com sucesso para o GitHub!{Colors.RESET}\n"
+                        )
                         return True
         except Exception as e:
             log_error("GIT-SYNC", f"Falha ao processar patch da sessão: {e}")
 
-
     if not resolved_pr:
-        log("GIT-SYNC", "Nenhum Pull Request aberto pela sessão (sessão diagnóstica/informativa sem alterações de código).", Colors.DIM)
+        log(
+            "GIT-SYNC",
+            "Nenhum Pull Request aberto pela sessão (sessão diagnóstica/informativa sem alterações de código).",
+            Colors.DIM,
+        )
         return False
 
     print("\n" + "=" * 75)
-    print(f"🔀 {Colors.BOLD}INTEGRAÇÃO CONTÍNUA: PULL REQUEST #{resolved_pr}{Colors.RESET}")
+    print(
+        f"🔀 {Colors.BOLD}INTEGRAÇÃO CONTÍNUA: PULL REQUEST #{resolved_pr}{Colors.RESET}"
+    )
     print(f"📁 Repositório: {repo_name} ➔ Branch: {target_branch}")
     print("=" * 75 + "\n")
 
@@ -262,56 +380,111 @@ def approve_and_merge_pr(
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=True,
     )
 
     # 3. Aprova o PR (Code Review)
     if auto_approve_review:
-        log("GITHUB-REVIEW", f"Aprovando Pull Request #{resolved_pr} via GitHub CLI...", Colors.HEADER)
+        log(
+            "GITHUB-REVIEW",
+            f"Aprovando Pull Request #{resolved_pr} via GitHub CLI...",
+            Colors.HEADER,
+        )
         review_proc = subprocess.run(
-            ["gh", "pr", "review", str(resolved_pr), "--repo", repo_name, "--approve", "--body", "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade."],
+            [
+                "gh",
+                "pr",
+                "review",
+                str(resolved_pr),
+                "--repo",
+                repo_name,
+                "--approve",
+                "--body",
+                "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade.",
+            ],
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=True,
         )
         if review_proc.returncode == 0:
-            print(f"{Colors.GREEN}✔ Review de aprovação registrado no PR #{resolved_pr}.{Colors.RESET}")
+            print(
+                f"{Colors.GREEN}✔ Review de aprovação registrado no PR #{resolved_pr}.{Colors.RESET}"
+            )
         else:
             # Não interrompe se for o próprio autor
-            print(f"{Colors.DIM}Nota: {review_proc.stderr.strip() or review_proc.stdout.strip()}{Colors.RESET}")
+            print(
+                f"{Colors.DIM}Nota: {review_proc.stderr.strip() or review_proc.stdout.strip()}{Colors.RESET}"
+            )
 
     # 3. Merge do PR no GitHub (Squash and Delete Branch)
-    log("GITHUB-MERGE", f"Executando Merge (Squash) do PR #{resolved_pr}...", Colors.HEADER)
+    log(
+        "GITHUB-MERGE",
+        f"Executando Merge (Squash) do PR #{resolved_pr}...",
+        Colors.HEADER,
+    )
     merge_proc = subprocess.run(
-        ["gh", "pr", "merge", str(resolved_pr), "--repo", repo_name, "--squash", "--delete-branch", "--admin"],
+        [
+            "gh",
+            "pr",
+            "merge",
+            str(resolved_pr),
+            "--repo",
+            repo_name,
+            "--squash",
+            "--delete-branch",
+            "--admin",
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=True,
     )
     if merge_proc.returncode != 0:
         # Tenta sem flag --admin se não for admin
         merge_proc = subprocess.run(
-            ["gh", "pr", "merge", str(resolved_pr), "--repo", repo_name, "--squash", "--delete-branch"],
+            [
+                "gh",
+                "pr",
+                "merge",
+                str(resolved_pr),
+                "--repo",
+                repo_name,
+                "--squash",
+                "--delete-branch",
+            ],
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=True,
         )
 
     if merge_proc.returncode != 0:
-        log_error("GITHUB-MERGE", f"Falha ao realizar merge do PR #{resolved_pr}: {merge_proc.stderr.strip()}")
+        log_error(
+            "GITHUB-MERGE",
+            f"Falha ao realizar merge do PR #{resolved_pr}: {merge_proc.stderr.strip()}",
+        )
         return False
 
-    print(f"{Colors.GREEN}✔ PR #{resolved_pr} mesclado com sucesso na branch {target_branch}!{Colors.RESET}\n")
+    print(
+        f"{Colors.GREEN}✔ PR #{resolved_pr} mesclado com sucesso na branch {target_branch}!{Colors.RESET}\n"
+    )
 
     # 4. Sincroniza localmente (git pull)
-    log("GIT-PULL", f"Sincronizando branch local '{target_branch}' com origin...", Colors.CYAN)
-    subprocess.run(["git", "checkout", target_branch], cwd=repo_root, capture_output=True, shell=True)
+    log(
+        "GIT-PULL",
+        f"Sincronizando branch local '{target_branch}' com origin...",
+        Colors.CYAN,
+    )
+    subprocess.run(
+        ["git", "checkout", target_branch],
+        cwd=repo_root,
+        capture_output=True,
+        shell=True,
+    )
     pull_proc = subprocess.run(
         ["git", "pull", "origin", target_branch],
         cwd=repo_root,
@@ -319,12 +492,16 @@ def approve_and_merge_pr(
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=True,
     )
     print(pull_proc.stdout.strip())
 
     # 5. Validação de QA Local (Bug #4 fix: comandos configuráveis via amb_project.json)
-    log("QA-VALIDATION", "Executando verificação de integridade pós-merge...", Colors.CYAN)
+    log(
+        "QA-VALIDATION",
+        "Executando verificação de integridade pós-merge...",
+        Colors.CYAN,
+    )
 
     def _run_qa_cmd(cmd_str: str, label: str) -> bool:
         """Executa um comando de QA e retorna True se passou."""
@@ -332,17 +509,25 @@ def approve_and_merge_pr(
             return True
         parts = cmd_str.strip().split()
         proc = subprocess.run(
-            parts, cwd=repo_root,
-            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True
+            parts,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=True,
         )
         if proc.returncode != 0:
-            log_error("QA", f"Falha no {label}!\n{proc.stdout.strip()}\n{proc.stderr.strip()}")
+            log_error(
+                "QA", f"Falha no {label}!\n{proc.stdout.strip()}\n{proc.stderr.strip()}"
+            )
             return False
         print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
         return True
 
     # Lê comandos de QA do amb_project.json (Bug #4 fix)
     from config import load_project_json
+
     proj = load_project_json()
     qa_cfg = proj.get("qa", {})
 
@@ -350,7 +535,9 @@ def approve_and_merge_pr(
     if not qa_cfg:
         if os.path.exists(os.path.join(repo_root, "package.json")):
             qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-        elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
+        elif os.path.exists(
+            os.path.join(repo_root, "pyproject.toml")
+        ) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
             qa_cfg = {"build": "python -m py_compile"}
         elif os.path.exists(os.path.join(repo_root, "go.mod")):
             qa_cfg = {"build": "go build ./..."}
@@ -362,17 +549,32 @@ def approve_and_merge_pr(
             return False
 
     print("\n" + "=" * 75)
-    print(f"🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}")
+    print(
+        f"🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}"
+    )
     print("=" * 75 + "\n")
     return True
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Aprovação e Merge Automático de PRs do Jules no Git (AMB_V2)")
-    parser.add_argument("--session-id", "-s", help="ID da sessão Jules para extrair o PR.")
-    parser.add_argument("--pr", "-p", type=int, help="Número específico do Pull Request (ex: 15).")
-    parser.add_argument("--auto-latest", "-a", action="store_true", help="Detecta e mescla o último PR aberto no repositório.")
-    parser.add_argument("--branch", "-b", default="develop", help="Branch de destino (Padrão: develop).")
+    parser = argparse.ArgumentParser(
+        description="Aprovação e Merge Automático de PRs do Jules no Git (AMB_V2)"
+    )
+    parser.add_argument(
+        "--session-id", "-s", help="ID da sessão Jules para extrair o PR."
+    )
+    parser.add_argument(
+        "--pr", "-p", type=int, help="Número específico do Pull Request (ex: 15)."
+    )
+    parser.add_argument(
+        "--auto-latest",
+        "-a",
+        action="store_true",
+        help="Detecta e mescla o último PR aberto no repositório.",
+    )
+    parser.add_argument(
+        "--branch", "-b", default="develop", help="Branch de destino (Padrão: develop)."
+    )
 
     args = parser.parse_args()
 
@@ -380,7 +582,7 @@ def main():
         session_id=args.session_id,
         pr_number=args.pr,
         auto_latest=args.auto_latest or (not args.session_id and not args.pr),
-        target_branch=args.branch
+        target_branch=args.branch,
     )
 
     sys.exit(0 if success else 1)

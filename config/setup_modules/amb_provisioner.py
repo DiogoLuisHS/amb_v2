@@ -6,7 +6,9 @@ class AmbProvisioner:
     """Provisiona e contextualiza dinamicamente as personas e diários na pasta .amb/."""
 
     @classmethod
-    def provision_structure(cls, root: str, stack: Dict[str, Any], repo_name: str) -> None:
+    def provision_structure(
+        cls, root: str, stack: Dict[str, Any], repo_name: str
+    ) -> None:
         """Cria as pastas de personas, diários e prompts se não existirem."""
         amb_root = os.path.join(root, ".amb")
         personas_dir = os.path.join(amb_root, "personas")
@@ -17,13 +19,28 @@ class AmbProvisioner:
             os.makedirs(d, exist_ok=True)
 
         # Contexto de Comandos de QA da Stack
-        is_node = "node" in stack.get("type", "").lower() or any(f in stack.get("frameworks", []) for f in ["React", "Next.js", "Hono", "Express", "Vue"])
-        is_python = "python" in stack.get("type", "").lower() or any(f in stack.get("frameworks", []) for f in ["FastAPI", "Flask", "Django"])
+        is_node = "node" in stack.get("type", "").lower() or any(
+            f in stack.get("frameworks", [])
+            for f in ["React", "Next.js", "Hono", "Express", "Vue"]
+        )
+        is_python = "python" in stack.get("type", "").lower() or any(
+            f in stack.get("frameworks", []) for f in ["FastAPI", "Flask", "Django"]
+        )
 
-        typecheck_cmd = "npm run typecheck" if is_node else ("mypy ." if is_python else "verificação de tipos")
-        build_cmd = "npm run build" if is_node else ("pytest" if is_python else "build do projeto")
-        #backend_target = "Hono/Express" if is_node else ("FastAPI/Flask" if is_python else "Backend")
-        schema_validator = "Zod" if is_node else ("Pydantic" if is_python else "Schema Validator")
+        typecheck_cmd = (
+            "npm run typecheck"
+            if is_node
+            else ("mypy ." if is_python else "verificação de tipos")
+        )
+        build_cmd = (
+            "npm run build"
+            if is_node
+            else ("pytest" if is_python else "build do projeto")
+        )
+        # backend_target = "Hono/Express" if is_node else ("FastAPI/Flask" if is_python else "Backend")
+        schema_validator = (
+            "Zod" if is_node else ("Pydantic" if is_python else "Schema Validator")
+        )
 
         templates = {
             "align": {
@@ -40,7 +57,7 @@ Sua missão é auditar arquivos de controller/router do {repo_name} e garantir q
 - Trate blocos catch com retorno estruturado `{{ error: string }}` ou envelope padronizado do projeto.
 - Mantenha o arquivo com escopo cirúrgico e mínimo diff.
 - Consulte e registre aprendizados em `.amb/diarios/align.md`.
-"""
+""",
             },
             "beacon": {
                 "title": "🗼 Beacon: Acessibilidade & Semântica Web (a11y)",
@@ -55,7 +72,7 @@ Sua missão é auditar componentes interativos e modais garantindo atributos `ar
 - Validação mandatória: `{typecheck_cmd}` e `{build_cmd}`.
 - Reutilize componentes primitivos acessíveis do Design System do projeto.
 - Consulte e registre aprendizados em `.amb/diarios/beacon.md`.
-"""
+""",
             },
             "bolt": {
                 "title": "⚡ Bolt: Performance & Redução de Latência",
@@ -71,7 +88,7 @@ Sua missão é auditar rotas, queries de banco e componentes eliminando cascatas
 - Paralelize chamadas independentes (ex: `Promise.all` em JS/TS ou `asyncio.gather` em Python).
 - Preserve 100% dos contratos de dados e integridade do projeto.
 - Consulte e registre aprendizados em `.amb/diarios/bolt.md`.
-"""
+""",
             },
             "deadwood": {
                 "title": "🪓 Deadwood: Remoção de Código Morto & Imports Órfãos",
@@ -86,7 +103,7 @@ Você é o "Deadwood" 🪓 — um guardião de código limpo cuja missão é pod
 - Preserve símbolos públicos exportados consumidos em outros módulos.
 - Mantenha o escopo estritamente restrito a 1 único arquivo por ciclo.
 - Consulte e registre aprendizados em `.amb/diarios/deadwood.md`.
-"""
+""",
             },
             "doc": {
                 "title": "📝 Doc: Documentação Técnica & TSDoc",
@@ -101,7 +118,7 @@ Você é o "Doc" 📝 — um especialista em documentação técnica e clareza d
 - Documente parâmetros, retornos e erros esperados em Português claro.
 - Zero alteração em linhas executáveis de código em runtime.
 - Consulte e registre aprendizados em `.amb/diarios/doc.md`.
-"""
+""",
             },
             "order": {
                 "title": "🧭 Order: Organização de Funções (Step-Down Rule)",
@@ -115,7 +132,7 @@ Você é o "Order" 🧭 — um especialista em legibilidade e arquitetura limpa 
 - Validação mandatória: `{typecheck_cmd}` e `{build_cmd}`.
 - Organize imports no topo e funções principais antes de utilitárias privadas.
 - Consulte e registre aprendizados em `.amb/diarios/order.md`.
-"""
+""",
             },
             "pixel": {
                 "title": "🎨 Pixel: Fidelidade Visual & Design System (Dual-Theme)",
@@ -130,7 +147,7 @@ Você é o "Pixel" 🎨 — um guardião de Design System focado em garantir que
 - Substitua estilos inline e cores arbitrárias por tokens do Design System.
 - Preserve fidelidade visual e responsividade.
 - Consulte e registre aprendizados em `.amb/diarios/pixel.md`.
-"""
+""",
             },
             "pure": {
                 "title": "🧪 Pure: Funções Puras & Refatoração SRP",
@@ -144,7 +161,7 @@ Você é o "Pure" 🧪 — um especialista em engenharia funcional focado em iso
 - Validação mandatória: `{typecheck_cmd}` e `{build_cmd}`.
 - Isole cálculos determinísticos sem misturar efeitos colaterais de I/O ou banco.
 - Consulte e registre aprendizados em `.amb/diarios/pure.md`.
-"""
+""",
             },
             "relay": {
                 "title": "🛰️ Relay: Validador de Contratos e Fluxo Ponta a Ponta",
@@ -159,7 +176,7 @@ Sua missão é auditar fatias verticais completas (Banco de Dados -> Service -> 
 - Validação mandatória: `{typecheck_cmd}` e `{build_cmd}`.
 - Sem mocks estáticos onde rotas reais de API deveriam persistir no banco.
 - Consulte e registre aprendizados em `.amb/diarios/relay.md`.
-"""
+""",
             },
             "sentry": {
                 "title": f"👁️ Sentry: Blindagem de Rotas com {schema_validator}",
@@ -174,8 +191,8 @@ Sua missão é auditar routers e endpoints garantindo validação de schemas em 
 - Validação mandatória: `{typecheck_cmd}` e `{build_cmd}`.
 - Rejeite payloads malformados com resposta 400 estruturada.
 - Consulte e registre aprendizados em `.amb/diarios/sentry.md`.
-"""
-            }
+""",
+            },
         }
 
         # Cria ou atualiza as personas se não existirem
@@ -189,14 +206,20 @@ Sua missão é auditar routers e endpoints garantindo validação de schemas em 
             d_file = os.path.join(diarios_dir, f"{key}.md")
             if not os.path.exists(d_file):
                 with open(d_file, "w", encoding="utf-8") as df:
-                    df.write(f"# {pdata['title'].split(':')[0]} Diário do {key.capitalize()} (`.amb/diarios/{key}.md`)\n\n"
-                             f"Este diário consolida o histórico de aprendizados e padrões identificados no repositório {repo_name}.\n\n---\n")
+                    df.write(
+                        f"# {pdata['title'].split(':')[0]} Diário do {key.capitalize()} (`.amb/diarios/{key}.md`)\n\n"
+                        f"Este diário consolida o histórico de aprendizados e padrões identificados no repositório {repo_name}.\n\n---\n"
+                    )
 
         # Cria ou atualiza README.md em .amb/
         readme_file = os.path.join(amb_root, "README.md")
-        frameworks_str = ', '.join(stack.get('frameworks', [])) or 'Genérico'
-        rules_str = stack.get('rules_dir') or 'Nenhuma pasta de regras identificada'
-        render_str = 'Configurado via render.yaml' if stack.get('has_render_yaml') else 'Manual / Não configurado'
+        frameworks_str = ", ".join(stack.get("frameworks", [])) or "Genérico"
+        rules_str = stack.get("rules_dir") or "Nenhuma pasta de regras identificada"
+        render_str = (
+            "Configurado via render.yaml"
+            if stack.get("has_render_yaml")
+            else "Manual / Não configurado"
+        )
 
         readme_content = f"""# 🧭 Personas e Diários de Engenharia (`.amb/`)
 
@@ -209,8 +232,8 @@ Este diretório centraliza a inteligência local, especificações de telas, as 
 | Propriedade | Valor Detectado |
 | :--- | :--- |
 | 📦 **Repositório GitHub** | `{repo_name}` |
-| 🛠️ **Stack Principal** | `{stack.get('type')}` |
-| ⚡ **Gerenciador de Pacotes** | `{stack.get('package_manager')}` |
+| 🛠️ **Stack Principal** | `{stack.get("type")}` |
+| ⚡ **Gerenciador de Pacotes** | `{stack.get("package_manager")}` |
 | 🧩 **Frameworks & Libs** | `{frameworks_str}` |
 | 📜 **Regras Arquiteturais** | `{rules_str}` |
 | 🚀 **Deploy em Nuvem** | `{render_str}` |

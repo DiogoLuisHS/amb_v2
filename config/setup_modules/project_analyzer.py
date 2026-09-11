@@ -18,7 +18,7 @@ class ProjectAnalyzer:
                 capture_output=True,
                 text=True,
                 timeout=5,
-                check=False
+                check=False,
             )
             if res.returncode == 0 and res.stdout.strip():
                 url = res.stdout.strip()
@@ -33,7 +33,9 @@ class ProjectAnalyzer:
             try:
                 with open(git_config, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
-                    match = re.search(r"url\s*=\s*.*github\.com[:/]([^/]+)/([^/.]+)", content)
+                    match = re.search(
+                        r"url\s*=\s*.*github\.com[:/]([^/]+)/([^/.]+)", content
+                    )
                     if match:
                         return f"{match.group(1)}/{match.group(2)}"
             except Exception:
@@ -48,12 +50,21 @@ class ProjectAnalyzer:
             "frameworks": [],
             "package_manager": "npm",
             "has_render_yaml": os.path.exists(os.path.join(root, "render.yaml")),
-            "rules_dir": None
+            "rules_dir": None,
         }
 
         # Coleta manifestos da raiz e de subpastas conhecidas de monorepos
         search_dirs = [root]
-        for sub in ["apps", "app", "packages", "src", "frontend", "backend", "web", "api"]:
+        for sub in [
+            "apps",
+            "app",
+            "packages",
+            "src",
+            "frontend",
+            "backend",
+            "web",
+            "api",
+        ]:
             p = os.path.join(root, sub)
             if os.path.exists(p) and os.path.isdir(p):
                 search_dirs.append(p)
@@ -70,7 +81,9 @@ class ProjectAnalyzer:
 
         # 1. Package Manager & Node/TS Stack
         for sdir in search_dirs:
-            if os.path.exists(os.path.join(sdir, "bun.lock")) or os.path.exists(os.path.join(sdir, "bun.lockb")):
+            if os.path.exists(os.path.join(sdir, "bun.lock")) or os.path.exists(
+                os.path.join(sdir, "bun.lockb")
+            ):
                 stack["package_manager"] = "bun"
                 has_node = True
             elif os.path.exists(os.path.join(sdir, "pnpm-lock.yaml")):
@@ -86,7 +99,10 @@ class ProjectAnalyzer:
                 try:
                     with open(pkg_path, "r", encoding="utf-8") as f:
                         pkg = json.load(f)
-                        deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+                        deps = {
+                            **pkg.get("dependencies", {}),
+                            **pkg.get("devDependencies", {}),
+                        }
                         if "react" in deps or "next" in deps:
                             fw = "React" if "react" in deps else "Next.js"
                             if fw not in stack["frameworks"]:
@@ -101,13 +117,23 @@ class ProjectAnalyzer:
                             stack["frameworks"].append("Express")
                         if "fastify" in deps and "Fastify" not in stack["frameworks"]:
                             stack["frameworks"].append("Fastify")
-                        if ("tailwindcss" in deps or "@tailwindcss/vite" in deps) and "TailwindCSS" not in stack["frameworks"]:
+                        if (
+                            "tailwindcss" in deps or "@tailwindcss/vite" in deps
+                        ) and "TailwindCSS" not in stack["frameworks"]:
                             stack["frameworks"].append("TailwindCSS")
-                        if "drizzle-orm" in deps and "Drizzle ORM" not in stack["frameworks"]:
+                        if (
+                            "drizzle-orm" in deps
+                            and "Drizzle ORM" not in stack["frameworks"]
+                        ):
                             stack["frameworks"].append("Drizzle ORM")
-                        if ("prisma" in deps or "@prisma/client" in deps) and "Prisma" not in stack["frameworks"]:
+                        if (
+                            "prisma" in deps or "@prisma/client" in deps
+                        ) and "Prisma" not in stack["frameworks"]:
                             stack["frameworks"].append("Prisma")
-                        if "@google/stitch-sdk" in deps and "Stitch SDK" not in stack["frameworks"]:
+                        if (
+                            "@google/stitch-sdk" in deps
+                            and "Stitch SDK" not in stack["frameworks"]
+                        ):
                             stack["frameworks"].append("Stitch SDK")
                 except Exception:
                     pass
@@ -126,9 +152,15 @@ class ProjectAnalyzer:
                                 stack["frameworks"].append("Django")
                             if "flask" in c and "Flask" not in stack["frameworks"]:
                                 stack["frameworks"].append("Flask")
-                            if "sqlalchemy" in c and "SQLAlchemy" not in stack["frameworks"]:
+                            if (
+                                "sqlalchemy" in c
+                                and "SQLAlchemy" not in stack["frameworks"]
+                            ):
                                 stack["frameworks"].append("SQLAlchemy")
-                            if "pydantic" in c and "Pydantic" not in stack["frameworks"]:
+                            if (
+                                "pydantic" in c
+                                and "Pydantic" not in stack["frameworks"]
+                            ):
                                 stack["frameworks"].append("Pydantic")
                     except Exception:
                         pass

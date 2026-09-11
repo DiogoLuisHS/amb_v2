@@ -23,11 +23,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -49,23 +57,27 @@ class RenderClient:
         method: str,
         path: str,
         params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> Any:
         """Executa chamada HTTP autenticada via Bearer Token."""
         url = f"{self.BASE_URL}/{path.lstrip('/')}"
         if params:
-            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+            query = urllib.parse.urlencode(
+                {k: v for k, v in params.items() if v is not None}
+            )
             url = f"{url}?{query}"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "AMB-CLI-v2/1.0"
+            "User-Agent": "AMB-CLI-v2/1.0",
         }
 
         body_bytes = json.dumps(data).encode("utf-8") if data is not None else None
-        req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method.upper())
+        req = urllib.request.Request(
+            url, data=body_bytes, headers=headers, method=method.upper()
+        )
 
         try:
             with urllib.request.urlopen(req, timeout=45) as resp:
@@ -100,7 +112,9 @@ class RenderClient:
         return self._request("GET", f"services/{service_id}")
 
     def list_deploys(self, service_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-        res = self._request("GET", f"services/{service_id}/deploys", params={"limit": limit})
+        res = self._request(
+            "GET", f"services/{service_id}/deploys", params={"limit": limit}
+        )
         if isinstance(res, list):
             return res
         return res.get("deploys", [])
@@ -108,7 +122,9 @@ class RenderClient:
     def get_deploy(self, service_id: str, deploy_id: str) -> Dict[str, Any]:
         return self._request("GET", f"services/{service_id}/deploys/{deploy_id}")
 
-    def trigger_deploy(self, service_id: str, clear_cache: bool = False) -> Dict[str, Any]:
+    def trigger_deploy(
+        self, service_id: str, clear_cache: bool = False
+    ) -> Dict[str, Any]:
         data = {"clearCache": "clear" if clear_cache else "do_not_clear"}
         return self._request("POST", f"services/{service_id}/deploys", data=data)
 
@@ -117,6 +133,8 @@ if __name__ == "__main__":
     try:
         c = RenderClient()
         services = c.list_services()
-        print(f"{Colors.GREEN}✅ Conexão Render API bem-sucedida! Serviços encontrados: {len(services)}{Colors.RESET}")
+        print(
+            f"{Colors.GREEN}✅ Conexão Render API bem-sucedida! Serviços encontrados: {len(services)}{Colors.RESET}"
+        )
     except Exception as e:
         log_error("RENDER-CLIENT", str(e))

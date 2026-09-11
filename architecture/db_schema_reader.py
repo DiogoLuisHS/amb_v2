@@ -69,7 +69,7 @@ class DbSchemaReader:
         tables = []
         pattern = re.compile(
             r"export\s+const\s+(\w+)\s*=\s*(?:sqliteTable|pgTable|mysqlTable)\(\s*['\"]([^'\"]+)['\"]\s*,\s*\{([^}]+)\}",
-            re.MULTILINE | re.DOTALL
+            re.MULTILINE | re.DOTALL,
         )
 
         for match in pattern.finditer(content):
@@ -87,19 +87,23 @@ class DbSchemaReader:
                     col_name = col_match.group(1)
                     col_type = col_match.group(2)
                     col_opts = col_match.group(3)
-                    columns.append({
-                        "name": col_name,
-                        "type": col_type,
-                        "options": col_opts.strip().rstrip(",")
-                    })
+                    columns.append(
+                        {
+                            "name": col_name,
+                            "type": col_type,
+                            "options": col_opts.strip().rstrip(","),
+                        }
+                    )
 
-            tables.append({
-                "variable": var_name,
-                "table_name": table_name,
-                "file": filepath.name,
-                "path": str(filepath),
-                "columns": columns
-            })
+            tables.append(
+                {
+                    "variable": var_name,
+                    "table_name": table_name,
+                    "file": filepath.name,
+                    "path": str(filepath),
+                    "columns": columns,
+                }
+            )
 
         return tables
 
@@ -110,7 +114,9 @@ def show_schema(filter_term: Optional[str] = None):
     schema_files = DbSchemaReader.list_schema_files(root)
 
     if not schema_files:
-        print(f"\n{Colors.YELLOW}[!] Nenhum diretório de schema Drizzle/DB encontrado em: {root}{Colors.RESET}")
+        print(
+            f"\n{Colors.YELLOW}[!] Nenhum diretório de schema Drizzle/DB encontrado em: {root}{Colors.RESET}"
+        )
         return
 
     all_tables = []
@@ -120,7 +126,8 @@ def show_schema(filter_term: Optional[str] = None):
     if filter_term:
         ft = filter_term.lower().strip()
         filtered = [
-            t for t in all_tables
+            t
+            for t in all_tables
             if ft in t["table_name"].lower()
             or ft in t["variable"].lower()
             or ft in t["file"].lower()
@@ -129,13 +136,19 @@ def show_schema(filter_term: Optional[str] = None):
         filtered = all_tables
 
     print("\n" + "=" * 75)
-    print(f"🏛️  {Colors.BOLD}{Colors.CYAN}CATÁLOGO DE SCHEMAS DO BANCO DE DADOS (READ-ONLY){Colors.RESET}")
+    print(
+        f"🏛️  {Colors.BOLD}{Colors.CYAN}CATÁLOGO DE SCHEMAS DO BANCO DE DADOS (READ-ONLY){Colors.RESET}"
+    )
     print(f"📁 Repositório: {Colors.GREEN}{root}{Colors.RESET}")
-    print(f"{Colors.DIM}[NOTA PARA IA: Estes schemas são IMUTÁVEIS. Ajuste apenas Controllers e Frontend!]{Colors.RESET}")
+    print(
+        f"{Colors.DIM}[NOTA PARA IA: Estes schemas são IMUTÁVEIS. Ajuste apenas Controllers e Frontend!]{Colors.RESET}"
+    )
     print("=" * 75)
 
     if not filtered:
-        print(f"\n{Colors.YELLOW}Nenhuma tabela encontrada com o termo: '{filter_term}'{Colors.RESET}")
+        print(
+            f"\n{Colors.YELLOW}Nenhuma tabela encontrada com o termo: '{filter_term}'{Colors.RESET}"
+        )
         print("\n📋 Tabelas disponíveis no projeto:")
         for t in all_tables:
             print(f"  • {Colors.BOLD}{t['table_name']}{Colors.RESET} (em {t['file']})")
@@ -143,7 +156,9 @@ def show_schema(filter_term: Optional[str] = None):
         return
 
     for t in filtered:
-        print(f"\n📦 TABELA: `{Colors.BOLD}{Colors.GREEN}{t['table_name']}{Colors.RESET}` (Variável: `{t['variable']}` | Arquivo: `{t['file']}`)")
+        print(
+            f"\n📦 TABELA: `{Colors.BOLD}{Colors.GREEN}{t['table_name']}{Colors.RESET}` (Variável: `{t['variable']}` | Arquivo: `{t['file']}`)"
+        )
         print("-" * 75)
         print(f"{'COLUNA':<25} | {'TIPO ORM':<15} | {'DETALHES / CONSTRAINTS'}")
         print("-" * 75)

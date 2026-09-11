@@ -13,7 +13,15 @@ import json
 import subprocess
 from typing import Dict, Any, Optional
 
-from config import Colors, log, log_error, require_env, get_env, find_repo_root, ApiExecutionError
+from config import (
+    Colors,
+    log,
+    log_error,
+    require_env,
+    get_env,
+    find_repo_root,
+    ApiExecutionError,
+)
 
 
 class StitchClient:
@@ -26,12 +34,18 @@ class StitchClient:
 
     def _resolve_runner(self) -> str:
         candidates = [
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "stitch_client.mjs")),
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "client", "stitch_client.mjs")),
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "stitch_client.mjs")
+            ),
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "client", "stitch_client.mjs")
+            ),
         ]
         runner = next((p for p in candidates if os.path.exists(p)), None)
         if not runner:
-            raise ApiExecutionError(f"Runner Stitch (stitch_client.mjs) não encontrado em {candidates[0]}")
+            raise ApiExecutionError(
+                f"Runner Stitch (stitch_client.mjs) não encontrado em {candidates[0]}"
+            )
         return runner
 
     def _run_node_command(self, action: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -41,7 +55,7 @@ class StitchClient:
             capture_output=True,
             text=True,
             encoding="utf-8",
-            errors="replace"
+            errors="replace",
         )
         if proc.returncode != 0:
             err_msg = proc.stderr.strip() or proc.stdout.strip()
@@ -50,7 +64,9 @@ class StitchClient:
                 err_msg = err_json.get("error", err_msg)
             except Exception:
                 pass
-            raise ApiExecutionError(f"Falha na execução do Stitch SDK ({action}): {err_msg}")
+            raise ApiExecutionError(
+                f"Falha na execução do Stitch SDK ({action}): {err_msg}"
+            )
 
         try:
             return json.loads(proc.stdout.strip())
@@ -62,7 +78,7 @@ class StitchClient:
         prompt: str,
         device_type: str = "DESKTOP",
         model_id: str = "GEMINI_3_8_FLASH",
-        design_system: Optional[str] = None
+        design_system: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Gera uma nova tela visual a partir de uma descrição textual."""
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
@@ -75,18 +91,18 @@ class StitchClient:
         if design_system:
             payload["designSystem"] = design_system
 
-        log("STITCH", f"Disparando geração de nova tela visual ({device_type})...", Colors.CYAN)
+        log(
+            "STITCH",
+            f"Disparando geração de nova tela visual ({device_type})...",
+            Colors.CYAN,
+        )
         res = self._run_node_command("generate_screen", payload)
         return res
 
     def edit_screen(self, screen_id: str, prompt: str) -> Dict[str, Any]:
         """Refina e edita uma tela existente com novas instruções visuais."""
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
-        payload = {
-            "projectId": project_id,
-            "screenId": screen_id,
-            "prompt": prompt
-        }
+        payload = {"projectId": project_id, "screenId": screen_id, "prompt": prompt}
         log("STITCH", f"Refinando tela {screen_id}...", Colors.CYAN)
         res = self._run_node_command("edit_screen", payload)
         return res
@@ -94,15 +110,17 @@ class StitchClient:
     def get_screen(self, screen_id: str) -> Dict[str, Any]:
         """Obtém detalhes, DOM HTML e screenshot de uma tela."""
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
-        payload = {
-            "projectId": project_id,
-            "screenId": screen_id
-        }
+        payload = {"projectId": project_id, "screenId": screen_id}
         log("STITCH", f"Consultando detalhes da tela {screen_id}...", Colors.CYAN)
         res = self._run_node_command("get_screen", payload)
         return res
 
-    def generate_variants(self, screen_id: str, prompt: str = "Explorar variações visuais", variant_count: int = 3) -> Dict[str, Any]:
+    def generate_variants(
+        self,
+        screen_id: str,
+        prompt: str = "Explorar variações visuais",
+        variant_count: int = 3,
+    ) -> Dict[str, Any]:
         """Gera variantes visuais exploratórias a partir de uma tela."""
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
         payload = {
@@ -111,14 +129,20 @@ class StitchClient:
             "prompt": prompt,
             "variantOptions": {
                 "variantCount": variant_count,
-                "creativeRange": "EXPLORE"
-            }
+                "creativeRange": "EXPLORE",
+            },
         }
-        log("STITCH", f"Gerando {variant_count} variantes para a tela {screen_id}...", Colors.CYAN)
+        log(
+            "STITCH",
+            f"Gerando {variant_count} variantes para a tela {screen_id}...",
+            Colors.CYAN,
+        )
         res = self._run_node_command("generate_variants", payload)
         return res
 
-    def sync_design_system(self, design_md_path: Optional[str] = None) -> Dict[str, Any]:
+    def sync_design_system(
+        self, design_md_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Sincroniza arquivo design.md com o Design System do Stitch."""
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
         root = find_repo_root()
@@ -127,34 +151,44 @@ class StitchClient:
             os.path.join(root, "docs", "design.md"),
             os.path.join(root, ".antigravity", "rules", "design.md"),
         ]
-        resolved_file = design_md_path or next((p for p in default_paths if os.path.exists(p)), None)
+        resolved_file = design_md_path or next(
+            (p for p in default_paths if os.path.exists(p)), None
+        )
         if not resolved_file or not os.path.exists(resolved_file):
-            raise ApiExecutionError("Arquivo design.md não encontrado para sincronização de Design Tokens.")
+            raise ApiExecutionError(
+                "Arquivo design.md não encontrado para sincronização de Design Tokens."
+            )
 
         import base64
+
         with open(resolved_file, "rb") as f:
             b64_content = base64.b64encode(f.read()).decode("utf-8")
 
-        log("STITCH-DS", f"Enviando {resolved_file} para o projeto {project_id}...", Colors.CYAN)
-        upload_payload = {
-            "projectId": project_id,
-            "designMdBase64": b64_content
-        }
+        log(
+            "STITCH-DS",
+            f"Enviando {resolved_file} para o projeto {project_id}...",
+            Colors.CYAN,
+        )
+        upload_payload = {"projectId": project_id, "designMdBase64": b64_content}
         upload_res = self._run_node_command("upload_design_md", upload_payload)
-        
+
         instance_id = upload_res.get("id")
         source_screen = upload_res.get("sourceScreen")
         if not instance_id or not source_screen:
             return upload_res
 
-        log("STITCH-DS", f"Criando e aplicando Design System a partir de {resolved_file}...", Colors.CYAN)
+        log(
+            "STITCH-DS",
+            f"Criando e aplicando Design System a partir de {resolved_file}...",
+            Colors.CYAN,
+        )
         ds_payload = {
             "projectId": project_id,
             "selectedScreenInstance": {
                 "id": instance_id,
-                "sourceScreen": source_screen
+                "sourceScreen": source_screen,
             },
-            "deviceType": "DESKTOP"
+            "deviceType": "DESKTOP",
         }
         res = self._run_node_command("create_design_system_from_design_md", ds_payload)
         return res
@@ -164,14 +198,20 @@ class StitchClient:
 def generate_screen(prompt: str, **kwargs) -> Dict[str, Any]:
     return StitchClient().generate_screen(prompt, **kwargs)
 
+
 def edit_screen(screen_id: str, prompt: str) -> Dict[str, Any]:
     return StitchClient().edit_screen(screen_id, prompt)
+
 
 def get_screen(screen_id: str) -> Dict[str, Any]:
     return StitchClient().get_screen(screen_id)
 
-def generate_variants(screen_id: str, prompt: str = "Explorar variações", count: int = 3) -> Dict[str, Any]:
+
+def generate_variants(
+    screen_id: str, prompt: str = "Explorar variações", count: int = 3
+) -> Dict[str, Any]:
     return StitchClient().generate_variants(screen_id, prompt, variant_count=count)
+
 
 def sync_design_system(design_md_path: Optional[str] = None) -> Dict[str, Any]:
     return StitchClient().sync_design_system(design_md_path)

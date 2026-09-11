@@ -22,11 +22,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -48,12 +56,14 @@ class JulesClient:
         method: str,
         path: str,
         params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Executa requisição HTTP autenticada via header X-Goog-Api-Key."""
         url = f"{self.BASE_URL}/{path.lstrip('/')}"
         if params:
-            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+            query = urllib.parse.urlencode(
+                {k: v for k, v in params.items() if v is not None}
+            )
             url = f"{url}?{query}"
 
         headers = {
@@ -63,7 +73,9 @@ class JulesClient:
         }
 
         body_bytes = json.dumps(data).encode("utf-8") if data is not None else None
-        req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method.upper())
+        req = urllib.request.Request(
+            url, data=body_bytes, headers=headers, method=method.upper()
+        )
 
         try:
             with urllib.request.urlopen(req, timeout=45) as resp:
@@ -86,7 +98,10 @@ class JulesClient:
                 hint = "Acesso negado. Confirme se a chave de API está ativada no Google Cloud / Jules."
             raise ApiExecutionError(f"Erro na API Jules: {msg}", hint=hint)
         except Exception as e:
-            raise ApiExecutionError(f"Falha de conexão com Jules API: {e}", hint="Verifique sua conexão com a internet.")
+            raise ApiExecutionError(
+                f"Falha de conexão com Jules API: {e}",
+                hint="Verifique sua conexão com a internet.",
+            )
 
     # 1. Sources
     def list_sources(self, page_size: int = 50) -> List[Dict[str, Any]]:
@@ -94,16 +109,30 @@ class JulesClient:
         return res.get("sources", [])
 
     # 2. Sessions
-    def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: Optional[str] = None) -> Dict[str, Any]:
+    def create_session(
+        self,
+        prompt: str,
+        source_name: Optional[str] = None,
+        title: Optional[str] = None,
+        base_branch: Optional[str] = None,
+    ) -> Dict[str, Any]:
         from config import get_repo_name, find_repo_root
+
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
-        
+
         # Auto-detecta branch ativa do repositório local se não especificada
         if not base_branch or base_branch in ["develop", "main"]:
             try:
                 import subprocess
+
                 root = find_repo_root()
-                b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=root, capture_output=True, text=True, check=False)
+                b_proc = subprocess.run(
+                    ["git", "branch", "--show-current"],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
                 cur_b = b_proc.stdout.strip()
                 if cur_b:
                     base_branch = cur_b
@@ -115,21 +144,24 @@ class JulesClient:
             "prompt": prompt,
             "sourceContext": {
                 "source": resolved_source,
-                "githubRepoContext": {
-                    "startingBranch": base_branch
-                }
-            }
+                "githubRepoContext": {"startingBranch": base_branch},
+            },
         }
         if title:
             payload["title"] = title
         return self._request("POST", "sessions", data=payload)
 
-
     def get_session(self, session_id: str) -> Dict[str, Any]:
-        path = session_id if session_id.startswith("sessions/") else f"sessions/{session_id}"
+        path = (
+            session_id
+            if session_id.startswith("sessions/")
+            else f"sessions/{session_id}"
+        )
         return self._request("GET", path)
 
-    def list_sessions(self, page_size: int = 50, repo_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_sessions(
+        self, page_size: int = 50, repo_filter: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         res = self._request("GET", "sessions", params={"pageSize": page_size})
         sessions = res.get("sessions", [])
         if repo_filter:
@@ -161,11 +193,13 @@ class JulesClient:
         return self._request("DELETE", path)
 
     # 3. Activities
-    def list_activities(self, session_id: str, page_size: int = 50, fetch_all: bool = True) -> Dict[str, Any]:
+    def list_activities(
+        self, session_id: str, page_size: int = 50, fetch_all: bool = True
+    ) -> Dict[str, Any]:
         """Lista atividades da sessão. Se fetch_all=True, percorre todas as páginas para capturar as atividades mais recentes."""
         clean_id = session_id.split("/")[-1]
         path = f"sessions/{clean_id}/activities"
-        
+
         if not fetch_all:
             return self._request("GET", path, params={"pageSize": page_size})
 
@@ -176,7 +210,11 @@ class JulesClient:
             if page_token:
                 params["pageToken"] = page_token
             res = self._request("GET", path, params=params)
-            acts = res.get("activities", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            acts = (
+                res.get("activities", [])
+                if isinstance(res, dict)
+                else (res if isinstance(res, list) else [])
+            )
             all_acts.extend(acts)
             if not isinstance(res, dict) or not res.get("nextPageToken"):
                 break
@@ -184,8 +222,9 @@ class JulesClient:
 
         return {"activities": all_acts}
 
-
-    def list_activities_for_sessions(self, session_ids: List[str], page_size: int = 50, max_workers: int = 10) -> Dict[str, Dict[str, Any]]:
+    def list_activities_for_sessions(
+        self, session_ids: List[str], page_size: int = 50, max_workers: int = 10
+    ) -> Dict[str, Dict[str, Any]]:
         import concurrent.futures
 
         results = {}
@@ -193,14 +232,23 @@ class JulesClient:
         def fetch_for_session(sid):
             try:
                 act_res = self.list_activities(session_id=sid, page_size=page_size)
-                return sid, (act_res if isinstance(act_res, list) else act_res.get("activities", []))
+                return sid, (
+                    act_res
+                    if isinstance(act_res, list)
+                    else act_res.get("activities", [])
+                )
             except Exception as e:
                 from config import log_error
-                log_error("JULES-CLIENT", f"Falha ao buscar atividades da sessão {sid}: {e}")
+
+                log_error(
+                    "JULES-CLIENT", f"Falha ao buscar atividades da sessão {sid}: {e}"
+                )
                 return sid, []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_sid = {executor.submit(fetch_for_session, sid): sid for sid in session_ids}
+            future_to_sid = {
+                executor.submit(fetch_for_session, sid): sid for sid in session_ids
+            }
             for future in concurrent.futures.as_completed(future_to_sid):
                 sid = future_to_sid[future]
                 try:
@@ -208,7 +256,11 @@ class JulesClient:
                     results[sid] = acts
                 except Exception as e:
                     from config import log_error
-                    log_error("JULES-CLIENT", f"Erro fatal ao processar atividades da sessão {sid}: {e}")
+
+                    log_error(
+                        "JULES-CLIENT",
+                        f"Erro fatal ao processar atividades da sessão {sid}: {e}",
+                    )
                     results[sid] = []
 
         return results
@@ -218,6 +270,8 @@ if __name__ == "__main__":
     try:
         c = JulesClient()
         sources = c.list_sources()
-        print(f"{Colors.GREEN}✅ Conexão Jules REST API bem-sucedida! Repositórios encontrados: {len(sources)}{Colors.RESET}")
+        print(
+            f"{Colors.GREEN}✅ Conexão Jules REST API bem-sucedida! Repositórios encontrados: {len(sources)}{Colors.RESET}"
+        )
     except Exception as e:
         log_error("JULES-CLIENT", str(e))

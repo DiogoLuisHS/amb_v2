@@ -14,10 +14,10 @@ class CognitiveSynthesizer:
             return "Stack identificada: " + ", ".join(stack.get("frameworks", []))
 
         prompt = f"""Analise este resumo técnico de um projeto de software e gere 3 diretrizes essenciais de desenvolvimento em 1 parágrafo:
-- Tipo: {stack.get('type')}
-- Gerenciador: {stack.get('package_manager')}
-- Frameworks: {', '.join(stack.get('frameworks', [])) or 'Genérico'}
-- Render Deploy: {'Sim' if stack.get('has_render_yaml') else 'Não'}
+- Tipo: {stack.get("type")}
+- Gerenciador: {stack.get("package_manager")}
+- Frameworks: {", ".join(stack.get("frameworks", [])) or "Genérico"}
+- Render Deploy: {"Sim" if stack.get("has_render_yaml") else "Não"}
 """
         try:
             res = subprocess.run(
@@ -28,7 +28,7 @@ class CognitiveSynthesizer:
                 encoding="utf-8",
                 errors="replace",
                 timeout=20,
-                check=False
+                check=False,
             )
             if res.returncode == 0 and res.stdout.strip():
                 return res.stdout.strip()

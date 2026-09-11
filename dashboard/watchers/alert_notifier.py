@@ -18,11 +18,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -36,6 +44,7 @@ def play_beep():
     try:
         if sys.platform == "win32":
             import winsound
+
             winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
         else:
             print("\a", end="", flush=True)
@@ -46,19 +55,21 @@ def play_beep():
 def notify_attention(source: str, title: str, details: str, action_command: str = None):
     """Exibe um banner de alerta urgente no terminal."""
     play_beep()
-    
+
     border = "!" * 75
     print("\n" + f"{Colors.RED}{Colors.BOLD}{border}{Colors.RESET}")
-    print(f"🚨 {Colors.BOLD}[ATENÇÃO REQUERIDA] — FONTE: {source.upper()}{Colors.RESET}")
+    print(
+        f"🚨 {Colors.BOLD}[ATENÇÃO REQUERIDA] — FONTE: {source.upper()}{Colors.RESET}"
+    )
     print(f"📌 {Colors.BOLD}MOTIVO:{Colors.RESET} {title}")
     print("-" * 75)
     print(details.strip())
-    
+
     if action_command:
         print("-" * 75)
         print(f"👉 {Colors.BOLD}COMANDO PARA RESPONDER/AGIR:{Colors.RESET}")
         print(f"   {Colors.GREEN}{action_command}{Colors.RESET}")
-        
+
     print(f"{Colors.RED}{Colors.BOLD}{border}{Colors.RESET}\n", flush=True)
 
 
@@ -72,5 +83,5 @@ if __name__ == "__main__":
         source="Teste",
         title="Alerta de Exemplo",
         details="Isto é uma demonstração do banner de alerta.",
-        action_command="python amb_v2/dashboard/auto_advisor.py"
+        action_command="python amb_v2/dashboard/auto_advisor.py",
     )

@@ -18,11 +18,19 @@ while _cur and os.path.basename(_cur) != "amb_v2":
     _cur = _p
 _AMB = _cur
 for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
+    "config",
+    "agents",
+    "pipeline",
+    "dashboard",
+    "dashboard/watchers",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -66,7 +74,7 @@ class RenderWatcher:
                     event_key = f"deploy:{deploy_id}:{status}"
                     if event_key not in self.notified_deploys:
                         self.notified_deploys.add(event_key)
-                        
+
                         commit_msg = dep.get("commit", {}).get("message", "N/A")
                         created_at = dep.get("createdAt", "")
 
@@ -80,14 +88,16 @@ class RenderWatcher:
                                 f"Data: {created_at}\n"
                                 f"Logs: https://dashboard.render.com/web/{service_id}/deploys/{deploy_id}"
                             ),
-                            action_command=f"python amb_v2/integrations/render/tools/fetch_logs.py --service-id {service_id}"
+                            action_command=f"python amb_v2/integrations/render/tools/fetch_logs.py --service-id {service_id}",
                         )
-                        alerts.append({
-                            "type": "deploy_failed",
-                            "service_id": service_id,
-                            "deploy_id": deploy_id,
-                            "status": status
-                        })
+                        alerts.append(
+                            {
+                                "type": "deploy_failed",
+                                "service_id": service_id,
+                                "deploy_id": deploy_id,
+                                "status": status,
+                            }
+                        )
 
         except Exception as e:
             log_error("RENDER-WATCHER", f"Falha na checagem do Render: {e}")

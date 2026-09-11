@@ -16,25 +16,49 @@ if _AMB_ROOT not in sys.path:
     sys.path.insert(0, _AMB_ROOT)
 
 for _sub in [
-    "config", "config/setup_modules", "agents", "architecture", "pipeline", "gui",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
-    "cli_modules"
+    "config",
+    "config/setup_modules",
+    "agents",
+    "architecture",
+    "pipeline",
+    "gui",
+    "integrations/jules",
+    "integrations/jules/tools",
+    "integrations/stitch",
+    "integrations/stitch/tools",
+    "integrations/antigravity",
+    "integrations/antigravity/tools",
+    "integrations/render",
+    "integrations/render/tools",
+    "cli_modules",
 ]:
     _p = os.path.normpath(os.path.join(_AMB_ROOT, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
-from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError  # noqa: E402
+from config import (
+    Colors,
+    log_error,
+    find_repo_root,
+    load_env_file,
+    get_repo_name,
+    AmbError,
+)  # noqa: E402
 from cli_modules.cli_parsers import create_parser  # noqa: E402
 
 
 def banner():
-    print(f"\n{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.CYAN}🚀 AMB_V2 CLI — SISTEMA UNIFICADO DE AUTOMAÇÃO E AGENTES{Colors.RESET}")
-    print(f"📁 Repositório Ativo: {Colors.GREEN}{get_repo_name()}{Colors.RESET} ({find_repo_root()})")
-    print(f"{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}\n")
+    print(
+        f"\n{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}"
+    )
+    print(
+        f"{Colors.BOLD}{Colors.CYAN}🚀 AMB_V2 CLI — SISTEMA UNIFICADO DE AUTOMAÇÃO E AGENTES{Colors.RESET}"
+    )
+    print(
+        f"📁 Repositório Ativo: {Colors.GREEN}{get_repo_name()}{Colors.RESET} ({find_repo_root()})"
+    )
+    print(
+        f"{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}\n"
+    )
 
 
 # -------------------------------------------------------------
