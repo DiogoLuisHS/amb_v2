@@ -137,10 +137,9 @@ async function main() {
         break;
       }
       case "get_screen": {
+        const screenName = payload.name || `projects/${payload.projectId}/screens/${payload.screenId}`;
         const res = await client.callTool("get_screen", {
-          projectId: payload.projectId,
-          screenId: payload.screenId,
-          name: `projects/${payload.projectId}/screens/${payload.screenId}`
+          name: screenName
         });
         response = await extractScreenDetails(client, payload.projectId, res);
         try {

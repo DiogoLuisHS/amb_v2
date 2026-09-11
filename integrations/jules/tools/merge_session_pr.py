@@ -196,8 +196,8 @@ def approve_and_merge_pr(
                         patch_success = True
                     
                     if patch_success:
-                        subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=True)
-                        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=True)
+                        subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=False)
+                        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=False)
 
 
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
@@ -311,7 +311,7 @@ def approve_and_merge_pr(
 
     # 4. Sincroniza localmente (git pull)
     log("GIT-PULL", f"Sincronizando branch local '{target_branch}' com origin...", Colors.CYAN)
-    subprocess.run(["git", "checkout", target_branch], cwd=repo_root, capture_output=True, shell=True)
+    subprocess.run(["git", "checkout", target_branch], cwd=repo_root, capture_output=True, shell=False)
     pull_proc = subprocess.run(
         ["git", "pull", "origin", target_branch],
         cwd=repo_root,
@@ -319,7 +319,7 @@ def approve_and_merge_pr(
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=False
     )
     print(pull_proc.stdout.strip())
 
@@ -330,10 +330,20 @@ def approve_and_merge_pr(
         """Executa um comando de QA e retorna True se passou."""
         if not cmd_str.strip():
             return True
-        parts = cmd_str.strip().split()
+        import shlex
+        import shutil
+        parts = shlex.split(cmd_str.strip(), posix=(sys.platform != "win32"))
+        if not parts:
+            return True
+        bin_path = shutil.which(parts[0])
+        use_shell = False
+        if bin_path:
+            parts[0] = bin_path
+        else:
+            use_shell = True
         proc = subprocess.run(
             parts, cwd=repo_root,
-            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True
+            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=use_shell
         )
         if proc.returncode != 0:
             log_error("QA", f"Falha no {label}!\n{proc.stdout.strip()}\n{proc.stderr.strip()}")

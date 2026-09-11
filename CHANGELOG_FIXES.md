@@ -159,3 +159,23 @@ amb agent --role relay --loop --max-cycles 5
   - Extraídas as funções auxiliares `_build_ai_context`, `_dispatch_jules_session` e `_handle_pr_merge`.
   - O PR #12 original foi fechado e descartado para evitar a aplicação indesejada de reformatação global do Ruff em 45 arquivos alheios ao escopo, integrando-se apenas a refatoração estritamente necessária de forma atômica e limpa.
 
+### Proteção contra Command Injection em Comandos Git
+**Arquivos:** `integrations/jules/tools/merge_session_pr.py`, `agents/autonomous_loop.py`
+- **Motivação:** Invocação de comandos do `git` com `shell=True` permitia vulnerabilidade potencial caso nomes de branches ou mensagens de commit contivessem caracteres de controle do shell.
+- **Implementação:** Substituído `shell=True` por `shell=False` em todos os comandos `git checkout`, `git pull`, `git commit` e `git add`, passando argumentos via vetor seguro (`argv`).
+
+### Resolução Segura de Binários no Executor de QA
+**Arquivos:** `pipeline/pipeline.py`, `integrations/jules/tools/merge_session_pr.py`
+- **Motivação:** Execução de comandos de validação pós-merge e pós-pipeline via `shell=True`. A remoção ingênua causava quebra no Windows ao rodar scripts como `npm run typecheck` (`npm.cmd`).
+- **Implementação:** Integrado `shlex.split` com resolução segura do executável via `shutil.which` antes da execução, mantendo compatibilidade nativa com Windows (`.cmd`) sem recorrer ao shell para binários resolvidos.
+
+### Criação da Suíte de Testes Unitários Automatizados
+**Arquivos:** `tests/test_auto_reply.py`, `tests/test_ai_context_builder.py`
+- **Motivação:** Ausência de suíte de testes automatizados (`pytest` coletava 0 testes).
+- **Implementação:**
+  - Criados testes cobrindo `extract_activity_text` para todas as variações de payload do Jules (`agentMessaged`, `userMessaged`, strings diretas e fallbacks).
+  - Criados testes para a máquina de detecção de turnos (`get_last_conversation_turn`).
+  - Criados testes de mapeamento e isolamento de estado por `copy.deepcopy` em `AIContextBuilder`.
+  - 100% dos testes validados e passando com `pytest`.
+
+

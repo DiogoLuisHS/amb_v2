@@ -301,7 +301,7 @@ def _handle_pr_merge(
                 ["git", "pull", "origin", branch],
                 cwd=repo_root,
                 capture_output=True,
-                shell=True,
+                shell=False,
             )
     except Exception as em:
         log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")

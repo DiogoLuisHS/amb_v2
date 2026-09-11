@@ -64,10 +64,20 @@ class QualityGatekeeper:
             if not cmd_str.strip():
                 return True
             print(f"\n[{Colors.BOLD}QA{Colors.RESET}] {cmd_str}")
-            parts = cmd_str.strip().split()
+            import shlex
+            import shutil
+            parts = shlex.split(cmd_str.strip(), posix=(sys.platform != "win32"))
+            if not parts:
+                return True
+            bin_path = shutil.which(parts[0])
+            use_shell = False
+            if bin_path:
+                parts[0] = bin_path
+            else:
+                use_shell = True
             proc = subprocess.run(
                 parts, cwd=repo_root,
-                capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True
+                capture_output=True, text=True, encoding="utf-8", errors="replace", shell=use_shell
             )
             if proc.returncode != 0:
                 if proc.stdout.strip():
@@ -128,7 +138,7 @@ class PipelineOrchestrator:
         repo_name = get_repo_name()
 
         # Auto-detecta branch atual do Git local se não fornecida explicitamente
-        if not starting_branch or starting_branch in ["develop", "main"]:
+        if not starting_branch:
             try:
                 b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=repo_root, capture_output=True, text=True, check=False)
                 cur_branch = b_proc.stdout.strip()
