@@ -104,10 +104,13 @@ def cmd_agent(args):
         runner.list_personas(personas, personas_dir)
         return
 
+    # Padrão: Despacha para o Google Jules. Só roda local com agy se --agy / --local for especificado.
+    dispatch_jules = not getattr(args, "agy", False)
+
     if args.all:
         for idx, (k, p_data) in enumerate(personas.items(), 1):
             print(f"\n📦 [{idx}/{len(personas)}] Processando Persona: {p_data['title']}")
-            runner.execute_single_persona(p_data, task=args.task, dispatch_jules=args.dispatch_jules)
+            runner.execute_single_persona(p_data, task=args.task, dispatch_jules=dispatch_jules)
         return
 
     clean_role = args.role.lower().replace(".md", "").strip()
@@ -115,7 +118,7 @@ def cmd_agent(args):
         log_error("AGENT", f"Persona '{args.role}' não encontrada em {personas_dir}.", hint=f"Disponíveis: {', '.join(personas.keys())}")
         sys.exit(1)
 
-    runner.execute_single_persona(personas[clean_role], task=args.task, dispatch_jules=args.dispatch_jules)
+    runner.execute_single_persona(personas[clean_role], task=args.task, dispatch_jules=dispatch_jules)
 
 
 # -------------------------------------------------------------

@@ -148,15 +148,15 @@ def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str):
         print(f"    Missão: {Colors.DIM}{p['summary']}{Colors.RESET}\n")
 
     print(f"{Colors.YELLOW}Como Executar:{Colors.RESET}")
-    print(f"  • Uma Persona:       amb agent --role <nome>  (ou python amb_v2/agents/local_agent_runner.py --role <nome>)")
-    print(f"  • TODAS as Personas: amb agent --all")
-    print(f"  • Despachar Jules:    amb agent --role <nome> --dispatch-jules\n")
+    print(f"  • Despachar Jules (Padrão): amb agent --role <nome>  (ou python amb_v2/agents/local_agent_runner.py --role <nome>)")
+    print(f"  • TODAS as Personas (Jules):  amb agent --all")
+    print(f"  • Executar Local (agy CLI):   amb agent --role <nome> --agy (ou --local)\n")
 
 
 def execute_single_persona(
     persona_data: Dict[str, str],
     task: Optional[str] = None,
-    dispatch_jules: bool = False
+    dispatch_jules: bool = True
 ):
     """Executa ou despacha uma persona específica."""
     title = persona_data["title"]
@@ -233,10 +233,14 @@ def main():
     parser.add_argument("--all", "-a", action="store_true", help="Executa TODAS as personas encontradas na pasta sequencialmente.")
     parser.add_argument("--task", "-t", help="Instrução ou escopo específico adicional para anexar ao prompt da persona.")
     parser.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis na pasta e encerra.")
-    parser.add_argument("--dispatch-jules", "-j", action="store_true", help="Despacha para o Google Jules em vez de rodar localmente.")
+    parser.add_argument("--agy", "--local", action="store_true", default=False, help="Executa o agente localmente via agy CLI em vez de despachar para o Google Jules.")
+    parser.add_argument("--dispatch-jules", "-j", action="store_true", help="(Legado) Força o despacho para o Google Jules na nuvem (comportamento padrão).")
     parser.add_argument("--personas-dir", help="Caminho customizado da pasta de personas.")
 
     args = parser.parse_args()
+
+    # Padrão: Despacha para o Google Jules. Só roda local com agy se --agy / --local for especificado.
+    dispatch_jules = not args.agy
 
     personas_dir = get_personas_directory(args.personas_dir)
     personas = discover_personas(personas_dir)
@@ -264,7 +268,7 @@ def main():
                 execute_single_persona(
                     persona_data=p_data,
                     task=args.task,
-                    dispatch_jules=args.dispatch_jules
+                    dispatch_jules=dispatch_jules
                 )
             except Exception as e:
                 log_error("AGENT", f"Falha na persona '{key}': {e}")
@@ -286,7 +290,7 @@ def main():
         execute_single_persona(
             persona_data=personas[clean_role],
             task=args.task,
-            dispatch_jules=args.dispatch_jules
+            dispatch_jules=dispatch_jules
         )
     except Exception as e:
         log_error("AGENT", str(e))
