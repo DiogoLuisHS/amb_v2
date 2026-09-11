@@ -17,6 +17,12 @@ Este diário consolida o histórico de aprendizados e padrões identificados no 
 
 ---
 
+### 📅 [2026-09-11] Refatoração: architecture/ai_context_builder.py
+- **Alvo:** `architecture/ai_context_builder.py`
+- **Ação SRP:** Extraída a lógica condicional de classificação das camadas (`if-elif-else`) do método principal `classify_and_order_files` para um método helper privado `_determine_file_layer`. O dicionário base também foi extraído para um atributo estático de classe (`LAYERS_CONFIG`).
+- **Melhoria DRY:** Removeu-se o boilerplate de dict duplicado e simplificou-se drasticamente o fluxo do laço `for` em `classify_and_order_files`, melhorando a legibilidade sem alterar o comportamento.
+- **Status de QA:** 0 erros de sintaxe/tipagem (Ruff check all pass) e contratos validados sem alterar output final (`test_layer.py` mock verificado, `generate_context()` ok).
+
 ### 📅 [2024-09-02] Refatoração: cli.py (Limpeza Final)
 - **Alvo:** `cli.py`
 - **Ação SRP:** Utilizado o submódulo de parsing (`cli_modules/cli_parsers.py`) e apagada a redundância gigantesca de declarações `cmd_*` e inicialização de argumentos que ainda estava duplicada dentro de `cli.py`.
