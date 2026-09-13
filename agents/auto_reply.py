@@ -12,6 +12,7 @@ destravar o agente quando ele estiver no estado AWAITING_USER_FEEDBACK.
 """
 
 import os
+import functools
 import sys
 import argparse
 from typing import Tuple, Dict, Any, Optional
@@ -285,18 +286,9 @@ def _filter_rules_for_jules(content: str) -> str:
     return "\n".join(lines)
 
 
-def generate_ai_suggestion(
-    session_title: str,
-    initial_prompt: str,
-    full_chat_history: str,
-    current_question: str,
-) -> str:
-    """Gera a sugestão de resposta técnica via Antigravity Client / Gemini contextualizado com histórico e regras."""
-    root = find_repo_root()
-    rules_dir = os.path.join(root, ".antigravity", "rules")
-    if not os.path.exists(rules_dir):
-        rules_dir = os.path.join(root, ".gemini", "rules")
-
+@functools.lru_cache(maxsize=128)
+def load_rules(rules_dir: str) -> str:
+    """Carrega e cacheia o conteúdo das regras para evitar I/O redundante."""
     rules_context = ""
     if os.path.exists(rules_dir):
         for f in sorted(os.listdir(rules_dir)):
@@ -312,6 +304,22 @@ def generate_ai_suggestion(
                         rules_context += f"\n--- [REGRA: {f}] ---\n" + filtered_rule
                 except Exception:
                     pass
+    return rules_context
+
+
+def generate_ai_suggestion(
+    session_title: str,
+    initial_prompt: str,
+    full_chat_history: str,
+    current_question: str,
+) -> str:
+    """Gera a sugestão de resposta técnica via Antigravity Client / Gemini contextualizado com histórico e regras."""
+    root = find_repo_root()
+    rules_dir = os.path.join(root, ".antigravity", "rules")
+    if not os.path.exists(rules_dir):
+        rules_dir = os.path.join(root, ".gemini", "rules")
+
+    rules_context = load_rules(rules_dir)
 
     system_instruction = (
         "Você é o Antigravity Cognitive Advisor para o Google Jules. "
