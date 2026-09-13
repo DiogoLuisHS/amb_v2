@@ -44,7 +44,7 @@ for _sub in [
     if os.path.exists(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name  # noqa: E402
+from config import Colors, log, log_error, find_repo_root, get_repo_name, load_project_json  # noqa: E402
 from jules_client import JulesClient  # noqa: E402
 
 
@@ -109,7 +109,7 @@ def approve_and_merge_pr(
     session_id: Optional[str] = None,
     pr_number: Optional[int] = None,
     auto_latest: bool = False,
-    target_branch: str = "develop",
+    target_branch: str = "main",
     auto_approve_review: bool = True
 ) -> bool:
     """Aprova o PR no GitHub, realiza o merge (squash), puxa localmente e roda o build."""
@@ -321,7 +321,7 @@ def approve_and_merge_pr(
     )
     print(pull_proc.stdout.strip())
 
-    # 5. Validação de QA Local (Bug #4 fix: comandos configuráveis via amb_project.json)
+    # 5. Validação de QA Local pós-merge
     log("QA-VALIDATION", "Executando verificação de integridade pós-merge...", Colors.CYAN)
 
     def _run_qa_cmd(cmd_str: str, label: str) -> bool:
@@ -349,9 +349,8 @@ def approve_and_merge_pr(
         print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
         return True
 
-    # Lê comandos de QA do amb_project.json (Bug #4 fix)
-    from config import load_project_json
-    proj = load_project_json()
+    # Lê comandos de QA configurados no amb_project.json
+    proj = load_project_json() or {}
     qa_cfg = proj.get("qa", {})
 
     # Auto-detecção de stack se não configurado
@@ -380,7 +379,7 @@ def main():
     parser.add_argument("--session-id", "-s", help="ID da sessão Jules para extrair o PR.")
     parser.add_argument("--pr", "-p", type=int, help="Número específico do Pull Request (ex: 15).")
     parser.add_argument("--auto-latest", "-a", action="store_true", help="Detecta e mescla o último PR aberto no repositório.")
-    parser.add_argument("--branch", "-b", default="develop", help="Branch de destino (Padrão: develop).")
+    parser.add_argument("--branch", "-b", default="main", help="Branch de destino (Padrão: main).")
 
     args = parser.parse_args()
 
