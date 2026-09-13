@@ -53,8 +53,22 @@ def cmd_monitor(args):
 
 def cmd_advisor(args):
     """Menu cognitivo para tirar dúvidas pendentes do Jules com IA."""
-    from auto_reply import run_auto_advisor
-    run_auto_advisor(auto_approve=args.auto_approve)
+    sid = getattr(args, "session_id_flag", None) or getattr(args, "session_id", None)
+    if sid:
+        sid = str(sid).strip().rstrip("/").split("/")[-1]
+        msg = getattr(args, "message", None)
+        if msg:
+            from jules_client import JulesClient
+            client = JulesClient()
+            client.send_message(session_id=sid, message=msg)
+            from config import Colors, log
+            log("JULES", f"✅ Mensagem direta enviada para a sessão {sid}!", Colors.GREEN)
+        else:
+            from auto_reply import advise_and_reply
+            advise_and_reply(session_id=sid, auto_approve=args.auto_approve)
+    else:
+        from auto_reply import run_auto_advisor
+        run_auto_advisor(auto_approve=args.auto_approve)
 
 
 def cmd_gui(args):
@@ -173,17 +187,20 @@ def cmd_jules(args):
         print(f"Painel: https://jules.google.com/session/{sid}")
 
     elif sub in ["reply", "advisor", "ask"]:
+        sid = getattr(args, "session_id_flag", None) or getattr(args, "session_id", None)
+        if sid:
+            sid = str(sid).strip().rstrip("/").split("/")[-1]
         if getattr(args, "message", None):
             from jules_client import JulesClient
             client = JulesClient()
-            if not getattr(args, "session_id", None):
-                log_error("JULES", "Informe --session-id ao usar --message direta.")
+            if not sid:
+                log_error("JULES", "Informe o ID da sessão ao usar --message direta.")
                 return
-            client.send_message(session_id=args.session_id, message=args.message)
-            log("JULES", f"✅ Mensagem direta enviada para a sessão {args.session_id}!", Colors.GREEN)
-        elif getattr(args, "session_id", None):
+            client.send_message(session_id=sid, message=args.message)
+            log("JULES", f"✅ Mensagem direta enviada para a sessão {sid}!", Colors.GREEN)
+        elif sid:
             from auto_reply import advise_and_reply
-            advise_and_reply(session_id=args.session_id, auto_approve=args.auto_approve)
+            advise_and_reply(session_id=sid, auto_approve=args.auto_approve)
         else:
             from auto_reply import run_auto_advisor
             run_auto_advisor(auto_approve=args.auto_approve)

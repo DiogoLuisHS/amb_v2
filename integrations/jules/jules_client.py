@@ -95,6 +95,12 @@ class JulesClient:
 
     # 2. Sessions
     def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: Optional[str] = None) -> Dict[str, Any]:
+        if os.path.isfile(prompt):
+            try:
+                with open(prompt, "r", encoding="utf-8") as f:
+                    prompt = f.read()
+            except Exception:
+                pass
         from config import get_repo_name, find_repo_root
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
         
@@ -146,6 +152,12 @@ class JulesClient:
         return sessions
 
     def send_message(self, session_id: str, message: str) -> Dict[str, Any]:
+        if os.path.isfile(message):
+            try:
+                with open(message, "r", encoding="utf-8") as f:
+                    message = f.read()
+            except Exception:
+                pass
         clean_id = session_id.split("/")[-1]
         path = f"sessions/{clean_id}:sendMessage"
         return self._request("POST", path, data={"prompt": message})

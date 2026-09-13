@@ -13,6 +13,12 @@ for _s in ["config", "integrations/jules"]:
 from jules_client import JulesClient, Colors, log, log_error
 
 def create_session(prompt: str, title: str = None, source_name: str = None, client: JulesClient = None):
+    if os.path.isfile(prompt):
+        try:
+            with open(prompt, "r", encoding="utf-8") as f:
+                prompt = f.read()
+        except Exception:
+            pass
     c = client or JulesClient()
     return c.create_session(prompt=prompt, title=title, source_name=source_name)
 

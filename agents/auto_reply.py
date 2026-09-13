@@ -144,12 +144,12 @@ def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
     for a in acts:
         aid = a.get("id") or a.get("name")
 
-        # 1. Mensagem do Usuário
+        # 1. Mensagem ou Ação do Usuário
         user_txt = extract_activity_text(a, role="user")
-        if user_txt:
+        if user_txt or "planApproved" in a or a.get("planApproved"):
             if not turn_info["last_speaker"]:
                 turn_info["last_speaker"] = "USER"
-                turn_info["last_user_msg"] = user_txt
+                turn_info["last_user_msg"] = user_txt or "Plano aprovado pelo usuário."
                 turn_info["is_awaiting_user_action"] = False
                 break
 
@@ -160,17 +160,17 @@ def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
             else None
         )
         if not plan and "planGenerated" in a:
-            p_gen = a["planGenerated"].get("plan")
-            if p_gen and p_gen.get("state") == "PENDING_USER_APPROVAL":
-                plan = p_gen
+            plan = a["planGenerated"].get("plan")
 
-        if plan and plan.get("state") == "PENDING_USER_APPROVAL":
+        if plan and (plan.get("state") == "PENDING_USER_APPROVAL" or "steps" in plan or plan.get("id")):
             if not turn_info["last_speaker"]:
                 turn_info["last_speaker"] = "PLAN"
                 turn_info["has_unapproved_plan"] = True
-                turn_info["unapproved_plan_title"] = plan.get("title", "")
+                steps = plan.get("steps", [])
+                p_title = plan.get("title") or (steps[0].get("title") if steps else "Plano de Implementação")
+                turn_info["unapproved_plan_title"] = p_title
                 turn_info["last_agent_msg_id"] = aid
-                turn_info["last_agent_msg"] = f"Plano proposto: {plan.get('title', '')}"
+                turn_info["last_agent_msg"] = f"Plano proposto: {p_title}"
                 turn_info["is_awaiting_user_action"] = True
                 break
 
@@ -377,6 +377,7 @@ Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do J
 
 def advise_and_reply(session_id: str, auto_approve: bool = False, force: bool = False):
     """Fluxo interativo com exibição de histórico, pergunta e resposta assistida por IA."""
+    session_id = str(session_id).strip().rstrip("/").split("/")[-1]
     j_client = JulesClient()
     log(
         "JULES-ADVISOR",

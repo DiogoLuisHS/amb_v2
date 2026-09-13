@@ -44,7 +44,10 @@ def create_parser():
 
     # 4. amb advisor
     p_adv = subparsers.add_parser("advisor", aliases=["ask"], help="Menu cognitivo para tirar dúvidas pendentes do Jules com IA.")
-    p_adv.add_argument("--auto-approve", "-y", action="store_true", help="Responde todas as sessões pendentes em lote.")
+    p_adv.add_argument("session_id", nargs="?", help="ID ou URL da sessão do Jules (opcional).")
+    p_adv.add_argument("--session-id", "-s", dest="session_id_flag", help="ID ou URL da sessão do Jules.")
+    p_adv.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
+    p_adv.add_argument("--auto-approve", "-y", action="store_true", help="Responde ou aprova automaticamente com IA sem confirmação.")
     p_adv.set_defaults(func=cmd_advisor)
 
     # 5. amb gui
@@ -83,7 +86,8 @@ def create_parser():
     j_create.add_argument("--title", "-t", help="Título da sessão.")
 
     j_reply = j_subs.add_parser("reply", aliases=["advisor", "ask"], help="Responde uma dúvida com IA (ou envia mensagem direta se --message).")
-    j_reply.add_argument("--session-id", "-s", required=False, help="ID da sessão (opcional; se omitido, lista todas as sessões pendentes).")
+    j_reply.add_argument("session_id", nargs="?", help="ID ou URL da sessão do Jules (opcional).")
+    j_reply.add_argument("--session-id", "-s", dest="session_id_flag", required=False, help="ID ou URL da sessão (opcional; se omitido, lista todas as sessões pendentes).")
     j_reply.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
     j_reply.add_argument("--auto-approve", "-y", action="store_true", help="Envia resposta gerada pelo Gemini sem pedir confirmação.")
 
