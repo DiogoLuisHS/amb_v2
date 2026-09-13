@@ -274,12 +274,19 @@ class AIContextBuilder:
 
         result = set(core_files)
 
+        exists_cache: dict[str, bool] = {}
+
+        def path_exists(p: str) -> bool:
+            if p not in exists_cache:
+                exists_cache[p] = (self.root_dir / p).exists()
+            return exists_cache[p]
+
         for core in list(core_files):
             for down in self.adj_down.get(core, []):
-                if not down.startswith("@") and (self.root_dir / down).exists():
+                if not down.startswith("@") and path_exists(down):
                     result.add(down)
             for up in self.adj_up.get(core, []):
-                if not up.startswith("@") and (self.root_dir / up).exists():
+                if not up.startswith("@") and path_exists(up):
                     result.add(up)
 
         return result
