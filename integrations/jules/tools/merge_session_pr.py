@@ -22,7 +22,6 @@ import json
 import time
 import argparse
 import subprocess
-from pathlib import Path
 from typing import Optional, Dict, Any
 
 
@@ -45,8 +44,8 @@ for _sub in [
     if os.path.exists(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name, AmbError
-from jules_client import JulesClient
+from config import Colors, log, log_error, find_repo_root, get_repo_name  # noqa: E402
+from jules_client import JulesClient  # noqa: E402
 
 
 def detect_pr_from_session(session_id: str) -> Optional[int]:
@@ -92,7 +91,7 @@ def get_latest_open_pr(repo_name: str) -> Optional[Dict[str, Any]]:
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=False
         )
         if proc.returncode == 0 and proc.stdout.strip():
             try:
@@ -160,7 +159,7 @@ def approve_and_merge_pr(
                         text=True,
                         encoding="utf-8",
                         errors="replace",
-                        shell=True
+                        shell=False
                     )
                     if os.path.exists(patch_path):
                         os.remove(patch_path)
@@ -177,13 +176,12 @@ def approve_and_merge_pr(
                                 t_path = os.path.join(repo_root, f_rel)
                                 os.makedirs(os.path.dirname(t_path), exist_ok=True)
                                 if not os.path.exists(t_path):
-                                    with open(t_path, "w", encoding="utf-8") as tf:
-                                        pass
+                                    open(t_path, "w", encoding="utf-8").close()
                                 continue
                             p_part_path = os.path.join(repo_root, f".tmp_part_{p_idx}.patch")
                             with open(p_part_path, "w", encoding="utf-8") as ppf:
                                 ppf.write(single_p)
-                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=True)
+                            p_res = subprocess.run(["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", p_part_path], cwd=repo_root, capture_output=True, text=True, shell=False)
                             if os.path.exists(p_part_path):
                                 os.remove(p_part_path)
                             if p_res.returncode != 0:
@@ -219,7 +217,7 @@ def approve_and_merge_pr(
 
                         qa_passed = True
                         for step_key, step_cmd in qa_cfg.items():
-                            p_step = subprocess.run(step_cmd.split(), cwd=repo_root, capture_output=True, text=True, shell=True)
+                            p_step = subprocess.run(step_cmd, cwd=repo_root, capture_output=True, text=True, shell=True)
                             if p_step.returncode != 0:
                                 log_error("QA", f"Falha no {step_key} pós-patch: {p_step.stderr.strip() or p_step.stdout.strip()}")
                                 qa_passed = False
@@ -238,7 +236,7 @@ def approve_and_merge_pr(
                             text=True,
                             encoding="utf-8",
                             errors="replace",
-                            shell=True
+                            shell=False
                         )
                         print(f"{Colors.GREEN}✔ Alterações enviadas com sucesso para o GitHub!{Colors.RESET}\n")
                         return True
@@ -262,7 +260,7 @@ def approve_and_merge_pr(
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=False
     )
 
     # 3. Aprova o PR (Code Review)
@@ -274,7 +272,7 @@ def approve_and_merge_pr(
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=False
         )
         if review_proc.returncode == 0:
             print(f"{Colors.GREEN}✔ Review de aprovação registrado no PR #{resolved_pr}.{Colors.RESET}")
@@ -290,7 +288,7 @@ def approve_and_merge_pr(
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True
+        shell=False
     )
     if merge_proc.returncode != 0:
         # Tenta sem flag --admin se não for admin
@@ -300,7 +298,7 @@ def approve_and_merge_pr(
             text=True,
             encoding="utf-8",
             errors="replace",
-            shell=True
+            shell=False
         )
 
     if merge_proc.returncode != 0:
@@ -342,7 +340,7 @@ def approve_and_merge_pr(
         else:
             use_shell = True
         proc = subprocess.run(
-            parts, cwd=repo_root,
+            cmd_str.strip() if use_shell else parts, cwd=repo_root,
             capture_output=True, text=True, encoding="utf-8", errors="replace", shell=use_shell
         )
         if proc.returncode != 0:

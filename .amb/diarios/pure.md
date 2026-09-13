@@ -47,3 +47,9 @@ Este diário consolida o histórico de aprendizados e padrões identificados no 
 - **Ação SRP:** Extraídos submódulos `cli_modules/cli_handlers.py` e `cli_modules/cli_parsers.py`.
 - **Melhoria DRY:** Centralizadas declarações do argparse e os handlers `cmd_*` nos novos submódulos, deixando o `cli.py` com a responsabilidade apenas de carregar configurações globais, registrar paths e chamar `create_parser()`. Arquivo reduzido de 539 linhas para 64 linhas.
 - **Status de QA:** 0 erros de sintaxe/tipagem. Validação com `amb check` e `cli.py --help` 100% verde.
+
+### 📅 [2026-09-13] Bug Fix: merge_session_pr.py QA subprocess
+- **Target:** `integrations/jules/tools/merge_session_pr.py`
+- **SRP Action:** Corrected the subprocess.run invocation inside `_run_qa_cmd` to conditionally pass either a string (when shell=True) or a list (when shell=False) to avoid dropping arguments on POSIX systems. Normalized multiple other subprocess calls to explicitly use `shell=False`.
+- **DRY Improvement:** Normalized cross-platform behavior of QA test executions and Git/GitHub CLI integrations, resolving Bug #4 robustly without changing logic.
+- **QA Status:** Linting and formatting passed (`ruff`). No regression in test suite.
