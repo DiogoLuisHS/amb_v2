@@ -286,61 +286,7 @@ def cmd_stitch(args):
 
 
 # -------------------------------------------------------------
-# 6. RENDER CLOUD
-# -------------------------------------------------------------
-def cmd_render(args):
-    """Roteia comandos do Render Cloud."""
-    sub = args.render_cmd
-    from render_client import RenderClient
-    from config import require_env
-
-    client = RenderClient()
-
-    if sub == "status":
-        sid = getattr(args, "service_id", None) or require_env("RENDER_SERVICE_ID")
-        deploys = client.list_deploys(service_id=sid, limit=1)
-        if not deploys:
-            print(f"Nenhum deploy encontrado para o serviço {sid}.")
-            return
-        dep = deploys[0].get("deploy", deploys[0])
-        status = dep.get("status", "UNKNOWN")
-        status_color = Colors.GREEN if status == "live" else (Colors.RED if "fail" in status.lower() else Colors.YELLOW)
-        log("RENDER", f"Status do serviço {sid}: {status_color}{status}{Colors.RESET}", Colors.CYAN)
-        print(f"  • Deploy ID:   {dep.get('id')}")
-        print(f"  • Commit:      {dep.get('commit', {}).get('message', 'N/A')}")
-        print(f"  • Criado em:   {dep.get('createdAt')}")
-
-    elif sub == "logs":
-        sid = getattr(args, "service_id", None) or require_env("RENDER_SERVICE_ID")
-        deploys = client.list_deploys(service_id=sid, limit=1)
-        if deploys:
-            dep = deploys[0].get("deploy", deploys[0])
-            dep_id = dep.get("id")
-            log("RENDER-LOGS", f"Logs do Deploy {dep_id} (Serviço: {sid}):", Colors.CYAN)
-            print(f"Painel Live Logs: https://dashboard.render.com/web/{sid}/deploys/{dep_id}")
-        else:
-            print(f"Nenhum deploy recente encontrado para {sid}.")
-
-    elif sub == "deploy":
-        sid = getattr(args, "service_id", None) or require_env("RENDER_SERVICE_ID")
-        log("RENDER", f"Disparando deploy para serviço {sid}...", Colors.CYAN)
-        res = client.trigger_deploy(service_id=sid)
-        dep_id = res.get("id") or res.get("deploy", {}).get("id")
-        log("RENDER", f"✅ Deploy disparado com sucesso! ID: {dep_id}", Colors.GREEN)
-
-    elif sub == "services":
-        services = client.list_services()
-        log("RENDER", f"Serviços encontrados na conta ({len(services)}):", Colors.CYAN)
-        for item in services:
-            srv = item.get("service", item)
-            print(f"  • ID: {Colors.BOLD}{srv.get('id')}{Colors.RESET} | {Colors.GREEN}{srv.get('name')}{Colors.RESET} ({srv.get('type')})")
-
-    else:
-        print("Subcomando do Render inválido. Use 'amb render --help'.")
-
-
-# -------------------------------------------------------------
-# 7. VALIDATE, PIPELINE, SCHEMA & CONTEXT
+# 6. VALIDATE, PIPELINE, SCHEMA & CONTEXT
 # -------------------------------------------------------------
 def cmd_validate(args):
     """Audita um arquivo de código contra as regras arquiteturais do repositório."""

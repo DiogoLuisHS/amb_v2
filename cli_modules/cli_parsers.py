@@ -1,7 +1,7 @@
 import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
-    cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_render, cmd_validate,
+    cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate,
     cmd_pipeline, cmd_schema, cmd_context
 )
 
@@ -35,7 +35,7 @@ def create_parser():
 
 
     # 3. amb monitor
-    p_mon = subparsers.add_parser("monitor", aliases=["watch", "sentinel"], help="Sentinela em tempo real (Jules + Render) com suporte a auto-resposta Gemini.")
+    p_mon = subparsers.add_parser("monitor", aliases=["watch", "sentinel"], help="Sentinela em tempo real (Jules) com suporte a auto-resposta Gemini.")
     p_mon.add_argument("--interactive", "-i", action="store_true", help="Abre o menu interativo cognitivo (Advisor) para inspecionar e responder pendências.")
     p_mon.add_argument("--auto-approve", "-y", action="store_true", help="Aprova e responde chats automaticamente via Gemini.")
     p_mon.add_argument("--check-once", "-1", action="store_true", help="Executa apenas uma rodada de checagem e encerra.")
@@ -126,15 +126,6 @@ def create_parser():
     s_sync = s_subs.add_parser("sync", help="Sincroniza design tokens do design.md com o Design System do Stitch.")
     s_sync.add_argument("--file", "-f", help="Caminho do arquivo design.md.")
     p_stitch.set_defaults(func=cmd_stitch)
-
-    # 9. amb render
-    p_render = subparsers.add_parser("render", help="Comandos de integração com o Render Cloud.")
-    r_subs = p_render.add_subparsers(dest="render_cmd", help="Subcomandos do Render")
-    r_subs.add_parser("status", help="Status do deploy mais recente.")
-    r_subs.add_parser("logs", help="Últimos logs de build/execução.")
-    r_subs.add_parser("deploy", help="Dispara um novo deploy.")
-    r_subs.add_parser("services", help="Lista todos os serviços configurados na conta Render.")
-    p_render.set_defaults(func=cmd_render)
 
     # 10. amb validate
     p_val = subparsers.add_parser("validate", aliases=["lint", "audit"], help="Audita um arquivo contra as regras arquiteturais do repositório.")

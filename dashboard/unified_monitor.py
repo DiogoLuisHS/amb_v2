@@ -3,7 +3,7 @@
 """
 📡 AMB_V2 - Monitoramento Unificado e Contínuo em Tempo Real
 Localização: amb_v2/dashboard/unified_monitor.py
-Responsabilidade Única: Executar o loop de vigilância concorrente dos 4 módulos (Jules, Render,
+Responsabilidade Única: Executar o loop de vigilância dos módulos Google (Jules,
 Stitch, Antigravity) e notificar instantaneamente o desenvolvedor sobre erros ou dúvidas.
 """
 
@@ -26,7 +26,6 @@ for _sub in [
     "integrations/jules", "integrations/jules/tools",
     "integrations/stitch", "integrations/stitch/tools",
     "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -34,7 +33,6 @@ for _sub in [
 
 from config import Colors, log, log_error, get_env
 from jules_watcher import JulesWatcher
-from render_watcher import RenderWatcher
 from alert_notifier import notify_info
 
 
@@ -46,14 +44,12 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
     print("=" * 75)
     print(f"Intervalo de Polling: {interval_seconds}s")
     print(f"Jules API Key:       {'Configurada ✅' if get_env('JULES_API_KEY') else 'Não configurada ⚠️'}")
-    print(f"Render API Key:      {'Configurada ✅' if get_env('RENDER_API_KEY') else 'Não configurada ⚠️'}")
     print(f"Stitch API Key:      {'Configurada ✅' if get_env('STITCH_API_KEY') else 'Não configurada ⚠️'}")
     print(f"Gemini/Antigravity:  {'Configurada ✅' if get_env('GEMINI_API_KEY') else 'Não configurada ⚠️'}")
     print("-" * 75)
     print(f"{Colors.DIM}Pressione Ctrl+C para encerrar o monitoramento a qualquer momento.{Colors.RESET}\n")
 
     jules_w = JulesWatcher()
-    render_w = RenderWatcher()
 
     cycle = 1
     while True:
@@ -76,10 +72,7 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
                         except Exception as e:
                             log_error("AUTO-PILOT", f"Falha no auto-reply da sessão {sid}: {e}")
 
-            # 2. Render
-            render_alerts = render_w.check()
-
-            if not jules_alerts and not render_alerts:
+            if not jules_alerts:
                 notify_info("Tudo operando normalmente. Nenhuma pendência humana ou erro detectado.\n")
 
             if check_once:
@@ -111,7 +104,7 @@ class UnifiedMonitor:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Monitor unificado de atenção para Jules, Render, Stitch e Antigravity.")
+    parser = argparse.ArgumentParser(description="Monitor unificado de atenção para Jules, Stitch e Antigravity.")
     parser.add_argument("--interval", "-i", type=int, default=15, help="Intervalo em segundos entre verificações (padrão: 15s).")
     parser.add_argument("--check-once", action="store_true", help="Executa apenas uma verificação e encerra.")
     parser.add_argument("--auto-approve", "-y", action="store_true", help="Piloto automático: gera respostas com Antigravity e envia sozinho para todas as dúvidas.")

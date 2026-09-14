@@ -20,7 +20,6 @@ for _sub in [
     "integrations/jules", "integrations/jules/tools",
     "integrations/stitch", "integrations/stitch/tools",
     "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
     "cli_modules"
 ]:
     _p = os.path.normpath(os.path.join(_AMB_ROOT, *_sub.split("/")))

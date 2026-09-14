@@ -196,7 +196,6 @@ Sua missão é auditar routers e endpoints garantindo validação de schemas em 
         readme_file = os.path.join(amb_root, "README.md")
         frameworks_str = ', '.join(stack.get('frameworks', [])) or 'Genérico'
         rules_str = stack.get('rules_dir') or 'Nenhuma pasta de regras identificada'
-        render_str = 'Configurado via render.yaml' if stack.get('has_render_yaml') else 'Manual / Não configurado'
 
         readme_content = f"""# 🧭 Personas e Diários de Engenharia (`.amb/`)
 
@@ -213,7 +212,6 @@ Este diretório centraliza a inteligência local, especificações de telas, as 
 | ⚡ **Gerenciador de Pacotes** | `{stack.get('package_manager')}` |
 | 🧩 **Frameworks & Libs** | `{frameworks_str}` |
 | 📜 **Regras Arquiteturais** | `{rules_str}` |
-| 🚀 **Deploy em Nuvem** | `{render_str}` |
 
 ---
 

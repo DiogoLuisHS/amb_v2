@@ -25,7 +25,6 @@ for _sub in [
     "integrations/jules", "integrations/jules/tools",
     "integrations/stitch", "integrations/stitch/tools",
     "integrations/antigravity", "integrations/antigravity/tools",
-    "integrations/render", "integrations/render/tools",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:
@@ -55,12 +54,10 @@ def run_setup(interactive: bool = True):
     print(f"  • Tipo de Projeto:    {Colors.GREEN}{stack['type']}{Colors.RESET}")
     print(f"  • Gerenciador:        {Colors.GREEN}{stack['package_manager']}{Colors.RESET}")
     print(f"  • Frameworks:         {Colors.GREEN}{', '.join(stack['frameworks']) or 'Genérico'}{Colors.RESET}")
-    print(f"  • Pasta de Regras:    {Colors.GREEN}{stack['rules_dir'] or 'Nenhuma detectada'}{Colors.RESET}")
-    print(f"  • Render Deploy:      {Colors.GREEN}{'Configurado (render.yaml)' if stack['has_render_yaml'] else 'Nenhum'}{Colors.RESET}\n")
+    print(f"  • Pasta de Regras:    {Colors.GREEN}{stack['rules_dir'] or 'Nenhuma detectada'}{Colors.RESET}\n")
 
     current_repo = get_env("GITHUB_REPOSITORY", detected_repo or "")
     current_stitch_id = get_env("STITCH_PROJECT_ID", "")
-    current_render_id = get_env("RENDER_SERVICE_ID", "")
 
     # 2. Interatividade se solicitado
     if interactive:
@@ -73,10 +70,6 @@ def run_setup(interactive: bool = True):
         in_stitch = input(f"👉 Stitch Project ID [{current_stitch_id}]: ").strip()
         if in_stitch:
             current_stitch_id = in_stitch
-
-        in_render = input(f"👉 Render Service ID (opcional) [{current_render_id}]: ").strip()
-        if in_render:
-            current_render_id = in_render
 
     # 3. Provisionamento da Estrutura .amb/ e Personas Contextualizadas
     log("SETUP", "Provisionando estrutura .amb/ e contextualizando personas...", Colors.CYAN)
@@ -91,7 +84,6 @@ def run_setup(interactive: bool = True):
     project_data = {
         "repository": current_repo,
         "stitch_project_id": current_stitch_id,
-        "render_service_id": current_render_id,
         "stack": stack,
         "technical_summary": summary_spec
     }
@@ -111,8 +103,6 @@ def run_setup(interactive: bool = True):
         env_updates["GITHUB_REPOSITORY"] = current_repo
     if current_stitch_id:
         env_updates["STITCH_PROJECT_ID"] = current_stitch_id
-    if current_render_id:
-        env_updates["RENDER_SERVICE_ID"] = current_render_id
 
     if env_updates:
         if not os.path.exists(env_path):
@@ -165,7 +155,7 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
 ### 📋 Passos Obrigatórios de Execução:
 
 1. Inspeção e Detecção da Stack:
-   - Inspecione a raiz do projeto (package.json, bun.lock, pnpm-lock.yaml, pyproject.toml, .git/config, render.yaml, pastas de regras .antigravity/rules ou .gemini/rules).
+   - Inspecione a raiz do projeto (package.json, bun.lock, pnpm-lock.yaml, pyproject.toml, .git/config, pastas de regras .antigravity/rules ou .gemini/rules).
    - Identifique o repositório remoto (owner/repo), a stack técnica (frameworks frontend e backend) e o gerenciador de pacotes.
 
 2. Execução do Setup Automático (Provisionamento de .amb e Personas):
@@ -180,8 +170,6 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
      * JULES_API_KEY=
      * GITHUB_REPOSITORY=<owner/repo detectado>
      * GEMINI_API_KEY=
-     * RENDER_API_KEY=
-     * RENDER_SERVICE_ID=
 
 4. Validação e Teste do Ambiente:
    - Execute o script de validação para checar o carregamento correto das variáveis e caminhos:

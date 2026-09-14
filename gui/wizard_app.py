@@ -379,7 +379,6 @@ class DynamicWizard(tk.Tk):
             "JULES_API_KEY",
             "GEMINI_API_KEY",
             "GITHUB_REPOSITORY",
-            "RENDER_API_KEY",
         ]
         for ck in core_keys:
             if ck not in env_data:

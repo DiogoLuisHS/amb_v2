@@ -188,7 +188,6 @@ def require_env(key: str, hint: Optional[str] = None) -> str:
             "JULES_API_KEY": "Obtenha em https://jules.google.com e adicione no arquivo .env (JULES_API_KEY=...)",
             "GITHUB_REPOSITORY": "Configure GITHUB_REPOSITORY=usuario/repositorio no .env ou execute setup_project.py",
             "GEMINI_API_KEY": "Obtenha em https://aistudio.google.com/app/api-keys e adicione no .env (GEMINI_API_KEY=...)",
-            "RENDER_API_KEY": "Obtenha em https://dashboard.render.com/u/settings#api-keys e adicione no .env (RENDER_API_KEY=...)",
         }
         resolved_hint = hint or default_hints.get(key, f"Defina a variável '{key}' no arquivo .env ou execute python amb_v2/config/setup_project.py")
         raise ConfigurationError(f"Variável mandatória ausente: '{key}'", hint=resolved_hint)
@@ -232,7 +231,6 @@ def main():
         ("JULES_API_KEY", "Google Jules SDK / API"),
         ("GITHUB_REPOSITORY", "Repositório GitHub"),
         ("GEMINI_API_KEY", "Google Antigravity / Gemini"),
-        ("RENDER_API_KEY", "Render Cloud API"),
     ]
 
     for key, desc in keys_to_check:

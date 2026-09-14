@@ -49,7 +49,7 @@ amb prompt --synthesize "Criar painel de métricas financeiras com gráficos e f
 
 ### 📡 2.2. Sentinela, Advisor & Assistente Gráfico (`monitor`, `advisor`, `gui`)
 
-Vigilância em tempo real das sessões do Jules e deploys do Render, auto-resposta via Gemini e Assistente Gráfico nativo para montagem de comandos e gestão de variáveis do `.env`.
+Vigilância em tempo real das sessões do Jules, auto-resposta via Gemini e Assistente Gráfico nativo para montagem de comandos e gestão de variáveis do `.env`.
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
@@ -169,28 +169,7 @@ amb stitch sync
 
 ---
 
-### 🚀 2.6. Render Cloud (`render`)
-
-Integração com a infraestrutura em nuvem do Render para monitoramento e deploys.
-
-| Comando | Descrição |
-| :--- | :--- |
-| `amb render status` | Exibe o status do serviço, último deploy e commit associado. |
-| `amb render logs` | Consulta e exibe os últimos logs do servidor de produção. |
-| `amb render services` | Lista todos os serviços configurados na conta Render com seus IDs. |
-| `amb render deploy` | Dispara um novo deploy manual via Render API. |
-
-```bash
-# Exemplos:
-amb render status
-amb render logs
-amb render services
-amb render deploy
-```
-
----
-
-### 🔍 2.7. Qualidade, Pipeline, Schemas & Contexto (`validate`, `pipeline`, `schema`, `context`)
+### 🔍 2.6. Qualidade, Pipeline, Schemas & Contexto (`validate`, `pipeline`, `schema`, `context`)
 
 Ferramentas avançadas para governança de código, orquestração Design-to-Deploy e inteligência de monorepo.
 
@@ -265,10 +244,6 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Stitch SDK** | `amb stitch variants -s <id>` | `python integrations/stitch/tools/generate_variants.py` |
 | **Stitch SDK** | `amb stitch sync` | `python integrations/stitch/tools/sync_design_system.py` |
 | **Stitch SDK** | `amb stitch get -s <id>` | `python integrations/stitch/tools/get_screen.py` |
-| **Render Cloud**| `amb render services` | `python integrations/render/tools/list_services.py` |
-| **Render Cloud**| `amb render status` | `python integrations/render/tools/get_deploy_status.py` |
-| **Render Cloud**| `amb render logs` | `python integrations/render/tools/fetch_logs.py` |
-| **Render Cloud**| `amb render deploy` | `python integrations/render/tools/trigger_deploy.py` |
 | **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
 | **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |
@@ -298,7 +273,7 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 │   └── local_agent_runner.py        # Executor dinâmico de personas
 ├── dashboard/
 │   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
-│   └── watchers/                    # Watchers especializados do Jules e Render
+│   └── watchers/                    # Watchers especializados do Jules
 ├── integrations/
 │   ├── antigravity/
 │   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
@@ -306,9 +281,6 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 │   ├── jules/
 │   │   ├── jules_client.py          # Client REST API oficial do Jules
 │   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
-│   ├── render/
-│   │   ├── render_client.py         # Client oficial Render Cloud API
-│   │   └── tools/                   # Facades retrocompatíveis
 │   └── stitch/
 │       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
 │       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)

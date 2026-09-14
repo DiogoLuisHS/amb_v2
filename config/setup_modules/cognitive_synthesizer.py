@@ -17,7 +17,6 @@ class CognitiveSynthesizer:
 - Tipo: {stack.get('type')}
 - Gerenciador: {stack.get('package_manager')}
 - Frameworks: {', '.join(stack.get('frameworks', [])) or 'Genérico'}
-- Render Deploy: {'Sim' if stack.get('has_render_yaml') else 'Não'}
 """
         try:
             res = subprocess.run(

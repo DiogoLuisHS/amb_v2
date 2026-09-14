@@ -40,7 +40,6 @@ for _sub in [
     "integrations/jules/tools",
     "integrations/stitch",
     "integrations/antigravity",
-    "integrations/render",
 ]:
     _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
     if os.path.exists(_p) and _p not in sys.path:

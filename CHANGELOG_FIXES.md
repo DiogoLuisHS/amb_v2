@@ -191,7 +191,6 @@ amb agent --role relay --loop --max-cycles 5
 - **Implementação:**
   - `amb-jules-specialist`: Ciclo de vida completo do Google Jules (sessões, streaming, auto-reply, merge de PRs).
   - `amb-stitch-specialist`: Geração de UI, extração de código e design systems com Stitch.
-  - `amb-render-specialist`: Monitoramento de serviços e verificação de deploys pós-merge no Render.
   - `amb-antigravity-specialist`: Personas locais (`agy`), calibração de prompts e diários de aprendizado.
   - `amb-autonomous-pipeline`: O loop contínuo de 7 etapas (`amb agent --loop`).
   - `amb-design-to-code`: Esteira Stitch ➔ Jules/AGY para codificação de protótipos em componentes de produção.

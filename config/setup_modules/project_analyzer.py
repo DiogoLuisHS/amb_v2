@@ -47,7 +47,6 @@ class ProjectAnalyzer:
             "type": "unknown",
             "frameworks": [],
             "package_manager": "npm",
-            "has_render_yaml": os.path.exists(os.path.join(root, "render.yaml")),
             "rules_dir": None
         }
 

@@ -18,7 +18,7 @@ Interface gráfica nativa (desenvolvida em Python / Tkinter) criada para substit
 
 3. **Gerenciador de Configurações (.env)**:
    - Lê e exibe todos os parâmetros configurados no arquivo `.env` do projeto ativo.
-   - Assegura a visibilidade imediata de chaves centrais como `STITCH_PROJECT_ID`, `STITCH_API_KEY`, `JULES_API_KEY`, `GEMINI_API_KEY`, `GITHUB_REPOSITORY`, `RENDER_API_KEY`, `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
+   - Assegura a visibilidade imediata de chaves centrais como `STITCH_PROJECT_ID`, `STITCH_API_KEY`, `JULES_API_KEY`, `GEMINI_API_KEY`, `GITHUB_REPOSITORY`, `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
    - Área com barra de rolagem (Canvas Scrollável) que comporta dezenas de variáveis sem cortes visuais.
    - Permite adicionar novas chaves customizadas via `➕ Adicionar Variável`.
    - Salva diretamente no `.env` do projeto ativo preservando comentários e formatação original.
