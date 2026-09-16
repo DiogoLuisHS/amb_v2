@@ -11,27 +11,8 @@ import os
 import sys
 import json
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-
-for _sub in [
-    "config", "config/setup_modules", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
-
-# Adiciona o diretório atual ao sys.path para importar config
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 from config import Colors, log, log_error, find_repo_root, get_env
 
 # Importa as classes especializadas extraídas para os submódulos (SRP)

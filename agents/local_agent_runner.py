@@ -14,24 +14,8 @@ import argparse
 import re
 from typing import Dict, List, Optional, Tuple
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, find_repo_root, ApiExecutionError
 

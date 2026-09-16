@@ -202,5 +202,59 @@ amb agent --role relay --loop --max-cycles 5
 - **Motivação:** Prompts longos passados via argumento na linha de comando sofriam risco de truncamento ou escape incorreto de aspas.
 - **Implementação:** Adicionado helper `_resolve_prompt` que lê automaticamente o conteúdo caso o parâmetro seja o caminho de um arquivo existente.
 
+---
+
+## 🏛️ Frente 1 (Arquitetura & Engenharia) — Implementação Must Have (2026-09-16)
+
+### F1-M1 — Módulo Central de Bootstrap de Ambiente
+**Arquivos:** `config/bootstrap.py`, `amb_bootstrap.py`, `config/__init__.py`, e refatoração em mais de 10 arquivos (`cli.py`, `pipeline/pipeline.py`, `agents/autonomous_loop.py`, `agents/local_agent_runner.py`, `architecture/ai_context_builder.py`, `architecture/db_schema_reader.py`, `dashboard/auto_advisor.py`, `config/setup_project.py`, etc.).
+- **Motivação:** Mais de 12 arquivos repetiam um bloco de 15 a 20 linhas de manipulação manual e redundante de `sys.path`.
+- **Implementação:**
+  - Criado `config/bootstrap.py` com resolução determinística da raiz (`get_amb_root()`), injeção idempotente de submódulos canônicos (`ensure_amb_env()`) e utilitário `add_to_sys_path()`.
+  - Criado `amb_bootstrap.py` na raiz para inicialização imediata via `import amb_bootstrap`.
+  - Eliminados mais de 180 linhas de código boilerplate em todo o monorepo.
+  - Criada suíte de testes unitários `tests/test_bootstrap.py`.
+
+### F1-M2 — BaseGoogleClient com Retry Exponencial, Jitter e Mascaramento de Secrets
+**Arquivos:** `integrations/common/base_google_client.py`, `integrations/common/__init__.py`, `integrations/jules/jules_client.py`, `integrations/antigravity/antigravity_client.py`.
+- **Motivação:** Lógica de requisição, retries, headers de autenticação, captura de erros e decodificação JSON duplicadas entre `JulesClient` e `AntigravityClient`.
+- **Implementação:**
+  - Criado `BaseGoogleClient` com suporte a retry automático com **backoff exponencial e jitter aleatório (0.8x a 1.2x)** para quotas de IA (429, 500, 502, 503, 504) e instabilidades transitórias de socket/rede.
+  - Implementado mascaramento de credenciais e tokens sensíveis (`AIzaSy...`, query params `key=...`, headers `X-Goog-Api-Key` e `Bearer`) nos logs e stack traces.
+  - Normalização semântica de respostas de erro do Google em `ApiExecutionError` com hints contextuais.
+  - `JulesClient` refatorado para herdar diretamente de `BaseGoogleClient`.
+  - `AntigravityClient` integrado a `BaseGoogleClient` para chamadas REST ao Gemini.
+  - Criada suíte de testes unitários `tests/test_base_google_client.py`.
+
+### F1-M3 — Decomposição SRP de `auto_reply.py`
+**Arquivos:** `agents/auto_reply_core/turn_extractor.py`, `agents/auto_reply_core/cognitive_advisor.py`, `agents/auto_reply_core/feedback_dispatcher.py`, `agents/auto_reply_core/__init__.py`, `agents/auto_reply.py`.
+- **Motivação:** O módulo `auto_reply.py` acumulava mais de 700 linhas misturando parsing de conversação, inferência no Gemini, sanitização de Markdown e despacho REST para o Jules.
+- **Implementação:**
+  - Criado pacote `agents/auto_reply_core/` decomposto segundo o Princípio da Responsabilidade Única (SRP):
+    - `TurnHistoryExtractor`: Responsável exclusivamente pelo parsing de atividades do Jules, extração de texto em múltiplos formatos e detecção do último interlocutor e status do turno.
+    - `CognitiveAdvisor`: Responsável pelo carregamento/filtragem de regras arquiteturais, formatação de prompts contextuais e geração de pareceres técnicos via Antigravity/Gemini com fallbacks resilientes.
+    - `JulesFeedbackDispatcher`: Responsável pelo despacho de mensagens à REST API do Jules, aprovação de planos (`:approvePlan`) e orquestração de menus interativos e resolução em lote.
+  - `agents/auto_reply.py` refatorado como fachada leve delegando para as 3 classes com 100% de compatibilidade retroativa.
+  - Criada suíte de testes unitários `tests/test_auto_reply_srp.py`.
+
+### F1-M4 — Serviço Central de Abstração Git/GitHub (`GitService`)
+**Arquivos:** `integrations/git/git_service.py`, `integrations/git/__init__.py`, `integrations/jules/tools/merge_session_pr.py`, `integrations/jules/tools/cleanup_sessions.py`, `config/setup_modules/project_analyzer.py`, `agents/autonomous_loop.py`, `pipeline/pipeline.py`, `integrations/jules/jules_client.py`.
+- **Motivação:** Comandos `git` e `gh` eram executados via subprocess dispersos em pelo menos 6 locais distintos sem interface única, tratamento centralizado ou validação de autenticação.
+- **Implementação:**
+  - Criado `GitService` com operações locais do Git (`get_current_branch`, `get_remote_url`, `detect_github_repo`, `get_log_oneline`, `get_status`, `is_clean`, `checkout`, `pull`, `apply_patch`, `add_all_and_commit`, `push`).
+  - Implementadas operações da GitHub CLI (`gh`) com validação fail-fast de autenticação (`check_gh_auth`), listagem de PRs (`list_open_prs`, `get_latest_open_pr`), marcação de ready (`mark_pr_ready`), code review (`approve_pr`) e merge com squash (`merge_pr`).
+  - Migrados todos os locais que executavam comandos Git/GitHub dispersos para utilizar `GitService`.
+  - Criada suíte de testes unitários `tests/test_git_service.py` com mocks seguros.
+
+### Expansão da Suíte de Testes Automatizados (33 testes passando)
+- Suíte expandida de 10 testes originais para **33 testes automatizados** com tempo de execução de 0.21s:
+  - `tests/test_bootstrap.py` (4 testes)
+  - `tests/test_base_google_client.py` (5 testes)
+  - `tests/test_auto_reply_srp.py` (7 testes)
+  - `tests/test_git_service.py` (7 testes)
+  - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
+  - `tests/test_ai_context_builder.py` (2 testes)
+
+
 
 

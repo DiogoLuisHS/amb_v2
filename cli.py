@@ -10,21 +10,9 @@ está aberto, configura os paths do Python e invoca o parser de CLI.
 import os
 import sys
 
-# Injeta a raiz do AMB_V2 e todos os submódulos no sys.path
-_AMB_ROOT = os.path.abspath(os.path.dirname(__file__))
-if _AMB_ROOT not in sys.path:
-    sys.path.insert(0, _AMB_ROOT)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
-for _sub in [
-    "config", "config/setup_modules", "agents", "architecture", "pipeline", "gui",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-    "cli_modules"
-]:
-    _p = os.path.normpath(os.path.join(_AMB_ROOT, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
 from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError  # noqa: E402
 from cli_modules.cli_parsers import create_parser  # noqa: E402
 

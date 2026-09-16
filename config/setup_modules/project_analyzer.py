@@ -10,35 +10,12 @@ class ProjectAnalyzer:
 
     @staticmethod
     def detect_git_repo(root: str) -> Optional[str]:
-        """Tenta identificar o owner/repo do git remote origin."""
+        """Tenta identificar o owner/repo do git remote origin via GitService."""
         try:
-            res = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                url = res.stdout.strip()
-                match = re.search(r"github\.com[:/]([^/]+)/([^/.]+)", url)
-                if match:
-                    return f"{match.group(1)}/{match.group(2)}"
+            from integrations.git.git_service import GitService
+            return GitService(repo_root=root).detect_github_repo(cwd=root)
         except Exception:
-            pass
-
-        git_config = os.path.join(root, ".git", "config")
-        if os.path.exists(git_config):
-            try:
-                with open(git_config, "r", encoding="utf-8", errors="replace") as f:
-                    content = f.read()
-                    match = re.search(r"url\s*=\s*.*github\.com[:/]([^/]+)/([^/.]+)", content)
-                    if match:
-                        return f"{match.group(1)}/{match.group(2)}"
-            except Exception:
-                pass
-        return None
+            return None
 
     @staticmethod
     def detect_stack(root: str) -> Dict[str, Any]:

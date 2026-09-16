@@ -25,25 +25,11 @@ import subprocess
 from typing import Optional, Dict, Any
 
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, find_repo_root, get_repo_name, load_project_json  # noqa: E402
+from integrations.git.git_service import GitService  # noqa: E402
 from jules_client import JulesClient  # noqa: E402
 
 
@@ -81,27 +67,8 @@ def detect_pr_from_session(session_id: str) -> Optional[int]:
 
 
 def get_latest_open_pr(repo_name: str) -> Optional[Dict[str, Any]]:
-    """Consulta os PRs abertos no repositório via GitHub CLI, incluindo drafts criados pelo Jules."""
-    for draft_flag in [["--draft"], []]:
-        proc = subprocess.run(
-            ["gh", "pr", "list", "--repo", repo_name, "--state", "open",
-             "--json", "number,title,url,headRefName,isDraft,createdAt"] + draft_flag,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=False
-        )
-        if proc.returncode == 0 and proc.stdout.strip():
-            try:
-                prs = json.loads(proc.stdout)
-                if prs:
-                    # Ordena por mais recente e retorna o primeiro
-                    prs_sorted = sorted(prs, key=lambda p: p.get("createdAt", ""), reverse=True)
-                    return prs_sorted[0]
-            except Exception:
-                pass
-    return None
+    """Consulta os PRs abertos no repositório via GitService (GitHub CLI), incluindo drafts."""
+    return GitService().get_latest_open_pr(repo_name=repo_name)
 
 
 def approve_and_merge_pr(
@@ -114,6 +81,7 @@ def approve_and_merge_pr(
     """Aprova o PR no GitHub, realiza o merge (squash), puxa localmente e roda o build."""
     repo_root = find_repo_root()
     repo_name = get_repo_name()
+    git = GitService(repo_root=repo_root)
 
     resolved_pr = pr_number
 
@@ -193,9 +161,7 @@ def approve_and_merge_pr(
                         patch_success = True
                     
                     if patch_success:
-                        subprocess.run(["git", "add", "."], cwd=repo_root, capture_output=True, shell=False)
-                        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_root, capture_output=True, shell=False)
-
+                        git.add_all_and_commit(commit_msg, cwd=repo_root)
 
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
                         
@@ -228,15 +194,7 @@ def approve_and_merge_pr(
 
                         # Push to GitHub
                         log("GIT-PUSH", f"Enviando alterações validadas para origin/{target_branch}...", Colors.CYAN)
-                        subprocess.run(
-                            ["git", "push", "origin", target_branch],
-                            cwd=repo_root,
-                            capture_output=True,
-                            text=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            shell=False
-                        )
+                        git.push("origin", target_branch, cwd=repo_root)
                         print(f"{Colors.GREEN}✔ Alterações enviadas com sucesso para o GitHub!{Colors.RESET}\n")
                         return True
         except Exception as e:
@@ -253,72 +211,26 @@ def approve_and_merge_pr(
     print("=" * 75 + "\n")
 
     # 2. Marca como Pronto (caso o Jules tenha deixado o PR como Draft / Publish PR)
-    subprocess.run(
-        ["gh", "pr", "ready", str(resolved_pr), "--repo", repo_name],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=False
-    )
+    git.mark_pr_ready(resolved_pr, repo_name=repo_name)
 
     # 3. Aprova o PR (Code Review)
     if auto_approve_review:
         log("GITHUB-REVIEW", f"Aprovando Pull Request #{resolved_pr} via GitHub CLI...", Colors.HEADER)
-        review_proc = subprocess.run(
-            ["gh", "pr", "review", str(resolved_pr), "--repo", repo_name, "--approve", "--body", "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade."],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=False
-        )
-        if review_proc.returncode == 0:
+        if git.approve_pr(resolved_pr, repo_name=repo_name, body="✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade."):
             print(f"{Colors.GREEN}✔ Review de aprovação registrado no PR #{resolved_pr}.{Colors.RESET}")
-        else:
-            # Não interrompe se for o próprio autor
-            print(f"{Colors.DIM}Nota: {review_proc.stderr.strip() or review_proc.stdout.strip()}{Colors.RESET}")
 
     # 3. Merge do PR no GitHub (Squash and Delete Branch)
     log("GITHUB-MERGE", f"Executando Merge (Squash) do PR #{resolved_pr}...", Colors.HEADER)
-    merge_proc = subprocess.run(
-        ["gh", "pr", "merge", str(resolved_pr), "--repo", repo_name, "--squash", "--delete-branch", "--admin"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=False
-    )
-    if merge_proc.returncode != 0:
-        # Tenta sem flag --admin se não for admin
-        merge_proc = subprocess.run(
-            ["gh", "pr", "merge", str(resolved_pr), "--repo", repo_name, "--squash", "--delete-branch"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=False
-        )
-
-    if merge_proc.returncode != 0:
-        log_error("GITHUB-MERGE", f"Falha ao realizar merge do PR #{resolved_pr}: {merge_proc.stderr.strip()}")
+    if not git.merge_pr(resolved_pr, repo_name=repo_name, squash=True, delete_branch=True, admin=True):
+        log_error("GITHUB-MERGE", f"Falha ao realizar merge do PR #{resolved_pr}.")
         return False
 
     print(f"{Colors.GREEN}✔ PR #{resolved_pr} mesclado com sucesso na branch {target_branch}!{Colors.RESET}\n")
 
     # 4. Sincroniza localmente (git pull)
     log("GIT-PULL", f"Sincronizando branch local '{target_branch}' com origin...", Colors.CYAN)
-    subprocess.run(["git", "checkout", target_branch], cwd=repo_root, capture_output=True, shell=False)
-    pull_proc = subprocess.run(
-        ["git", "pull", "origin", target_branch],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=False
-    )
-    print(pull_proc.stdout.strip())
+    git.checkout(target_branch)
+    git.pull("origin", target_branch)
 
     # 5. Validação de QA Local pós-merge
     log("QA-VALIDATION", "Executando verificação de integridade pós-merge...", Colors.CYAN)

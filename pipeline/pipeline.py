@@ -27,27 +27,13 @@ import argparse
 import subprocess
 from pathlib import Path
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, require_env, AmbError, ConfigurationError
 from integrations.stitch.stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
 from integrations.jules.jules_client import JulesClient
+from integrations.git.git_service import GitService
 from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
 
 
@@ -138,13 +124,7 @@ class PipelineOrchestrator:
 
         # Auto-detecta branch atual do Git local se não fornecida explicitamente
         if not starting_branch:
-            try:
-                b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=repo_root, capture_output=True, text=True, check=False)
-                cur_branch = b_proc.stdout.strip()
-                if cur_branch:
-                    starting_branch = cur_branch
-            except Exception:
-                pass
+            starting_branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root)
         starting_branch = starting_branch or "main"
 
         # -------------------------------------------------------------

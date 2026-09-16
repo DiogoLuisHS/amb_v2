@@ -22,30 +22,11 @@ from pathlib import Path
 from typing import List, Optional
 
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config",
-    "agents",
-    "pipeline",
-    "dashboard",
-    "dashboard/watchers",
-    "integrations/jules",
-    "integrations/jules/tools",
-    "integrations/stitch",
-    "integrations/antigravity",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, find_repo_root, get_repo_name, AmbError  # noqa: E402
+from integrations.git.git_service import GitService  # noqa: E402
 from jules_client import JulesClient  # noqa: E402
 from auto_reply import advise_and_reply  # noqa: E402
 from local_agent_runner import get_personas_directory, discover_personas  # noqa: E402
@@ -296,12 +277,7 @@ def _handle_pr_merge(
                 Colors.GREEN,
             )
             # Garante que o git local puxa e valida origin
-            subprocess.run(
-                ["git", "pull", "origin", branch],
-                cwd=repo_root,
-                capture_output=True,
-                shell=False,
-            )
+            GitService(repo_root=repo_root).pull("origin", branch, cwd=repo_root)
     except Exception as em:
         log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
 
@@ -324,19 +300,7 @@ def run_autonomous_loop(
 
     # Auto-detecta branch atual do Git local se não fornecida explicitamente
     if not branch or branch in ["develop", "main"]:
-        try:
-            b_proc = subprocess.run(
-                ["git", "branch", "--show-current"],
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            cur_b = b_proc.stdout.strip()
-            if cur_b:
-                branch = cur_b
-        except Exception:
-            pass
+        branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root)
     branch = branch or "main"
 
     personas_dir = get_personas_directory()

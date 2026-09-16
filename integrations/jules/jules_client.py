@@ -13,34 +13,27 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional, List
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, require_env, ApiExecutionError
+from integrations.common.base_google_client import BaseGoogleClient
 
 
-class JulesClient:
-    """Client REST para Google Jules API v1alpha."""
+class JulesClient(BaseGoogleClient):
+    """Client REST para Google Jules API v1alpha com resiliência e retry exponencial."""
 
     BASE_URL = "https://jules.googleapis.com/v1alpha"
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or require_env("JULES_API_KEY")
+        resolved_key = api_key or require_env("JULES_API_KEY")
+        super().__init__(
+            base_url=self.BASE_URL,
+            api_key=resolved_key,
+            service_name="JULES",
+            timeout=45,
+            max_retries=3,
+        )
 
     def _request(
         self,
@@ -49,43 +42,8 @@ class JulesClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Executa requisição HTTP autenticada via header X-Goog-Api-Key."""
-        url = f"{self.BASE_URL}/{path.lstrip('/')}"
-        if params:
-            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-            url = f"{url}?{query}"
-
-        headers = {
-            "X-Goog-Api-Key": self.api_key,
-            "Content-Type": "application/json",
-            "User-Agent": "AMB-CLI-v2/1.0",
-        }
-
-        body_bytes = json.dumps(data).encode("utf-8") if data is not None else None
-        req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method.upper())
-
-        try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
-                resp_text = resp.read().decode("utf-8")
-                return json.loads(resp_text) if resp_text else {}
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8")
-            msg = f"HTTP {e.code}: {e.reason}"
-            try:
-                err_json = json.loads(error_body)
-                if "error" in err_json:
-                    msg = f"{msg} - {err_json['error'].get('message', error_body)}"
-            except Exception:
-                msg = f"{msg} - {error_body}"
-
-            hint = "Verifique se a JULES_API_KEY é válida e tem permissões na API do Google Jules."
-            if e.code == 404:
-                hint = "Recurso não encontrado. Verifique o ID da sessão ou se o repositório está conectado no Jules."
-            elif e.code == 403:
-                hint = "Acesso negado. Confirme se a chave de API está ativada no Google Cloud / Jules."
-            raise ApiExecutionError(f"Erro na API Jules: {msg}", hint=hint)
-        except Exception as e:
-            raise ApiExecutionError(f"Falha de conexão com Jules API: {e}", hint="Verifique sua conexão com a internet.")
+        """Executa requisição HTTP autenticada via BaseGoogleClient com retry exponencial e jitter."""
+        return self.execute_request(method=method, path_or_url=path, params=params, data=data)
 
     # 1. Sources
     def list_sources(self, page_size: int = 50) -> List[Dict[str, Any]]:
@@ -105,15 +63,8 @@ class JulesClient:
         
         # Auto-detecta branch ativa do repositório local se não especificada
         if not base_branch or base_branch in ["develop", "main"]:
-            try:
-                import subprocess
-                root = find_repo_root()
-                b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=root, capture_output=True, text=True, check=False)
-                cur_b = b_proc.stdout.strip()
-                if cur_b:
-                    base_branch = cur_b
-            except Exception:
-                pass
+            from integrations.git.git_service import GitService
+            base_branch = GitService().get_current_branch()
         base_branch = base_branch or "main"
 
         payload = {

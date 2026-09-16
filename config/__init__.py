@@ -17,6 +17,13 @@ from .config import (
     get_env,
     require_env,
     get_repo_name,
+    main,
+)
+from .bootstrap import (
+    ensure_amb_env,
+    get_amb_root,
+    add_to_sys_path,
+    CANONICAL_SUBMODULES,
 )
 
 __all__ = [
@@ -32,4 +39,9 @@ __all__ = [
     "get_env",
     "require_env",
     "get_repo_name",
+    "main",
+    "ensure_amb_env",
+    "get_amb_root",
+    "add_to_sys_path",
+    "CANONICAL_SUBMODULES",
 ]

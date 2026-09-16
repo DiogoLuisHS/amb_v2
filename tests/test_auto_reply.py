@@ -5,14 +5,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
 _root = Path(__file__).resolve().parent.parent
-for sub in ["config", "agents", "architecture", "pipeline", "integrations"]:
-    p = str(_root / sub)
-    if p not in sys.path:
-        sys.path.insert(0, p)
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from auto_reply import extract_activity_text, get_last_conversation_turn
 

@@ -15,25 +15,11 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, get_env, require_env, ApiExecutionError, find_repo_root
+from integrations.common.base_google_client import BaseGoogleClient
 
 
 class AntigravityClient:
@@ -42,6 +28,12 @@ class AntigravityClient:
     def __init__(self, model: Optional[str] = None):
         self.model = model or get_env("GEMINI_MODEL") or "gemini-3.8-flash"
         self.api_key = get_env("GEMINI_API_KEY")
+        self.google_client = BaseGoogleClient(
+            service_name="GEMINI",
+            timeout=35,
+            max_retries=2,
+            base_delay=1.0,
+        )
 
     def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
         """Tenta inferência via CLI agy se disponível no PATH."""
@@ -65,7 +57,6 @@ class AntigravityClient:
             pass
         return None
 
-
     def _generate_via_api(self, prompt: str, system_instruction: Optional[str] = None) -> str:
         """Executa chamada direta à REST API do Google Gemini com retry e fallback inteligente."""
         if not self.api_key:
@@ -73,66 +64,54 @@ class AntigravityClient:
 
         # Apenas modelos modernos de última geração
         models_to_try = [self.model]
-        for fallback_m in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash","gemini-3.1-pro-preview"]:
+        for fallback_m in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"]:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
         last_err = None
         for current_m in models_to_try:
-            for attempt in range(3):
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_m}:generateContent?key={self.api_key}"
-                headers = {"Content-Type": "application/json"}
-
-                payload = {
-                    "contents": [
-                        {
-                            "parts": [{"text": prompt}]
-                        }
-                    ],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "maxOutputTokens": 8192
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_m}:generateContent"
+            payload = {
+                "contents": [
+                    {
+                        "parts": [{"text": prompt}]
                     }
+                ],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "maxOutputTokens": 8192
+                }
+            }
+
+            if system_instruction:
+                payload["systemInstruction"] = {
+                    "parts": [{"text": system_instruction}]
                 }
 
-                if system_instruction:
-                    payload["systemInstruction"] = {
-                        "parts": [{"text": system_instruction}]
-                    }
-
-                data_bytes = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
-
-                try:
-                    with urllib.request.urlopen(req, timeout=35) as resp:
-                        resp_data = json.loads(resp.read().decode("utf-8"))
-                        candidates = resp_data.get("candidates", [])
-                        if candidates:
-                            parts = candidates[0].get("content", {}).get("parts", [])
-                            if parts:
-                                return parts[0].get("text", "").strip()
-                        raise ApiExecutionError("Resposta vazia retornada pelo modelo Gemini.")
-                except urllib.error.HTTPError as e:
-                    err_text = e.read().decode("utf-8")
-                    msg = f"HTTP {e.code}: {e.reason}"
-                    try:
-                        err_j = json.loads(err_text)
-                        if "error" in err_j:
-                            msg = f"{msg} - {err_j['error'].get('message', err_text)}"
-                    except Exception:
-                        msg = f"{msg} - {err_text}"
-
-                    last_err = ApiExecutionError(f"Erro no modelo {current_m}: {msg}")
-
-                    # Se for 429 (Rate Limit por minuto) ou 503 (alta demanda) pula para o próximo fallback
-                    if e.code in [429, 503]:
-                        log("ANTIGRAVITY", f"Limite ou instabilidade no modelo ({current_m}). Tentando fallback...", Colors.YELLOW)
-                        break
-                    else:
-                        break
-                except Exception as e:
-                    last_err = ApiExecutionError(f"Falha de conexão com a API do Gemini ({current_m}): {e}")
-                    break
+            try:
+                resp_data = self.google_client.execute_request(
+                    method="POST",
+                    path_or_url=url,
+                    params={"key": self.api_key},
+                    data=payload,
+                    timeout=35,
+                )
+                candidates = resp_data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+                raise ApiExecutionError("Resposta vazia retornada pelo modelo Gemini.")
+            except ApiExecutionError as e:
+                last_err = e
+                # Se for 429 ou 503, tenta o próximo modelo de fallback
+                if "429" in str(e) or "503" in str(e) or "Rate Limit" in getattr(e, "hint", ""):
+                    log("ANTIGRAVITY", f"Limite ou instabilidade no modelo ({current_m}). Tentando fallback...", Colors.YELLOW)
+                    continue
+                raise e
+            except Exception as e:
+                last_err = ApiExecutionError(f"Falha de conexão com a API do Gemini ({current_m}): {e}")
+                continue
 
         raise last_err or ApiExecutionError("Falha na chamada REST dos modelos Gemini.")
 

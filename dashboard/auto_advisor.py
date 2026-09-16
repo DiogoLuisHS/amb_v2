@@ -6,25 +6,8 @@ Localização: amb_v2/dashboard/auto_advisor.py
 Encaminha diretamente para a implementação centralizada em agents/auto_reply.py
 """
 
-import sys
-import os
-
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-for _sub in [
-    "config",
-    "agents",
-    "dashboard",
-    "integrations/jules",
-    "integrations/antigravity",
-]:
-    _p = os.path.normpath(os.path.join(_cur, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from auto_reply import main  # noqa: E402
 
