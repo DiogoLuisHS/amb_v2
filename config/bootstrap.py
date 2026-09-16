@@ -24,6 +24,7 @@ CANONICAL_SUBMODULES: List[str] = [
     "integrations",
     "integrations/common",
     "integrations/git",
+    "integrations/git/tools",
     "integrations/jules",
     "integrations/jules/tools",
     "integrations/stitch",

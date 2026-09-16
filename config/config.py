@@ -375,7 +375,7 @@ def main(as_json: bool = False):
         git_branch = git.get_current_branch(cwd=root)
         git_detected = bool(git_branch)
         git_clean = git.is_clean(cwd=root)
-        gh_auth = git.check_gh_auth(cwd=root)
+        gh_auth = git.check_gh_auth(cwd=root, fail_silently=True)
     except Exception:
         pass
 

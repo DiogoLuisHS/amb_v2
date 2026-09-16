@@ -261,6 +261,13 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Antigravity** | `amb agy prompt -i "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
 | **Antigravity** | `amb agy validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
 | **Antigravity** | `amb agy run "..."` | `python cli.py agy run "..."` |
+| **Git & PRs** | `amb git status` | `python integrations/git/tools/git_status.py` |
+| **Git & PRs** | `amb git sync` | `python integrations/git/tools/sync_branch.py` |
+| **Git & PRs** | `amb git diff [--cached]` | `python cli.py git diff` |
+| **Git & PRs** | `amb git pr list` | `python integrations/git/tools/pr_manager.py list` |
+| **Git & PRs** | `amb git pr get <id>` | `python integrations/git/tools/pr_manager.py get <id>` |
+| **Git & PRs** | `amb git pr create -t "..."` | `python integrations/git/tools/pr_manager.py create` |
+| **Git & PRs** | `amb git pr merge <id>` | `python integrations/git/tools/pr_manager.py merge <id>` |
 | **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
 | **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |

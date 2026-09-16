@@ -115,6 +115,16 @@ Configuração manual via `.amb/amb_project.json`:
 3. Sincronização de `design.md` via canal nativo do SDK: `theme.designMd` em `create_design_system` e `update_design_system`.
 4. Correção do modelo de geração: remoção do modelo falso, deixando opcional (Stitch default) ou suportando `GEMINI_3_FLASH` / `GEMINI_3_1_PRO`.
 
+### Bug #16 — `amb check` reportava falso-negativo de autenticação do GitHub CLI (`gh`) e truncamento de leading space no git status
+**Arquivos:** `config/config.py`, `integrations/git/git_service.py`
+**Causa:**
+1. Em `config/config.py:378`, a chamada `git.check_gh_auth(cwd=root)` sofria `TypeError: check_gh_auth() got an unexpected keyword argument 'cwd'`, sendo silenciada por um `except: pass` e marcando `"authenticated": false` mesmo com o `gh` perfeitamente autenticado no sistema.
+2. Em `integrations/git/git_service.py`, `get_status` utilizava `res.stdout.strip()`, eliminando o leading space do primeiro caractere da primeira linha no formato porcelain (ex: ` M README.md` virava `M README.md`, gerando falso arquivo staged `M EADME.md`).
+**Fix aplicado:**
+1. Parâmetro `cwd: Optional[str] = None` e `fail_silently: bool = False` adicionados explicitamente à assinatura de `check_gh_auth` em `GitService`.
+2. Em `config/config.py`, chamada atualizada para `git.check_gh_auth(cwd=root, fail_silently=True)`. O comando `amb check --json` agora reporta `"authenticated": true` com total precisão.
+3. Em `GitService.get_status`, substituído `.strip()` por `.rstrip()` e sanitizado `.is_clean` para preservar os identificadores de coluna na saída porcelain do Git.
+
 ---
 
 ## 🚀 Features Implementadas
@@ -394,9 +404,41 @@ amb agent --role relay --loop --max-cycles 5
 
 ---
 
-### Expansão da Suíte de Testes Automatizados (78 testes passando — 100% Green)
-- Suíte expandida de 66 para **78 testes automatizados** com tempo de execução de ~1.44s:
-  - `tests/test_antigravity_integration.py` (12 testes novos: RulesManager sanitization/fences, hierarquia de diretórios, cache/invalidação, filtragem por papel, resolução dinâmica de modelo, get_status, generate REST, fallback para agy CLI, síntese zero a priori, validação poliglota, fachadas de serviço e handlers da CLI amb agy)
+### F1-M7 — Modernização e Integração Consolidada de Git & GitHub CLI (`gh`)
+**Arquivos:** `integrations/git/git_service.py`, `integrations/git/tools/git_status.py`, `integrations/git/tools/pr_manager.py`, `integrations/git/tools/sync_branch.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `config/bootstrap.py`, `config/config.py`, `README.md`, `tests/test_git_service.py`.
+- **Motivação:**
+  - O `GitService` continha apenas operações básicas e dispersas; não possuía métodos estruturados para `ahead/behind`, diff granular, `stash`, `fetch` ou ciclo de vida completo de Pull Requests (`get`, `create`, `close`).
+  - A ferramenta `amb check` sofria com falso-negativo de autenticação do `gh`.
+  - Não existiam subcomandos unificados sob `amb git` nem fachadas modulares em `integrations/git/tools/`.
+- **Implementação:**
+  - **Expansão do `GitService` (`integrations/git/git_service.py`):**
+    - `get_detailed_status(cwd)`: diagnóstico consolidado com `branch`, `upstream`, contagem `ahead`/`behind`, status da working tree (`staged`, `unstaged`, `untracked`) e repositório GitHub detectado.
+    - `get_upstream_branch(cwd)` e `get_ahead_behind(cwd)` via `git rev-parse` e `git rev-list`.
+    - `get_diff(file_path, base_branch, cached, cwd)` para inspeções pontuais ou de branch completa.
+    - `fetch(remote, prune, cwd)`, `stash(action, message, cwd)`, `create_branch(branch_name, from_branch, checkout, cwd)`.
+    - Ciclo de vida de PRs: `get_pr(pr_number, repo_name)`, `create_pr(title, body, base, head, draft, repo_name)`, `close_pr(pr_number, comment, delete_branch, repo_name)`.
+    - Sanitização de chamadas `check_gh_auth(cwd=..., fail_silently=True)` e preservação de leading spaces no formato porcelain.
+  - **Criação de Ferramentas Facade Modulares (`integrations/git/tools/`):**
+    - `git_status.py`: `run_git_status(as_json=False, cwd=None)` com visual rico no terminal e exportação JSON.
+    - `pr_manager.py`: `run_pr_manager(action, ...)` para gerenciar PRs (`list`, `get`, `create`, `ready`, `approve`, `merge`, `close`).
+    - `sync_branch.py`: `run_sync_branch(remote="origin", branch=None, auto_stash=True)` com preservação automática via stash.
+    - Registro de `integrations/git/tools` no `CANONICAL_SUBMODULES` de `config/bootstrap.py`.
+  - **CLI `amb git` Unificada (`cli_modules/cli_parsers.py` & `cli_modules/cli_handlers.py`):**
+    - Subcomandos:
+      - `amb git status` (flags `--json`): visão completa de branches, upstream, commits ahead/behind e status da working tree.
+      - `amb git sync` (flags `-r/--remote`, `-b/--branch`, `--no-stash`): sincronização segura com stash automático.
+      - `amb git diff` (flags `-f/--file`, `-b/--base`, `--cached`): exibição de diffs staged ou uncommited.
+      - `amb git pr` (sub-ações `list`, `get`, `create`, `ready`, `approve`, `merge`, `close`).
+  - **Documentação Atualizada:**
+    - Seção "Git & GitHub CLI (`amb git`)" adicionada à tabela de referência do `README.md`.
+  - Suíte de testes unitários expandida em `tests/test_git_service.py` (de 7 para 12 testes passando).
+
+---
+
+### Expansão da Suíte de Testes Automatizados (83 testes passando — 100% Green)
+- Suíte expandida de 78 para **83 testes automatizados** com tempo de execução de ~2.1s:
+  - `tests/test_git_service.py` (12 testes: get_current_branch, detect_github_repo, is_clean, checkout_and_pull, check_gh_auth_failure, list_open_prs, pr_workflow_ready_approve_merge, get_detailed_status_and_upstream, get_diff_and_stash, pr_get_create_close, git_facade_tools, git_cli_handlers)
+  - `tests/test_antigravity_integration.py` (12 testes)
   - `tests/test_stitch_integration.py` (16 testes)
   - `tests/test_jules_integration.py` (6 testes)
   - `tests/test_quality_gatekeeper.py` (4 testes)
@@ -404,9 +446,9 @@ amb agent --role relay --loop --max-cycles 5
   - `tests/test_bootstrap.py` (5 testes)
   - `tests/test_base_google_client.py` (5 testes)
   - `tests/test_auto_reply_srp.py` (7 testes)
-  - `tests/test_git_service.py` (7 testes)
   - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
   - `tests/test_ai_context_builder.py` (2 testes)
+
 
 
 

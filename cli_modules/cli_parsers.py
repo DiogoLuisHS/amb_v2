@@ -2,7 +2,7 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate,
-    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git
 )
 
 def create_parser():
@@ -220,5 +220,67 @@ def create_parser():
     p_ctx.add_argument("module", nargs="?", default="agenda", help="Nome do módulo ou pasta para rastrear (ex: agenda, kanban, projects).")
     p_ctx.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
     p_ctx.set_defaults(func=cmd_context)
+
+    # 14. amb git
+    p_git = subparsers.add_parser("git", help="Comandos de controle de versão e ciclo de vida de Pull Requests via Git & GitHub CLI.")
+    git_subs = p_git.add_subparsers(dest="git_cmd", help="Subcomandos do Git")
+
+    g_status = git_subs.add_parser("status", help="Exibe status detalhado do repositório Git, branches, upstream e GitHub CLI.")
+    g_status.add_argument("--json", action="store_true", help="Exibe o status em formato JSON estruturado.")
+
+    g_sync = git_subs.add_parser("sync", help="Sincroniza a branch ativa com o repositório remoto (fetch + pull com auto-stash).")
+    g_sync.add_argument("--remote", "-r", default="origin", help="Nome do remote (padrão: origin).")
+    g_sync.add_argument("--branch", "-b", help="Nome da branch (padrão: branch ativa).")
+    g_sync.add_argument("--no-stash", action="store_false", dest="auto_stash", help="Desabilita stash automático se a working tree estiver modificada.")
+
+    g_diff = git_subs.add_parser("diff", help="Exibe o diff unificado de arquivos alterados ou contra a branch base.")
+    g_diff.add_argument("file", nargs="?", default=None, help="Caminho do arquivo específico (opcional).")
+    g_diff.add_argument("--base", "-b", help="Branch base para comparação.")
+    g_diff.add_argument("--cached", action="store_true", help="Exibe diff das alterações preparadas (staged).")
+
+    g_pr = git_subs.add_parser("pr", help="Gerenciador de Pull Requests no GitHub via GitHub CLI.")
+    pr_subs = g_pr.add_subparsers(dest="pr_cmd", help="Ações de Pull Request")
+
+    pr_list = pr_subs.add_parser("list", help="Lista Pull Requests abertos no repositório.")
+    pr_list.add_argument("--repo", help="Repositório alvo (dono/repo).")
+    pr_list.add_argument("--no-drafts", action="store_true", help="Oculta PRs em modo draft.")
+    pr_list.add_argument("--json", action="store_true", help="Exibe a lista em JSON puro.")
+
+    pr_get = pr_subs.add_parser("get", help="Exibe detalhes completos de um Pull Request.")
+    pr_get.add_argument("number", type=int, help="Número do Pull Request.")
+    pr_get.add_argument("--repo", help="Repositório alvo (dono/repo).")
+    pr_get.add_argument("--json", action="store_true", help="Exibe os detalhes em JSON puro.")
+
+    pr_create = pr_subs.add_parser("create", help="Cria um novo Pull Request no GitHub.")
+    pr_create.add_argument("--title", "-t", required=True, help="Título do PR.")
+    pr_create.add_argument("--body", "-b", default="", help="Descrição detalhada do PR.")
+    pr_create.add_argument("--base", help="Branch base de destino.")
+    pr_create.add_argument("--head", help="Branch de origem das alterações.")
+    pr_create.add_argument("--draft", action="store_true", help="Cria o PR como rascunho (Draft).")
+    pr_create.add_argument("--repo", help="Repositório alvo.")
+    pr_create.add_argument("--json", action="store_true", help="Exibe o retorno em JSON.")
+
+    pr_ready = pr_subs.add_parser("ready", help="Marca um PR em draft como pronto para revisão.")
+    pr_ready.add_argument("number", type=int, help="Número do Pull Request.")
+    pr_ready.add_argument("--repo", help="Repositório alvo.")
+
+    pr_app = pr_subs.add_parser("approve", help="Aprova formalmente o Pull Request.")
+    pr_app.add_argument("number", type=int, help="Número do Pull Request.")
+    pr_app.add_argument("--body", default="✅ Aprovado pelo AMB_V2.", help="Comentário de aprovação.")
+    pr_app.add_argument("--repo", help="Repositório alvo.")
+
+    pr_merge = pr_subs.add_parser("merge", help="Realiza o merge do Pull Request.")
+    pr_merge.add_argument("number", type=int, help="Número do Pull Request.")
+    pr_merge.add_argument("--no-squash", action="store_false", dest="squash", help="Não realizar squash merge.")
+    pr_merge.add_argument("--keep-branch", action="store_false", dest="delete_branch", help="Não deletar a branch remota após merge.")
+    pr_merge.add_argument("--repo", help="Repositório alvo.")
+
+    pr_close = pr_subs.add_parser("close", help="Fecha um Pull Request no GitHub.")
+    pr_close.add_argument("number", type=int, help="Número do Pull Request.")
+    pr_close.add_argument("--comment", help="Comentário opcional ao fechar.")
+    pr_close.add_argument("--delete-branch", action="store_true", help="Deletar a branch associada.")
+    pr_close.add_argument("--repo", help="Repositório alvo.")
+
+    p_git.set_defaults(func=cmd_git)
 
     return parser
