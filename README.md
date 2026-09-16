@@ -31,9 +31,13 @@ Gerencia o provisionamento, checklist de credenciais e geração de prompts para
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb check` | `amb status` | Valida as chaves de API (`.env`) e integridade do projeto. |
-| `amb setup` | `amb init` | Assistente interativo de detecção de stack e configuração do `.env`. |
+| `amb check` | `amb status` | Diagnóstico de saúde do projeto: chaves de API, Git, GitHub CLI, binários de QA e proteção no `.gitignore`. |
+| `amb check --json` | — | Emite o diagnóstico de ambiente completo em formato JSON estruturado. |
+| `amb setup` | `amb init` | Assistente de detecção de stack, inferência de comandos de QA, persona de exemplo e configuração do `.env`. |
 | `amb setup --auto` | — | Executa o setup em modo automático/não-interativo. |
+| `amb setup --force` | `-f` | Força a re-geração de arquivos de configuração e personas mesmo se já existirem. |
+| `amb setup --path <dir>` | — | Executa o setup apontando para um diretório de projeto específico em vez do atual. |
+| `amb setup --dry-run` | — | Simula a detecção de stack e comandos de QA sem gravar arquivos em disco. |
 | `amb prompt` | `amb setup -p` | Imprime o Prompt Mestre de Auto-Configuração para colar em novas IAs. |
 | `amb prompt --synthesize "<ideia>"` | `-s` | Converte uma ideia informal em prompt arquitetural estruturado com Gemini. |
 | `amb prompt --role <especialidade>` | `-r` | Define a especialidade da IA para a síntese do prompt (ex: `frontend`, `security`). |
@@ -41,7 +45,9 @@ Gerencia o provisionamento, checklist de credenciais e geração de prompts para
 ```bash
 # Exemplos:
 amb check
-amb setup
+amb check --json
+amb setup --auto
+amb setup --path ../meu-outro-projeto --auto
 amb prompt --synthesize "Criar painel de métricas financeiras com gráficos e filtros por data" --role frontend
 ```
 
@@ -79,7 +85,7 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
 | `amb agent --list` | `-l` | Lista todas as personas disponíveis no projeto ativo. |
-| `amb agent --role <nome>` | `-r` | Executa uma persona localmente via CLI `agy` (ex: `pixel`, `relay`, `sentry`). |
+| `amb agent --role <nome>` | `-r` | Executa uma persona localmente via CLI `agy` (ex: `engineer`, ou customizadas). |
 | `amb agent --role <nome> --dispatch-jules` | `-j` | Despacha a persona para a nuvem do Google Jules (Cloud VM + Branch + PR). |
 | `amb agent --role <nome> --task "<texto>"` | `-t` | Anexa instruções ou escopo adicional ao prompt base da persona. |
 | `amb agent --all` | `-a` | Executa todas as personas da pasta sequencialmente em lote. |
@@ -95,13 +101,13 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 ```bash
 # Exemplos:
 amb agent --list                                        # Ver personas disponíveis
-amb agent --role pixel                                  # Executar persona localmente
-amb agent --role pixel -j                               # Despachar persona para o Jules na nuvem
-amb agent --role pixel --loop                           # Loop contínuo infinito com auto-merge de PR
-amb agent --role pixel --loop --max-cycles 3            # Loop com limite de 3 ciclos
+amb agent --role engineer                               # Executar persona localmente
+amb agent --role engineer -j                            # Despachar persona para o Jules na nuvem
+amb agent --role engineer --loop                        # Loop contínuo infinito com auto-merge de PR
+amb agent --role engineer --loop --max-cycles 3         # Loop com limite de 3 ciclos
 amb agent --all --loop --max-cycles 2                   # Todas as personas, 2 ciclos completos
 amb agent --all --loop --branch main --max-cycles 5     # Loop na branch main
-amb agent --role relay --loop --modules agenda,kanban   # Rotacionar entre módulos por ciclo
+amb agent --role engineer --loop --modules api,web      # Rotacionar entre módulos por ciclo
 ```
 
 ---
@@ -262,9 +268,12 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 │   ├── cli_handlers.py              # Despacho de subcomandos
 │   └── cli_parsers.py               # Definição de argumentos e subcomandos
 ├── config/
-│   ├── config.py                    # Gerenciador central de .env, validações e caminhos
+│   ├── config.py                    # Diagnóstico completo de ambiente, saúde e chaves de API
 │   ├── bootstrap.py                 # Bootstrap centralizado de ambiente e sys.path
-│   └── setup_project.py             # Assistente de provisionamento e stack
+│   ├── setup_project.py             # Orquestrador do fluxo amb setup
+│   └── setup_modules/               # Módulos especializados de provisionamento
+│       ├── project_analyzer.py      # Auto-detecção de stack, monorepos e inferência de QA
+│       └── amb_provisioner.py       # Provisionamento .amb/, persona engineer.md e .gitignore
 ├── gui/
 │   ├── README.md                    # Documentação do Assistente Gráfico
 │   └── wizard_app.py                # Assistente Gráfico Nativo (Tkinter) dinâmico e gestor de .env

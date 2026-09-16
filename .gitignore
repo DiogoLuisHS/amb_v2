@@ -78,3 +78,8 @@ scratch/
 
 
 node_modules/
+
+# AMB_V2 - Arquivos Locais e Segredos de Ambiente
+.env.local
+.amb/loop_state.json
+.amb/telemetry.jsonl

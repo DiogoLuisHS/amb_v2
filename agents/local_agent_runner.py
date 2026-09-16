@@ -212,7 +212,7 @@ def execute_single_persona(
 
 def main():
     parser = argparse.ArgumentParser(description="Executor dinâmico de personas do repositório ativo (lê dinamicamente da pasta .amb/ ou .jules/).")
-    parser.add_argument("--role", "-r", help="Nome da persona a ser executada (ex: deadwood, beacon, bolt, sentry, relay, etc.).")
+    parser.add_argument("--role", "-r", help="Nome da persona a ser executada (ex: engineer, etc.).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa TODAS as personas encontradas na pasta sequencialmente.")
     parser.add_argument("--task", "-t", help="Instrução ou escopo específico adicional para anexar ao prompt da persona.")
     parser.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis na pasta e encerra.")

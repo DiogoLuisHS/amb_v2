@@ -259,8 +259,20 @@ amb agent --role relay --loop --max-cycles 5
   - Adicionado teste unitário `test_migrated_sentinel_modules()` em `tests/test_bootstrap.py`.
 
 
-### Expansão da Suíte de Testes Automatizados (34 testes passando)
-- Suíte expandida de 10 testes originais para **34 testes automatizados** com tempo de execução de ~0.18s:
+### F1-M9 — Modernização do Setup de Ambiente (`amb setup`), Diagnóstico (`amb check`), Proteção Preventiva `.env` e Persona Única (`engineer.md`)
+**Arquivos:** `config/setup_project.py`, `config/setup_modules/project_analyzer.py`, `config/setup_modules/amb_provisioner.py`, `config/config.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `agents/autonomous_loop.py`, `agents/local_agent_runner.py`, `tests/test_setup_and_analyzer.py`.
+- **Motivação:** O processo de setup possuía resolução frágil de diretório (busca ascendente por `.git` até 6 níveis arriscando poluir pastas-mãe), não persistia comandos de QA em `amb_project.json`, não verificava se o `.env` estava no `.gitignore`, e mantinha 10 personas legadas hardcoded e dispersas.
+- **Implementação:**
+  - **Decomposição Modular (SRP):** Extraídos `ProjectAnalyzer` e `AmbProvisioner` para `config/setup_modules/`.
+  - **Detecção Avançada & QA:** Suporte completo a Go (`go.mod`), Rust (`Cargo.toml`), gerenciadores modernos de Python (`uv`, `poetry`), npm/pnpm/yarn/bun e monorepos (`pnpm-workspace`, `turbo`, `lerna`). Inferência e persistência explícita de `typecheck`, `test`, `build` e `lint` no schema v2 de `.amb/amb_project.json`.
+  - **Segurança Preventiva:** `ensure_gitignore_security()` insere automaticamente `.env`, `.env.local` e `.amb/telemetry.jsonl` no `.gitignore` sem corromper comentários existentes. Criação automática de `.env.example` sanitizado.
+  - **Persona Única Genérica de Exemplo:** Eliminação das 10 personas legadas e consolidação em `engineer.md` e diário `engineer.md`, integrando contexto de QA específico da stack detectada.
+  - **Diagnóstico Modernizado (`amb check`):** Verificação de status Git, autenticação GitHub CLI (`gh`), credenciais mascaradas, binários de QA via `shutil.which`, verificação de segurança no `.gitignore` e suporte total à flag `--json`.
+  - **Novas Opções na CLI:** `amb setup --force`, `--path <dir>`, `--dry-run`, `amb check --json`.
+
+### Expansão da Suíte de Testes Automatizados (40 testes passando)
+- Suíte expandida de 34 para **40 testes automatizados** com tempo de execução de ~0.47s:
+  - `tests/test_setup_and_analyzer.py` (6 testes novos: detecção Python, Node, Go, provisionamento, dry-run e diagnóstico JSON)
   - `tests/test_bootstrap.py` (5 testes)
   - `tests/test_base_google_client.py` (5 testes)
   - `tests/test_auto_reply_srp.py` (7 testes)

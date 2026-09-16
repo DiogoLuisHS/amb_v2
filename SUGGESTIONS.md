@@ -197,6 +197,7 @@ gantt
 | **F1-M3** | Decomposição SRP de `auto_reply.py` | `agents/auto_reply_core/` (`turn_history_extractor.py`, `cognitive_advisor.py`, `jules_feedback_dispatcher.py`) | `tests/test_auto_reply_srp.py`, `tests/test_auto_reply.py` | ✅ **`[CONCLUÍDO]`** |
 | **F1-M4** | Serviço Central de Abstração Git/GitHub CLI | `integrations/git/git_service.py` | `tests/test_git_service.py` | ✅ **`[CONCLUÍDO]`** |
 | **F1-M8** | Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas | `cli_modules/alert_notifier.py`, `integrations/jules/jules_watcher.py`, `agents/monitor.py` | `tests/test_bootstrap.py` | ✅ **`[CONCLUÍDO]`** |
+| **F1-M9** | Modernização de Setup (`amb setup`), Diagnóstico (`amb check`), Proteção `.env` e Persona Única (`engineer.md`) | `config/setup_project.py`, `config/setup_modules/`, `config/config.py`, `agents/` | `tests/test_setup_and_analyzer.py` | ✅ **`[CONCLUÍDO]`** |
 
 ### Resumo das Soluções Entregues:
 
@@ -233,3 +234,14 @@ gantt
      - `config/bootstrap.py` e `cli_handlers.py` higienizados.
    - **Ganhos Arquiteturais:** Eliminação de falsa expectativa semântica, zero duplicação de extração de PR e coesão absoluta por domínio.
    - **Validação:** Coberto por teste unitário dedicado `test_migrated_sentinel_modules()` em `tests/test_bootstrap.py`.
+
+6. **Modernização de Setup (`amb setup`), Diagnóstico (`amb check`), Proteção `.env` e Persona Única (`F1-M9`):**
+   - **O que foi feito:**
+     - Decomposição modular do setup em `config/setup_modules/` (`ProjectAnalyzer` e `AmbProvisioner`).
+     - Detecção expandida para Go (`go.mod`), Rust (`Cargo.toml`), gerenciadores Python modernos (`uv`, `poetry`) e monorepos (`pnpm-workspace`, `turbo`, `lerna`).
+     - Inferência determinística e persistência de comandos de QA no `.amb/amb_project.json` (`test`, `typecheck`, `build`, `lint`).
+     - Proteção preventiva e não-destrutiva de segurança: injeção automática de `.env`, `.env.local` e `.amb/telemetry.jsonl` no `.gitignore`, além de geração do `.env.example`.
+     - Consolidação das personas: remoção das 10 personas legadas hardcoded e padronização em uma única persona genérica de alta qualidade (`engineer.md` e diário `engineer.md`).
+     - Diagnóstico completo em `amb check` com suporte à flag `--json`, validação de binários de QA via `shutil.which` e checagem de integridade Git/GitHub CLI.
+   - **Ganhos Arquiteturais:** Setup determinístico sem risco de criar `.amb/` em pastas-mãe acidentalmente; garantia de que Pull Requests tenham suíte de QA pré-configurada; repositório protegido contra vazamento de credenciais; loop autônomo limpo com foco no Engenheiro Autônomo.
+   - **Validação:** Coberto por 6 testes unitários em `tests/test_setup_and_analyzer.py` (total de 40 testes 100% green na suíte).

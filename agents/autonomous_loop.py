@@ -43,23 +43,15 @@ def load_persona_content(role: str) -> tuple[str, str]:
         p = personas[clean_role]
         return p["title"], p["content"]
 
-    # Fallbacks padrão
+    # Fallback padrão
     default_personas = {
-        "relay": (
-            "Autonomous Relay Engineer",
-            "Você é o Autonomous Relay Engineer. Sua missão é dar continuidade ao desenvolvimento, auditoria e aperfeiçoamento do projeto. "
-            "1. Analise arquivos recentes e identifique débitos técnicos.\n"
-            "2. Implemente melhorias sólidas seguindo o Design System e padrões do repositório.\n"
-            "3. Garanta 0 erros de TypeScript e build verde.\n"
-            "4. Crie commits descritivos e abra o Pull Request.",
-        ),
-        "sentry": (
-            "Architecture & Type Safety Sentry",
-            "Você é o Architecture Sentry. Sua missão é auditar a integridade estrutural do repositório, contratos de API e tipagem estrita.",
-        ),
-        "pixel": (
-            "Design System Artisan",
-            "Você é o Design System Artisan. Sua missão é elevar a experiência visual e consistência de UI/UX do projeto.",
+        "engineer": (
+            "Autonomous Software Engineer",
+            "Você é o Autonomous Software Engineer. Sua missão é dar continuidade ao desenvolvimento, auditoria e aperfeiçoamento do projeto.\n"
+            "1. Analise arquivos recentes e identifique débitos técnicos, bugs ou novas funcionalidades.\n"
+            "2. Implemente melhorias sólidas seguindo o Design System e padrões arquiteturais do repositório.\n"
+            "3. Garanta integridade total passando na suíte de testes e validação de QA configurada.\n"
+            "4. Crie commits descritivos e abra o Pull Request quando concluído.",
         ),
     }
 
@@ -308,12 +300,12 @@ def run_autonomous_loop(
 
     if all_personas:
         roles_to_run = (
-            list(discovered.keys()) if discovered else ["relay", "sentry", "pixel"]
+            list(discovered.keys()) if discovered else ["engineer"]
         )
     elif role:
         roles_to_run = [role]
     else:
-        roles_to_run = ["relay"]
+        roles_to_run = list(discovered.keys()) if discovered else ["engineer"]
 
     modules_list = modules or [""]
 
@@ -425,7 +417,7 @@ def main():
     parser.add_argument(
         "--role",
         "-r",
-        help="Persona a ser executada em loop (ex: relay, sentry, pixel).",
+        help="Persona a ser executada em loop (ex: engineer).",
     )
     parser.add_argument(
         "--all",

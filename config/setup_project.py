@@ -10,63 +10,121 @@ especializados em config/setup_modules (ProjectAnalyzer, AmbProvisioner, Cogniti
 import os
 import sys
 import json
+from datetime import datetime
+from typing import Optional, Dict, Any
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
-from config import Colors, log, log_error, find_repo_root, get_env
 
-# Importa as classes especializadas extraídas para os submódulos (SRP)
+from config import Colors, log, log_error, get_env
+from integrations.git.git_service import GitService
 from project_analyzer import ProjectAnalyzer
 from amb_provisioner import AmbProvisioner
-from cognitive_synthesizer import CognitiveSynthesizer
 
 
-def run_setup(interactive: bool = True):
-    """Executa o fluxo completo de setup, provisiona .amb e salva as configurações."""
-    root = find_repo_root()
+def run_setup(
+    interactive: bool = True,
+    target_dir: Optional[str] = None,
+    force: bool = False,
+    dry_run: bool = False
+) -> Dict[str, Any]:
+    """Executa o fluxo completo de setup, provisiona .amb/ e salva as configurações."""
+    # 1. Determina a raiz alvo de forma determinística (diretório atual ou especificado)
+    root = os.path.abspath(target_dir or os.getcwd())
     log("SETUP", f"Iniciando análise do projeto em: {root}", Colors.CYAN)
 
-    # 1. Análise
+    # 2. Análise Estrutural e Git
     detected_repo = ProjectAnalyzer.detect_git_repo(root)
     stack = ProjectAnalyzer.detect_stack(root)
+    qa_commands = ProjectAnalyzer.infer_qa_commands(stack, root)
+
+    try:
+        current_branch = GitService(repo_root=root).get_current_branch(cwd=root) or "main"
+    except Exception:
+        current_branch = "main"
 
     print(f"\n{Colors.BOLD}🔍 Resultados da Auto-Detecção:{Colors.RESET}")
+    print(f"  • Diretório Alvo:     {Colors.CYAN}{root}{Colors.RESET}")
     print(f"  • Repositório Git:    {Colors.GREEN}{detected_repo or 'Não detectado'}{Colors.RESET}")
-    print(f"  • Tipo de Projeto:    {Colors.GREEN}{stack['type']}{Colors.RESET}")
-    print(f"  • Gerenciador:        {Colors.GREEN}{stack['package_manager']}{Colors.RESET}")
-    print(f"  • Frameworks:         {Colors.GREEN}{', '.join(stack['frameworks']) or 'Genérico'}{Colors.RESET}")
-    print(f"  • Pasta de Regras:    {Colors.GREEN}{stack['rules_dir'] or 'Nenhuma detectada'}{Colors.RESET}\n")
+    print(f"  • Branch Atual:       {Colors.GREEN}{current_branch}{Colors.RESET}")
+    print(f"  • Tipo de Projeto:    {Colors.GREEN}{stack.get('type')}{Colors.RESET}")
+    print(f"  • Linguagem Primária: {Colors.GREEN}{stack.get('primary_language')}{Colors.RESET}")
+    print(f"  • Gerenciador:        {Colors.GREEN}{stack.get('package_manager')}{Colors.RESET}")
+    print(f"  • Frameworks:         {Colors.GREEN}{', '.join(stack.get('frameworks', [])) or 'Genérico'}{Colors.RESET}")
+    print(f"  • Pasta de Regras:    {Colors.GREEN}{stack.get('rules_dir') or 'Nenhuma detectada'}{Colors.RESET}")
+    print(f"  • Comandos de QA:     {Colors.GREEN}{json.dumps(qa_commands, ensure_ascii=False)}{Colors.RESET}\n")
 
-    current_repo = get_env("GITHUB_REPOSITORY", detected_repo or "")
+    current_repo = get_env("GITHUB_REPOSITORY", detected_repo or os.path.basename(root))
     current_stitch_id = get_env("STITCH_PROJECT_ID", "")
 
-    # 2. Interatividade se solicitado
-    if interactive:
-        print(f"{Colors.YELLOW}Configuração Interativa de Metadados (pressione ENTER para manter o valor sugerido):{Colors.RESET}")
-        
+    # 3. Interatividade (se solicitado e não for dry-run)
+    if interactive and not dry_run:
+        print(f"{Colors.YELLOW}Configuração de Metadados (pressione ENTER para manter o valor sugerido):{Colors.RESET}")
+
         in_repo = input(f"👉 Repositório GitHub (ex: owner/repo) [{current_repo}]: ").strip()
         if in_repo:
             current_repo = in_repo
 
-        in_stitch = input(f"👉 Stitch Project ID [{current_stitch_id}]: ").strip()
+        in_stitch = input(f"👉 Stitch Project ID (opcional) [{current_stitch_id}]: ").strip()
         if in_stitch:
             current_stitch_id = in_stitch
 
-    # 3. Provisionamento da Estrutura .amb/ e Personas Contextualizadas
-    log("SETUP", "Provisionando estrutura .amb/ e contextualizando personas...", Colors.CYAN)
-    AmbProvisioner.provision_structure(root, stack, current_repo or "Projeto")
+        print(f"\n{Colors.YELLOW}Configuração dos Comandos de QA:{Colors.RESET}")
+        for step in ["typecheck", "test", "build", "lint"]:
+            current_val = qa_commands.get(step, "")
+            prompt_label = f"👉 Comando de '{step}' [{current_val}]: "
+            in_cmd = input(prompt_label).strip()
+            if in_cmd:
+                qa_commands[step] = in_cmd
+            elif not current_val and not in_cmd:
+                # Remove se estava vazio
+                qa_commands.pop(step, None)
 
+    # 4. Modo Simulação (Dry-Run)
+    if dry_run:
+        preview_data = {
+            "$schema": "https://amb-v2.dev/schemas/amb_project.v2.json",
+            "version": "2.0.0",
+            "name": os.path.basename(root),
+            "repository": current_repo,
+            "default_branch": current_branch,
+            "stitch_project_id": current_stitch_id,
+            "stack": stack,
+            "qa": qa_commands,
+            "personas": {
+                "active": ["engineer"],
+                "custom_dir": None
+            }
+        }
+        print(f"{Colors.BOLD}{Colors.YELLOW}🔍 MODO SIMULAÇÃO (DRY-RUN) — Nenhuma alteração foi feita no disco:{Colors.RESET}")
+        print(json.dumps(preview_data, indent=2, ensure_ascii=False))
+        return preview_data
 
-    # 4. Síntese Cognitiva
-    log("SETUP", "Inferindo diretrizes e resumo técnico do projeto...", Colors.CYAN)
-    summary_spec = CognitiveSynthesizer.infer_project_specs(root, stack)
+    # 5. Provisionamento da Estrutura .amb/ e Persona Genérica
+    log("SETUP", "Provisionando estrutura .amb/, persona e segurança...", Colors.CYAN)
+    AmbProvisioner.provision_structure(
+        root=root,
+        stack=stack,
+        repo_name=current_repo or os.path.basename(root),
+        qa_commands=qa_commands,
+        force=force
+    )
 
-    # 5. Salvar amb_project.json dentro de .amb/ do projeto
+    # 6. Salvar amb_project.json com schema v2 completo
     project_data = {
+        "$schema": "https://amb-v2.dev/schemas/amb_project.v2.json",
+        "version": "2.0.0",
+        "name": os.path.basename(root),
         "repository": current_repo,
+        "default_branch": current_branch,
         "stitch_project_id": current_stitch_id,
         "stack": stack,
-        "technical_summary": summary_spec
+        "qa": qa_commands,
+        "personas": {
+            "active": ["engineer"],
+            "custom_dir": None
+        },
+        "created_at": datetime.now().isoformat()
     }
 
     out_dir = os.path.join(root, ".amb")
@@ -77,7 +135,7 @@ def run_setup(interactive: bool = True):
 
     log("SETUP", f"✅ Arquivo de configuração salvo em: {out_json}", Colors.GREEN)
 
-    # 6. Atualizar .env se necessário
+    # 7. Atualizar .env com valores mínimos de projeto
     env_path = os.path.join(root, ".env")
     env_updates = {}
     if current_repo:
@@ -91,12 +149,12 @@ def run_setup(interactive: bool = True):
                 f.write("# AMB_V2 - Variáveis de Ambiente do Projeto\n")
                 for k, v in env_updates.items():
                     f.write(f"{k}={v}\n")
-            log("SETUP", f"✅ Arquivo .env criado com sucesso em: {env_path}", Colors.GREEN)
+            log("SETUP", f"✅ Arquivo .env criado em: {env_path}", Colors.GREEN)
         else:
             try:
                 with open(env_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                
+
                 existing_keys = set()
                 new_lines = []
                 for line in lines:
@@ -113,14 +171,21 @@ def run_setup(interactive: bool = True):
 
                 with open(env_path, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
-                log("SETUP", f"✅ Arquivo .env atualizado com as chaves do projeto.", Colors.GREEN)
+                log("SETUP", "✅ Arquivo .env atualizado com as chaves do projeto.", Colors.GREEN)
             except Exception as e:
                 log_error("SETUP", f"Não foi possível atualizar .env: {e}")
 
     print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Setup do Projeto Concluído com Sucesso!{Colors.RESET}")
-    print(f"Estrutura .amb/ e Personas contextualizadas com base na stack {stack.get('type')}.")
-    print(f"Configuração salva em: {out_json}")
-    print(f"Você agora pode executar os comandos da CLI 'amb' normalmente.")
+    print(f"📁 Raiz do Projeto:   {root}")
+    print(f"📄 Configuração:      {out_json}")
+    print(f"🤖 Persona Ativa:     .amb/personas/engineer.md")
+    print(f"🛡️  Comandos de QA:    {', '.join([f'{k}: {v}' for k, v in qa_commands.items()]) or 'Nenhum'}")
+    print(f"\n👉 Próximos passos recomendados:")
+    print(f"   • Validar ambiente:         {Colors.CYAN}amb check{Colors.RESET}")
+    print(f"   • Executar agente autônomo: {Colors.CYAN}amb agent --role engineer{Colors.RESET}")
+    print(f"   • Iniciar sentinela:        {Colors.CYAN}amb monitor{Colors.RESET}\n")
+
+    return project_data
 
 
 def print_setup_prompt():
@@ -136,47 +201,44 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
 ### 📋 Passos Obrigatórios de Execução:
 
 1. Inspeção e Detecção da Stack:
-   - Inspecione a raiz do projeto (package.json, bun.lock, pnpm-lock.yaml, pyproject.toml, .git/config, pastas de regras .antigravity/rules ou .gemini/rules).
-   - Identifique o repositório remoto (owner/repo), a stack técnica (frameworks frontend e backend) e o gerenciador de pacotes.
+   - Inspecione a raiz do projeto (package.json, bun.lock, pnpm-lock.yaml, pyproject.toml, go.mod, Cargo.toml).
+   - Identifique o repositório remoto (owner/repo), stack técnica e comandos de teste/build.
 
-2. Execução do Setup Automático (Provisionamento de .amb e Personas):
-   - Execute o setup automático que criará a estrutura .amb/ e adaptará as personas à stack detectada:
-     amb setup --auto  (ou python amb_v2/config/setup_project.py --auto)
+2. Execução do Setup Automático:
+   - Execute o setup com inferência de QA e provisionamento de personas:
+     amb setup --auto
 
-3. Geração / Atualização do .env:
-   - Verifique se o arquivo .env existe na raiz do repositório.
-   - Garanta que as seguintes variáveis estejam declaradas no .env:
-     * STITCH_API_KEY=
-     * STITCH_PROJECT_ID=
-     * JULES_API_KEY=
-     * GITHUB_REPOSITORY=<owner/repo detectado>
-     * GEMINI_API_KEY=
-
-4. Validação e Teste do Ambiente:
-   - Execute o script de validação para checar o carregamento correto das variáveis e caminhos:
+3. Validação do Checklist de Ambiente:
+   - Execute a validação completa de saúde:
      amb check
-   - Execute a inspeção de schemas do banco de dados:
-     amb schema
-   - Execute o teste de listagem das personas:
-     amb agent --list
-
-5. Regras Mandatórias:
-   - Zero Fallback: Sem supressão silenciosa de erros ou mascaramento de falhas.
-   - SRP: Mantenha cada script em seu submódulo oficial (config/, agents/, architecture/, integrations/, cli_modules/).
-   - Dual-Theme Nativo: Respeite o Design System do projeto com suporte a Light e Dark Mode via tokens CSS.
-
-Ao finalizar, exiba o resumo da stack detectada e o status das chaves configuradas."""
-
+"""
     print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}{Colors.CYAN}📋 PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA (Copie e cole na sua IA):{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}📋 PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA:{Colors.RESET}")
     print("=" * 75 + "\n")
     print(prompt_text)
-    print("\n" + "=" * 75 + "\n")
+    print("=" * 75 + "\n")
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Assistente de Setup AMB_V2.")
+    parser.add_argument("--auto", action="store_true", help="Executa o setup de forma automática/não-interativa.")
+    parser.add_argument("--path", help="Caminho do diretório alvo a ser configurado.")
+    parser.add_argument("--force", action="store_true", help="Sobrescreve arquivos de template existentes.")
+    parser.add_argument("--dry-run", action="store_true", help="Simula o setup sem modificar o disco.")
+    parser.add_argument("--prompt", action="store_true", help="Exibe o Prompt Mestre para IAs.")
+
+    args = parser.parse_args()
+    if args.prompt:
+        print_setup_prompt()
+    else:
+        run_setup(
+            interactive=not args.auto,
+            target_dir=args.path,
+            force=args.force,
+            dry_run=args.dry_run
+        )
 
 
 if __name__ == "__main__":
-    if "--prompt" in sys.argv or "-p" in sys.argv:
-        print_setup_prompt()
-    else:
-        is_auto = "--auto" in sys.argv or "--non-interactive" in sys.argv
-        run_setup(interactive=not is_auto)
+    main()

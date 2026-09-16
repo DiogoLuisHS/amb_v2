@@ -15,6 +15,9 @@ def create_parser():
     # 1. amb setup
     p_setup = subparsers.add_parser("setup", aliases=["init"], help="Analisa e configura o projeto atual.")
     p_setup.add_argument("--auto", action="store_true", help="Executa o setup de forma automática/não-interativa.")
+    p_setup.add_argument("--path", help="Diretório alvo específico para configurar (padrão: diretório atual).")
+    p_setup.add_argument("--force", action="store_true", help="Sobrescreve arquivos de template existentes.")
+    p_setup.add_argument("--dry-run", action="store_true", help="Simula a execução do setup sem escrever nada no disco.")
     p_setup.add_argument("--prompt", "-p", action="store_true", help="Exibe o Prompt Mestre de Auto-Configuração para colar em IAs.")
     p_setup.set_defaults(func=cmd_setup)
 
@@ -26,6 +29,7 @@ def create_parser():
 
     # 2. amb check
     p_check = subparsers.add_parser("check", aliases=["status"], help="Valida chaves e configurações do projeto ativo.")
+    p_check.add_argument("--json", action="store_true", help="Exibe o diagnóstico em formato JSON estruturado.")
     p_check.set_defaults(func=cmd_check)
 
     # 2.1 amb config
@@ -56,7 +60,7 @@ def create_parser():
 
     # 6. amb agent
     p_agent = subparsers.add_parser("agent", aliases=["persona"], help="Executor de personas autônomas de manutenção.")
-    p_agent.add_argument("--role", "-r", help="Nome da persona (ex: deadwood, beacon, bolt, align, etc.).")
+    p_agent.add_argument("--role", "-r", help="Nome da persona (ex: engineer, etc.).")
     p_agent.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote.")
     p_agent.add_argument("--task", "-t", help="Instruções ou escopo adicional.")
     p_agent.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis.")

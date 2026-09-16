@@ -12,7 +12,12 @@ def cmd_setup(args):
     if getattr(args, "prompt", False):
         print_setup_prompt()
     else:
-        run_setup(interactive=not args.auto)
+        run_setup(
+            interactive=not args.auto,
+            target_dir=getattr(args, "path", None),
+            force=getattr(args, "force", False),
+            dry_run=getattr(args, "dry_run", False)
+        )
 
 
 def cmd_prompt(args):
@@ -33,7 +38,7 @@ def cmd_prompt(args):
 def cmd_check(args):
     """Verifica e valida as chaves de API e configurações do projeto ativo."""
     import config as cfg
-    cfg.main()
+    cfg.main(as_json=getattr(args, "json", False))
 
 
 # -------------------------------------------------------------
