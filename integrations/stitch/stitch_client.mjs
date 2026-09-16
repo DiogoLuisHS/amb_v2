@@ -9,27 +9,36 @@ import { StitchToolClient, stitch } from '@google/stitch-sdk';
 import fs from 'fs';
 import path from 'path';
 
-function getApiKey() {
-  if (process.env.STITCH_API_KEY) return process.env.STITCH_API_KEY;
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+function getEnvValue(key) {
+  if (process.env[key]) return process.env[key].trim().replace(/^['"]|['"]$/g, '');
 
   let curr = process.cwd();
   for (let i = 0; i < 6; i++) {
     const envFile = path.join(curr, '.env');
     if (fs.existsSync(envFile)) {
-      const txt = fs.readFileSync(envFile, 'utf-8');
-      for (const line of txt.split('\n')) {
-        const t = line.trim();
-        if (t.startsWith('STITCH_API_KEY=')) {
-          return t.split('=')[1].trim().replace(/^['"]|['"]$/g, '');
+      try {
+        const txt = fs.readFileSync(envFile, 'utf-8');
+        for (const line of txt.split('\n')) {
+          const t = line.trim();
+          if (t.startsWith(`${key}=`)) {
+            return t.split('=')[1].trim().replace(/^['"]|['"]$/g, '');
+          }
         }
-      }
+      } catch {}
     }
     const parent = path.dirname(curr);
     if (parent === curr) break;
     curr = parent;
   }
   return null;
+}
+
+function getApiKey() {
+  return getEnvValue('STITCH_API_KEY') || getEnvValue('GEMINI_API_KEY');
+}
+
+function getProjectId() {
+  return getEnvValue('STITCH_PROJECT_ID');
 }
 
 async function extractScreenDetails(client, projectId, result) {
@@ -114,6 +123,15 @@ async function main() {
     process.exit(1);
   }
 
+  if (!payload.projectId) {
+    const envPid = getProjectId();
+    if (envPid) payload.projectId = envPid;
+  }
+
+  if (apiKey) {
+    process.env.STITCH_API_KEY = apiKey;
+  }
+
   try {
     const client = new StitchToolClient({ apiKey });
     let response;
@@ -126,20 +144,38 @@ async function main() {
         break;
       }
       case "generate_variants": {
-        const res = await client.callTool("generate_variants", payload);
+        const varPayload = { ...payload };
+        if (!varPayload.selectedScreenIds && varPayload.screenId) {
+          varPayload.selectedScreenIds = [varPayload.screenId];
+          delete varPayload.screenId;
+        }
+        if (!varPayload.variantOptions) {
+          varPayload.variantOptions = {
+            variantCount: varPayload.variantCount || 3,
+            creativeRange: varPayload.creativeRange || "EXPLORE"
+          };
+        }
+        const res = await client.callTool("generate_variants", varPayload);
         response = await extractScreenDetails(client, payload.projectId, res);
         break;
       }
       case "edit_screens":
       case "edit_screen": {
-        const res = await client.callTool("edit_screens", payload);
+        const editPayload = { ...payload };
+        if (!editPayload.selectedScreenIds && editPayload.screenId) {
+          editPayload.selectedScreenIds = [editPayload.screenId];
+          delete editPayload.screenId;
+        }
+        const res = await client.callTool("edit_screens", editPayload);
         response = await extractScreenDetails(client, payload.projectId, res);
         break;
       }
       case "get_screen": {
         const screenName = payload.name || `projects/${payload.projectId}/screens/${payload.screenId}`;
         const res = await client.callTool("get_screen", {
-          name: screenName
+          name: screenName,
+          projectId: payload.projectId,
+          screenId: payload.screenId
         });
         response = await extractScreenDetails(client, payload.projectId, res);
         try {
@@ -154,6 +190,14 @@ async function main() {
       case "get_project": {
         const projName = payload.name || (payload.projectId ? `projects/${payload.projectId}` : (payload.id ? `projects/${payload.id}` : ''));
         response = await client.callTool("get_project", { name: projName });
+        break;
+      }
+      case "create_project": {
+        response = await client.callTool("create_project", payload || {});
+        break;
+      }
+      case "list_projects": {
+        response = await client.callTool("list_projects", payload || {});
         break;
       }
       case "list_screens": {
@@ -193,12 +237,38 @@ async function main() {
         }
         break;
       }
-      case "upload_design_md": {
-        response = await client.callTool("upload_design_md", payload);
+      case "create_design_system": {
+        response = await client.callTool("create_design_system", payload);
         break;
       }
-      case "create_design_system_from_design_md": {
-        response = await client.callTool("create_design_system_from_design_md", payload);
+      case "update_design_system": {
+        response = await client.callTool("update_design_system", payload);
+        break;
+      }
+      case "list_design_systems": {
+        response = await client.callTool("list_design_systems", payload || {});
+        break;
+      }
+      case "apply_design_system": {
+        response = await client.callTool("apply_design_system", payload);
+        break;
+      }
+      case "download_assets": {
+        response = await client.callTool("download_assets", payload);
+        break;
+      }
+      case "upload":
+      case "upload_asset": {
+        const proj = stitch.project(payload.projectId);
+        const screens = await proj.upload(payload.filePath, payload.opts || {});
+        response = {
+          success: true,
+          screens: (screens || []).map(s => ({
+            id: s.id,
+            screenId: s.screenId,
+            projectId: s.projectId
+          }))
+        };
         break;
       }
       default: {

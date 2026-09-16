@@ -30,7 +30,7 @@ from pathlib import Path
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, require_env, AmbError, ConfigurationError
+from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, get_device_type, require_env, AmbError, ConfigurationError
 from integrations.stitch.stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
 from integrations.jules.jules_client import JulesClient
 from integrations.git.git_service import GitService
@@ -53,7 +53,7 @@ class PipelineOrchestrator:
         skip_stitch: bool = False,
         no_qa: bool = False,
         resume_session: str = None,
-        device_type: str = "DESKTOP",
+        device_type: str = None,
         edit_screen_id: str = None,
         screen_id: str = None,
         sync_ds: bool = False,
@@ -141,8 +141,10 @@ class PipelineOrchestrator:
                 log("STITCH", f"Refinando tela ID {edit_screen_id} com novo prompt...", Colors.CYAN)
                 screen_data = edit_screen(screen_id=edit_screen_id, prompt=stitch_prompt)
             else:
-                log("STITCH", f"Disparando geração de nova tela visual ({device_type})...", Colors.CYAN)
-                screen_data = generate_screen(prompt=stitch_prompt, device_type=device_type)
+                target_dev = device_type or get_device_type()
+                dev_label = f" ({target_dev})" if target_dev else ""
+                log("STITCH", f"Disparando geração de nova tela visual{dev_label}...", Colors.CYAN)
+                screen_data = generate_screen(prompt=stitch_prompt, device_type=target_dev)
 
             current_screen_id = screen_data.get("screenId") or current_screen_id
             stitch_html = screen_data.get("htmlCode", "")
@@ -487,7 +489,7 @@ def main():
     parser.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto ao Jules")
     parser.add_argument("--no-qa", action="store_true", help="Não executa a verificação local de typecheck/build ao final")
     parser.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules")
-    parser.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default="DESKTOP", help="Tipo de dispositivo alvo para o Stitch")
+    parser.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default=None, help="Tipo de dispositivo alvo para o Stitch (padrão: lê de amb_project.json ou .env)")
     parser.add_argument("--screen-id", help="ID de tela existente no Stitch para reaproveitar")
     parser.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt")
     parser.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar")

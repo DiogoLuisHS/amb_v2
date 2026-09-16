@@ -191,4 +191,4 @@ Todas as melhorias arquiteturais, refatorações SRP, novas funcionalidades e co
 
 👉 **[`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md)**
 
-Consulte o changelog para verificar o detalhamento técnico de cada entrega concluída (`F1-M1`, `F1-M2`, `F1-M3`, `F1-M4`, `F1-M5`, `F1-M7`, `F1-M8`, `F1-M9`), arquivos modificados, motivações, soluções arquiteturais e suíte de testes automatizados (50/50 passing).
+Consulte o changelog para verificar o detalhamento técnico de cada entrega concluída (`F1-M1`, `F1-M2`, `F1-M3`, `F1-M4`, `F1-M5`, `F1-M7`, `F1-M8`, `F1-M9`, `F1-M10`), arquivos modificados, motivações, soluções arquiteturais e suíte de testes automatizados (62/62 passing).

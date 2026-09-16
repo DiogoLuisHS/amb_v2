@@ -157,20 +157,25 @@ Geração de interfaces visuais, refinamento com Design Tokens e variantes explo
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb stitch generate -p "<prompt>"` | `--prompt` | Gera uma nova tela HTML/CSS via Google Stitch SDK. |
+| `amb stitch list` | — | Lista todas as telas criadas no projeto Stitch ativo. |
+| `amb stitch generate -p "<prompt>"` | `--prompt` | Gera uma nova tela visual (Mobile, Desktop, Tablet ou Agnóstico). |
 | `amb stitch refine -s <id> -p "<prompt>"` | `--screen-id` | Refina uma tela existente com novas instruções visuais. |
-| `amb stitch variants -s <id>` | `--screen-id` | Gera variantes visuais exploratórias a partir de uma tela base. |
-| `amb stitch variants -s <id> -c <N>` | `--count` | Define o número de variantes a serem geradas (padrão: 3). |
-| `amb stitch sync` | — | Sincroniza design tokens do `design.md` com o Design System do Stitch. |
-| `amb stitch sync -f <caminho>` | `--file` | Especifica um arquivo customizado de design tokens. |
-| `amb stitch get -s <id>` | `--screen-id` | Baixa o código HTML/CSS, DOM e screenshot da tela. |
+| `amb stitch get -s <id>` | `--screen-id` | Obtém o código HTML/CSS, DOM e screenshot da tela. |
+| `amb stitch variants -s <id> -c <N>` | `--count` | Gera variantes visuais exploratórias (1-5 variações). |
+| `amb stitch download -o <dir>` | `--output` | Baixa telas e assets do projeto para um diretório local. |
+| `amb stitch project` | — | Consulta metadados e instâncias do projeto Stitch atual. |
+| `amb stitch sync` | — | Sincroniza `design.md` com o Design System oficial do Stitch. |
+| `amb stitch call <tool> '<json>'` | — | Invoca qualquer ferramenta oficial do Stitch SDK via JSON-RPC. |
 
 ```bash
 # Exemplos:
-amb stitch generate -p "Dashboard SaaS com sidebar escura e cards de KPI"
+amb stitch list
+amb stitch generate -p "Dashboard SaaS com cards de KPI" -d MOBILE -o public/dashboard.html
 amb stitch refine -s <SCREEN_ID> -p "Tornar os botões arredondados e ajustar contraste"
 amb stitch variants -s <SCREEN_ID> --count 3
-amb stitch sync
+amb stitch download -o ./dist/stitch_assets
+amb stitch sync -f design.md
+amb stitch project
 ```
 
 ---
@@ -245,11 +250,12 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Jules Cloud** | `amb jules merge -s <id>` | `python integrations/jules/tools/merge_session_pr.py` |
 | **Jules Cloud** | `amb jules merge --auto-latest` | `python integrations/jules/tools/merge_session_pr.py --auto-latest` |
 | **Jules Cloud** | `amb jules clean` | `python integrations/jules/tools/cleanup_sessions.py` |
+| **Stitch SDK** | `amb stitch list` | `python integrations/stitch/tools/list_screens.py` |
 | **Stitch SDK** | `amb stitch generate -p "..."` | `python integrations/stitch/tools/generate_screen.py` |
 | **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | `python integrations/stitch/tools/edit_screen.py` |
 | **Stitch SDK** | `amb stitch variants -s <id>` | `python integrations/stitch/tools/generate_variants.py` |
 | **Stitch SDK** | `amb stitch sync` | `python integrations/stitch/tools/sync_design_system.py` |
-| **Stitch SDK** | `amb stitch get -s <id>` | `python integrations/stitch/tools/get_screen.py` |
+| **Stitch SDK** | `amb stitch get -s <id> [-o tela.html]` | `python integrations/stitch/tools/get_screen.py` |
 | **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
 | **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |

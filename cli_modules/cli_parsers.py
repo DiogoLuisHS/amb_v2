@@ -111,24 +111,53 @@ def create_parser():
     p_stitch = subparsers.add_parser("stitch", help="Comandos de integração com o Google Stitch SDK.")
     s_subs = p_stitch.add_subparsers(dest="stitch_cmd", help="Subcomandos do Stitch")
 
+    s_list = s_subs.add_parser("list", help="Lista todas as telas geradas no projeto Stitch.")
+    s_list.add_argument("--project-id", help="ID do projeto Stitch (padrão: lê do .env).")
+    s_list.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
+
     s_gen = s_subs.add_parser("generate", help="Gera uma nova tela via Stitch.")
     s_gen.add_argument("--prompt", "-p", required=True, help="Descrição visual da tela.")
     s_gen.add_argument("--title", "-t", help="Título da tela.")
+    s_gen.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help="Tipo de dispositivo alvo (DESKTOP, MOBILE, TABLET, AGNOSTIC; padrão: lê do projeto ou .env).")
+    s_gen.add_argument("--output", "-o", help="Caminho do arquivo para salvar o HTML da tela.")
+    s_gen.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
 
     s_ref = s_subs.add_parser("refine", help="Refina uma tela existente no Stitch com novas instruções.")
     s_ref.add_argument("--screen-id", "-s", required=True, help="ID da tela.")
     s_ref.add_argument("--prompt", "-p", required=True, help="Instruções de edição e refinamento visual.")
+    s_ref.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help="Tipo de dispositivo alvo.")
+    s_ref.add_argument("--output", "-o", help="Caminho do arquivo para salvar o novo HTML refinado.")
+    s_ref.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
 
     s_get = s_subs.add_parser("get", help="Obtém o código HTML/CSS e assets de uma tela.")
     s_get.add_argument("--screen-id", "-s", required=True, help="ID da tela.")
+    s_get.add_argument("--output", "-o", help="Caminho do arquivo para salvar o código HTML da tela.")
+    s_get.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
 
     s_vars = s_subs.add_parser("variants", help="Gera variantes visuais exploratórias de uma tela.")
     s_vars.add_argument("--screen-id", "-s", required=True, help="ID da tela base.")
     s_vars.add_argument("--prompt", "-p", required=True, help="Instruções de variação.")
     s_vars.add_argument("--count", "-c", type=int, default=3, help="Número de variantes (padrão: 3).")
+    s_vars.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help="Tipo de dispositivo alvo.")
+    s_vars.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
+
+    s_down = s_subs.add_parser("download", help="Baixa todas as telas e assets do projeto Stitch para um diretório local.")
+    s_down.add_argument("--output", "-o", default="./stitch_assets", help="Diretório local de destino dos assets baixados.")
+    s_down.add_argument("--project-id", help="ID do projeto Stitch (padrão: lê do .env).")
+    s_down.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
+
+    s_proj = s_subs.add_parser("project", help="Consulta detalhes do projeto Stitch ativo.")
+    s_proj.add_argument("--project-id", help="ID do projeto Stitch (padrão: lê do .env).")
+    s_proj.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
 
     s_sync = s_subs.add_parser("sync", help="Sincroniza design tokens do design.md com o Design System do Stitch.")
     s_sync.add_argument("--file", "-f", help="Caminho do arquivo design.md.")
+    s_sync.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
+
+    s_call = s_subs.add_parser("call", help="Invoca uma ferramenta arbitrária do Stitch SDK via JSON-RPC.")
+    s_call.add_argument("tool", help="Nome da ferramenta (ex: get_screen, list_screens, download_assets).")
+    s_call.add_argument("payload", nargs="?", default="{}", help="Payload JSON da ferramenta.")
+    s_call.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
     p_stitch.set_defaults(func=cmd_stitch)
 
     # 10. amb validate
@@ -139,12 +168,14 @@ def create_parser():
     # 11. amb pipeline
     p_pipe = subparsers.add_parser("pipeline", aliases=["run", "deploy"], help="Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub) com prompts separados para Design e Engenharia.")
     p_pipe.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch.")
-    p_pipe.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo a especificação de engenharia para o Jules.")
+    p_pipe.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo as instruções técnicas para o Jules.")
+    p_pipe.add_argument("--prompt-file", "-f", help="Arquivo único unificado (.md) com divisões claras entre [STITCH_DESIGN] e [JULES_DEV].")
     p_pipe.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar o monitoramento sem criar nova.")
     p_pipe.add_argument("--skip-stitch", action="store_true", help="Pula a geração de UI no Stitch, indo direto ao Jules.")
     p_pipe.add_argument("--no-qa", action="store_true", help="Desabilita o teste QA local automático no final.")
     p_pipe.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos no Jules automaticamente.")
-    p_pipe.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET"], default="DESKTOP", help="Tipo de dispositivo para geração do Stitch.")
+    p_pipe.add_argument("--repo", "-r", help="Repositório GitHub no formato 'dono/repo' (padrão: auto-detectado via git).")
+    p_pipe.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help="Tipo de dispositivo para geração do Stitch.")
     p_pipe.add_argument("--edit-screen-id", help="Refina uma tela existente no Stitch em vez de criar uma nova.")
     p_pipe.add_argument("--screen-id", help="Utiliza uma tela já existente no Stitch como ponto de partida (não recria).")
     p_pipe.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais antes de gerar a tela.")

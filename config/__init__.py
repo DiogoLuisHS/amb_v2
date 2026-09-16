@@ -17,6 +17,9 @@ from .config import (
     get_env,
     require_env,
     get_repo_name,
+    get_device_type,
+    parse_design_tokens_from_text,
+    get_design_system_config,
     main,
 )
 from .bootstrap import (
@@ -39,6 +42,9 @@ __all__ = [
     "get_env",
     "require_env",
     "get_repo_name",
+    "get_device_type",
+    "parse_design_tokens_from_text",
+    "get_design_system_config",
     "main",
     "ensure_amb_env",
     "get_amb_root",

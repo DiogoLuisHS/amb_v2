@@ -1,26 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """🎨 Stitch Tool: get_screen (Facade)"""
-import sys, os, argparse
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur: break
-    _cur = _p
-for _s in ["config", "integrations/stitch"]:
-    _p = os.path.normpath(os.path.join(_cur, *_s.split("/")))
-    if os.path.exists(_p) and _p not in sys.path: sys.path.insert(0, _p)
+import sys
+import argparse
+
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
+
 from stitch_client import get_screen, Colors, log, log_error
 
+run_get_screen = get_screen
+
+
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--screen-id", "-s", required=True)
+    p = argparse.ArgumentParser(description="Consulta detalhes e obtém o HTML de uma tela no Stitch.")
+    p.add_argument("--screen-id", "-s", required=True, help="ID da tela.")
+    p.add_argument("--output", "-o", help="Caminho do arquivo para salvar o HTML da tela.")
     args = p.parse_args()
     try:
-        res = get_screen(screen_id=args.screen_id)
+        res = get_screen(screen_id=args.screen_id, output_file=args.output)
         log("STITCH", f"Detalhes da tela {args.screen_id} obtidos com sucesso.", Colors.GREEN)
+        if res.get("title"):
+            print(f"  • Título: {res['title']}")
+        if res.get("screenshotUrl"):
+            print(f"  • Screenshot: {res['screenshotUrl']}")
+        if res.get("htmlCode"):
+            print(f"  • DOM HTML: {len(res['htmlCode'])} caracteres")
+        if args.output:
+            print(f"  • HTML salvo em: {args.output}")
     except Exception as e:
-        log_error("STITCH", str(e)); sys.exit(1)
+        log_error("STITCH", str(e))
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

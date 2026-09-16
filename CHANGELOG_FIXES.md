@@ -98,11 +98,39 @@ Configuração manual via `.amb/amb_project.json`:
 **Causa:** A API do Jules retorna mensagens aninhadas (`agentMessaged: { agentMessage: "..." }`) que não possuíam o campo `.get("text")`. O parser falhava em capturar a mensagem e acabava caindo no log do `progressUpdated` anterior.
 **Fix:** Implementado `extract_activity_text()` polimórfico cobrindo todas as variações de payload do Jules e isolamento dos eventos de progresso para que nunca sobrescrevam mensagens ativas.
 
+### Bug #14 — Tipo de Dispositivo hardcoded como `"DESKTOP"` no Stitch SDK e Pipeline
+**Arquivos:** `integrations/stitch/stitch_client.py`, `pipeline/pipeline.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `config/config.py`
+**Causa:** O cliente e as ferramentas do Stitch forçavam `"DESKTOP"` como padrão para todas as gerações de tela, impedindo que projetos mobile ou agnósticos tivessem seus layouts gerados apropriadamente.
+**Fix aplicado:**
+1. Remoção total do padrão `"DESKTOP"` hardcoded.
+2. Implementação de resolução genérica via `get_device_type(default=None)`: flag `--device` > `STITCH_DEVICE_TYPE` / `DEVICE_TYPE` no `.env` > `stitch.device` / `device_type` em `amb_project.json` > `None` (parâmetro omitido, deixando o Stitch decidir).
+3. Suporte aos tipos de dispositivo oficiais do Stitch SDK: `"MOBILE"`, `"DESKTOP"`, `"TABLET"`, `"AGNOSTIC"`.
+
+### Bug #15 — Funções e Modelos Fictícios no Runner e Cliente do Stitch
+**Arquivos:** `integrations/stitch/stitch_client.mjs`, `integrations/stitch/stitch_client.py`, `integrations/stitch/tools/*.py`
+**Causa:** O cliente invocava ferramentas inexistentes no MCP do Stitch (`upload_design_md`, `create_design_system_from_design_md`) e referia um modelo inexistente `GEMINI_3_8_FLASH` em vez de consultar a especificação oficial do `@google/stitch-sdk`.
+**Fix aplicado:**
+1. Remoção completa de ferramentas fictícias no runner Node.js e Python.
+2. Alinhamento estrito com os 12 tools oficiais do MCP Server do Stitch (`create_project`, `get_project`, `list_projects`, `list_screens`, `get_screen`, `generate_screen_from_text`, `edit_screens`, `generate_variants`, `create_design_system`, `update_design_system`, `list_design_systems`, `apply_design_system`) e a virtual tool `download_assets`.
+3. Sincronização de `design.md` via canal nativo do SDK: `theme.designMd` em `create_design_system` e `update_design_system`.
+4. Correção do modelo de geração: remoção do modelo falso, deixando opcional (Stitch default) ou suportando `GEMINI_3_FLASH` / `GEMINI_3_1_PRO`.
 
 ---
 
-
 ## 🚀 Features Implementadas
+
+### F2-M3 — Alinhamento Estrito & Modernização da Integração Google Stitch SDK
+**Arquivos:** `integrations/stitch/stitch_client.py`, `integrations/stitch/stitch_client.mjs`, `integrations/stitch/tools/*`, `cli_modules/*`, `.agents/skills/amb-stitch-specialist/SKILL.md`
+**Implementação:**
+- Suporte nativo completo aos 12 tools oficiais do Stitch MCP Server e aos métodos de domínio do SDK (`upload`, `downloadAssets`).
+- Novos comandos CLI:
+  - `amb stitch list`: Lista telas do projeto com dimensões e títulos.
+  - `amb stitch download -o <dir>`: Baixa telas e assets autônomos para uso local.
+  - `amb stitch project`: Exibe metadados e configurações do projeto ativo.
+  - `amb stitch sync -f <file>`: Sincroniza tokens em Markdown com o tema oficial do Stitch.
+- Facade `integrations/stitch/tools/download_assets.py` para download automatizado de telas e assets.
+- Resolução dinâmica de dispositivos suportando `MOBILE`, `DESKTOP`, `TABLET` e `AGNOSTIC`.
+- Suite de testes unitários abrangente em `tests/test_stitch_integration.py` (15 testes cobrindo todo o ciclo).
 
 ### C5 — `amb context` Integrado ao Prompt de Despacho do Jules
 **Arquivo:** `agents/autonomous_loop.py`
@@ -298,11 +326,44 @@ amb agent --role relay --loop --max-cycles 5
 
 ---
 
-### Expansão da Suíte de Testes Automatizados (50 testes passando — 100% Green)
-- Suíte expandida de 40 para **50 testes automatizados** com tempo de execução de ~1.0s:
-  - `tests/test_jules_integration.py` (6 testes novos: extração de PR em outputs list/dict/activities, fallbacks e cleanup dry-run)
-  - `tests/test_quality_gatekeeper.py` (4 testes novos: detecção via json, fallback analyzer, execução de comandos e run_qa)
-  - `tests/test_setup_and_analyzer.py` (6 testes: detecção Python, Node, Go, provisionamento, dry-run e diagnóstico JSON)
+### F1-M10 — Modernização Completa da Integração Google Stitch SDK (@google/stitch-sdk)
+**Arquivos:** `integrations/stitch/stitch_client.py`, `integrations/stitch/stitch_client.mjs`, `integrations/stitch/tools/*.py`, `integrations/stitch/tools/list_screens.py`, `config/config.py`, `config/__init__.py`, `pipeline/pipeline.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `.agents/skills/amb-stitch-specialist/SKILL.md`, `README.md`, `tests/test_stitch_integration.py`.
+- **Motivação:**
+  - O runner do Stitch não validava a presença do executável Node.js ou do pacote `@google/stitch-sdk`, resultando em falhas crípticas de subprocess.
+  - O tipo de dispositivo (`device_type`) estava fixado como hardcoded `"DESKTOP"` em múltiplos locais, desrespeitando projetos mobile/tablet ou configurações do usuário.
+  - Não existia método nem comando para listar telas (`list_screens`), embora o runner Node.js suportasse a chamada.
+  - Faltava suporte a salvar o HTML/DOM gerado pelo Stitch diretamente em disco (`--output`).
+  - Os scripts em `integrations/stitch/tools/` continham o mesmo bloco legado de manipulação manual de `sys.path`.
+  - Não existiam testes unitários automatizados para o Stitch em `tests/`.
+- **Implementação:**
+  - **Resolução Dinâmica e Genérica do Dispositivo Alvo (`get_device_type`):**
+    - Adicionado `get_device_type()` em `config/config.py` para resolver a preferência do projeto:
+      1. Argumento explícito da CLI (`--device` / `--device-type`).
+      2. Variáveis `STITCH_DEVICE_TYPE` ou `DEVICE_TYPE` no `.env`.
+      3. Campo `stitch.device` ou `device_type` no `.amb/amb_project.json`.
+      4. `None` caso não especificado (deixando o Stitch SDK aplicar seu comportamento padrão sem forçar `"DESKTOP"`).
+    - Eliminado qualquer valor default `"DESKTOP"` hardcoded em `StitchClient.generate_screen()`, `sync_design_system()`, `pipeline.py`, `cli_parsers.py` e `cli_handlers.py`.
+  - **Diagnóstico Preventivo de Runtime:** `StitchClient` verifica preventivamente `shutil.which("node")` e captura erros `MODULE_NOT_FOUND` do runner com hints claros para instalação do Node.js e `npm install`.
+  - **Novos Métodos Canônicos:**
+    - `list_screens(project_id)`: Consulta e normaliza lista de telas com IDs, títulos, dimensões e descrições.
+    - `get_project(project_id)`: Consulta metadados do workspace e do design system vinculado.
+    - `save_screen_html(screen_data, output_path)`: Persiste o DOM HTML da tela em arquivo local.
+    - `call_tool(tool_name, payload)`: Despacha ferramentas dinâmicas arbitrárias do SDK via JSON-RPC.
+  - **Suporte a `--output` e `--json`:** `generate_screen`, `edit_screen` e `get_screen` aceitam `output_file` para salvar o HTML automaticamente.
+  - **Runner Node.js Aprimorado:** `stitch_client.mjs` lê `STITCH_PROJECT_ID` automaticamente do arquivo `.env` e suporta `list_projects`.
+  - **Fachadas Modernizadas & Nova Ferramenta:** Substituído o boilerplate legado de `sys.path` por `ensure_amb_env()` em todas as 5 ferramentas existentes e criada a nova ferramenta `list_screens.py`.
+  - **CLI Enriquecida:** Novos subcomandos `amb stitch list`, `amb stitch call`, flags `--output` / `-o` e `--json` em todos os comandos do Stitch.
+  - **Atualização de Documentação e Skills:** Atualizados `amb-stitch-specialist/SKILL.md` e a tabela de comandos do `README.md`.
+  - Suíte de testes unitários dedicada criada em `tests/test_stitch_integration.py` (12 testes passando).
+
+---
+
+### Expansão da Suíte de Testes Automatizados (62 testes passando — 100% Green)
+- Suíte expandida de 50 para **62 testes automatizados** com tempo de execução de ~1.26s:
+  - `tests/test_stitch_integration.py` (12 testes novos: checagem de Node.js, módulo ausente, generate, edit, get, list, get_project, variants, sync, call_tool, fachadas e resolução dinâmica de deviceType)
+  - `tests/test_jules_integration.py` (6 testes)
+  - `tests/test_quality_gatekeeper.py` (4 testes)
+  - `tests/test_setup_and_analyzer.py` (6 testes)
   - `tests/test_bootstrap.py` (5 testes)
   - `tests/test_base_google_client.py` (5 testes)
   - `tests/test_auto_reply_srp.py` (7 testes)
