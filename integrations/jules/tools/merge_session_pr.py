@@ -34,33 +34,21 @@ from jules_client import JulesClient  # noqa: E402
 
 
 def detect_pr_from_session(session_id: str) -> Optional[int]:
-    """Inspeciona os outputs da sessão e as atividades para extrair o número do PR."""
+    """Inspeciona os outputs da sessão e as atividades para extrair o número do PR via JulesClient."""
     client = JulesClient()
     try:
-        # 1. Checa diretamente na lista de outputs da sessão
-        sess = client.get_session(session_id)
-        outputs = sess.get("outputs", [])
-        if isinstance(outputs, list):
-            for item in outputs:
-                if isinstance(item, dict) and "pullRequest" in item:
-                    pr_url = item["pullRequest"].get("url", "")
-                    m = re.search(r"/pull/(\d+)", pr_url)
-                    if m:
-                        return int(m.group(1))
-        elif isinstance(outputs, dict) and "pullRequest" in outputs:
-            pr_url = outputs["pullRequest"].get("url", "")
-            m = re.search(r"/pull/(\d+)", pr_url)
-            if m:
-                return int(m.group(1))
-
-        # 2. Checa em activities
-        act_res = client.list_activities(session_id=session_id, page_size=50)
-        activities = act_res if isinstance(act_res, list) else act_res.get("activities", [])
-        for act in activities:
-            txt = str(act)
-            match = re.search(r"github\.com/[^/]+/[^/]+/pull/(\d+)", txt)
-            if match:
-                return int(match.group(1))
+        clean_id = session_id.split("/")[-1]
+        sess = client.get_session(clean_id)
+        act_res = client.list_activities(session_id=clean_id, page_size=25)
+        activities = act_res.get("activities", []) if isinstance(act_res, dict) else (act_res if isinstance(act_res, list) else [])
+        pr_info = JulesClient.extract_pull_request(sess, activities=activities)
+        if pr_info:
+            if pr_info.get("number"):
+                return int(pr_info["number"])
+            if pr_info.get("url"):
+                m = re.search(r"/pull/(\d+)", pr_info["url"])
+                if m:
+                    return int(m.group(1))
     except Exception as e:
         log_error("DETECT-PR", f"Falha ao consultar PR da sessão: {e}")
     return None
@@ -165,31 +153,11 @@ def approve_and_merge_pr(
 
                         print(f"{Colors.GREEN}✔ Patch da sessão aplicado e commitado com sucesso!{Colors.RESET}\n")
                         
-                        # QA Local adaptativo à stack
+                        # QA Local adaptativo à stack via QualityGatekeeper
                         log("QA-VALIDATION", "Executando verificação de integridade pós-patch...", Colors.CYAN)
-                        from config import load_project_json
-                        proj = load_project_json()
-                        qa_cfg = proj.get("qa", {})
-                        if not qa_cfg:
-                            if os.path.exists(os.path.join(repo_root, "package.json")):
-                                qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-                            elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")) or os.path.exists(os.path.join(repo_root, "setup.py")):
-                                qa_cfg = {"build": "python -m py_compile cli.py"}
-                            elif os.path.exists(os.path.join(repo_root, "go.mod")):
-                                qa_cfg = {"build": "go build ./..."}
-                            else:
-                                qa_cfg = {}
-
-                        qa_passed = True
-                        for step_key, step_cmd in qa_cfg.items():
-                            p_step = subprocess.run(step_cmd, cwd=repo_root, capture_output=True, text=True, shell=True)
-                            if p_step.returncode != 0:
-                                log_error("QA", f"Falha no {step_key} pós-patch: {p_step.stderr.strip() or p_step.stdout.strip()}")
-                                qa_passed = False
-                                break
-                            print(f"{Colors.GREEN}✔ {step_key}: concluído com sucesso!{Colors.RESET}")
-
-                        if not qa_passed:
+                        from pipeline.quality_gatekeeper import QualityGatekeeper
+                        if not QualityGatekeeper.run_qa(repo_root):
+                            log_error("QA", "A suíte de testes e validação local falhou após aplicar o patch.")
                             return False
 
                         # Push to GitHub
@@ -233,56 +201,20 @@ def approve_and_merge_pr(
     git.pull("origin", target_branch)
 
     # 5. Validação de QA Local pós-merge
-    log("QA-VALIDATION", "Executando verificação de integridade pós-merge...", Colors.CYAN)
-
-    def _run_qa_cmd(cmd_str: str, label: str) -> bool:
-        """Executa um comando de QA e retorna True se passou."""
-        if not cmd_str.strip():
-            return True
-        import shlex
-        import shutil
-        parts = shlex.split(cmd_str.strip(), posix=(sys.platform != "win32"))
-        if not parts:
-            return True
-        bin_path = shutil.which(parts[0])
-        use_shell = False
-        if bin_path:
-            parts[0] = bin_path
-        else:
-            use_shell = True
-        proc = subprocess.run(
-            cmd_str.strip() if use_shell else parts, cwd=repo_root,
-            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=use_shell
-        )
-        if proc.returncode != 0:
-            log_error("QA", f"Falha no {label}!\n{proc.stdout.strip()}\n{proc.stderr.strip()}")
-            return False
-        print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
-        return True
-
-    # Lê comandos de QA configurados no amb_project.json
-    proj = load_project_json() or {}
-    qa_cfg = proj.get("qa", {})
-
-    # Auto-detecção de stack se não configurado
-    if not qa_cfg:
-        if os.path.exists(os.path.join(repo_root, "package.json")):
-            qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-        elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
-            qa_cfg = {"build": "python -m py_compile"}
-        elif os.path.exists(os.path.join(repo_root, "go.mod")):
-            qa_cfg = {"build": "go build ./..."}
-        else:
-            qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-
-    for step_key, step_cmd in qa_cfg.items():
-        if not _run_qa_cmd(step_cmd, step_key):
-            return False
+    log("QA-VALIDATION", "Executando verificação de integridade pós-merge via QualityGatekeeper...", Colors.CYAN)
+    from pipeline.quality_gatekeeper import QualityGatekeeper
+    if not QualityGatekeeper.run_qa(repo_root):
+        log_error("QA", "A suíte de testes e validação local falhou após o merge.")
+        return False
 
     print("\n" + "=" * 75)
     print(f"🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}")
     print("=" * 75 + "\n")
     return True
+
+
+# Alias canônico de serviço para desacoplamento de handlers e testes (F1-M7)
+run_merge_session_pr = approve_and_merge_pr
 
 
 def main():

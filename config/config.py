@@ -139,18 +139,27 @@ def load_env_file() -> None:
             log_error("CONFIG", f"Falha ao ler arquivo .env em {env_path}: {e}")
 
 
-def load_project_json() -> dict:
+def load_project_json(repo_root: Optional[str] = None) -> dict:
     """Carrega dados contextuais de amb_project.json prioritariamente em .amb/, .jules/ ou na raiz."""
-    root = find_repo_root()
-    candidates = [
-        os.path.join(root, ".amb", "amb_project.json"),
-        os.path.join(root, ".amb", "project.json"),
-        os.path.join(root, ".jules", "amb_project.json"),
-        os.path.join(root, ".jules", "project.json"),
-        os.path.join(root, "amb_project.json"),
-        os.path.join(root, "amb_v2", "config", "amb_project.json"),
-        os.path.join(os.path.dirname(__file__), "amb_project.json"),
-    ]
+    if repo_root:
+        candidates = [
+            os.path.join(repo_root, ".amb", "amb_project.json"),
+            os.path.join(repo_root, ".amb", "project.json"),
+            os.path.join(repo_root, ".jules", "amb_project.json"),
+            os.path.join(repo_root, ".jules", "project.json"),
+            os.path.join(repo_root, "amb_project.json"),
+        ]
+    else:
+        root = find_repo_root()
+        candidates = [
+            os.path.join(root, ".amb", "amb_project.json"),
+            os.path.join(root, ".amb", "project.json"),
+            os.path.join(root, ".jules", "amb_project.json"),
+            os.path.join(root, ".jules", "project.json"),
+            os.path.join(root, "amb_project.json"),
+            os.path.join(root, "amb_v2", "config", "amb_project.json"),
+            os.path.join(os.path.dirname(__file__), "amb_project.json"),
+        ]
     for p_path in candidates:
         if os.path.exists(p_path):
             try:

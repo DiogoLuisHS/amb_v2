@@ -15,7 +15,7 @@ O Google Jules é um agente de desenvolvimento em nuvem que executa em uma máqu
 No `amb_v2`, a integração está localizada em:
 - **Cliente Core:** [`integrations/jules/jules_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/jules_client.py) (Wrapper oficial da API REST)
 - **Ferramentas CLI:** [`integrations/jules/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/tools/) (`create_session`, `get_session`, `approve_plan`, `reply_session`, `merge_session_pr`, `cleanup_sessions`)
-- **Sentinela / Watcher:** [`dashboard/watchers/jules_watcher.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/dashboard/watchers/jules_watcher.py)
+- **Sentinela / Watcher:** [`integrations/jules/jules_watcher.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/jules_watcher.py)
 
 ---
 

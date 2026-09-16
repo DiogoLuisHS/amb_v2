@@ -85,6 +85,39 @@ class JulesClient(BaseGoogleClient):
         path = session_id if session_id.startswith("sessions/") else f"sessions/{session_id}"
         return self._request("GET", path)
 
+    @staticmethod
+    def extract_pull_request(
+        session_dict: Dict[str, Any],
+        activities: Optional[List[Dict[str, Any]]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Extrai metadados do Pull Request (url, number) dos outputs da sessão ou das atividades com fallback via regex."""
+        # 1. Inspeciona outputs estruturados da sessão
+        outputs = session_dict.get("outputs", [])
+        if isinstance(outputs, list):
+            for item in outputs:
+                if isinstance(item, dict) and "pullRequest" in item:
+                    pr_info = item["pullRequest"]
+                    if isinstance(pr_info, dict) and pr_info.get("url"):
+                        return pr_info
+        elif isinstance(outputs, dict) and "pullRequest" in outputs:
+            pr_info = outputs["pullRequest"]
+            if isinstance(pr_info, dict) and pr_info.get("url"):
+                return pr_info
+
+        # 2. Inspeciona activities fornecidas via regex resiliente
+        if activities and isinstance(activities, list):
+            import re
+            for act in activities:
+                txt = str(act)
+                m = re.search(r"(https://github\.com/[^/]+/[^/]+/pull/(\d+))", txt)
+                if m:
+                    return {
+                        "url": m.group(1),
+                        "number": int(m.group(2))
+                    }
+
+        return None
+
     def list_sessions(self, page_size: int = 50, repo_filter: Optional[str] = None) -> List[Dict[str, Any]]:
         res = self._request("GET", "sessions", params={"pageSize": page_size})
         sessions = res.get("sessions", [])

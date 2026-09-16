@@ -44,16 +44,9 @@ class JulesWatcher:
         self.notified_events = set()
 
     @staticmethod
-    def extract_pull_request(session_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extrai metadados do Pull Request dos outputs da sessão."""
-        outputs = session_dict.get("outputs", [])
-        if isinstance(outputs, list):
-            for item in outputs:
-                if isinstance(item, dict) and "pullRequest" in item:
-                    return item["pullRequest"]
-        elif isinstance(outputs, dict) and "pullRequest" in outputs:
-            return outputs["pullRequest"]
-        return None
+    def extract_pull_request(session_dict: Dict[str, Any], activities: Optional[List[Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
+        """Extrai metadados do Pull Request dos outputs da sessão ou das atividades via JulesClient."""
+        return JulesClient.extract_pull_request(session_dict, activities=activities)
 
     def check(self) -> List[Dict[str, Any]]:
         """Verifica todas as sessões e retorna alertas detectados."""
@@ -179,6 +172,107 @@ class JulesWatcher:
             log_error("JULES-WATCHER", f"Falha na checagem de sessões: {e}")
 
         return alerts
+
+
+def stream_session_activities(session_id: str, poll_interval: int = 4, client: Optional[JulesClient] = None) -> None:
+    """Faz streaming ao vivo das atividades e saídas da sessão do Jules no terminal."""
+    import time
+    from config import Colors, log
+    from auto_reply_core.turn_extractor import TurnHistoryExtractor
+
+    c = client or JulesClient()
+    clean_id = session_id.split("/")[-1]
+
+    try:
+        sess = c.get_session(clean_id)
+        title = sess.get("title", "Sem título")
+        state = sess.get("state", "UNKNOWN")
+    except Exception as e:
+        log_error("JULES-STREAM", f"Falha ao carregar sessão {clean_id}: {e}")
+        return
+
+    print("\n" + "=" * 75)
+    print(f"📡 {Colors.BOLD}{Colors.CYAN}STREAMING AO VIVO DA SESSÃO JULES{Colors.RESET}")
+    print(f"  • ID:     {Colors.BOLD}{clean_id}{Colors.RESET}")
+    print(f"  • Título: {title}")
+    print(f"  • Estado: {Colors.BOLD}{state}{Colors.RESET}")
+    print(f"  • Painel: https://jules.google.com/session/{clean_id}")
+    print("=" * 75)
+    print(f"{Colors.DIM}Pressione Ctrl+C para encerrar o acompanhamento.{Colors.RESET}\n")
+
+    seen_ids = set()
+
+    try:
+        while True:
+            try:
+                # Atualiza dados da sessão
+                sess = c.get_session(clean_id)
+                current_state = sess.get("state", "UNKNOWN")
+
+                # Obtém atividades
+                act_res = c.list_activities(clean_id, page_size=25)
+                acts = act_res.get("activities", []) if isinstance(act_res, dict) else (act_res if isinstance(act_res, list) else [])
+
+                # Processa da mais antiga para a mais recente
+                for act in reversed(acts):
+                    aid = act.get("id") or act.get("name")
+                    if aid and aid not in seen_ids:
+                        seen_ids.add(aid)
+                        ctime = act.get("createTime", "")[:19].replace("T", " ")
+                        originator = (act.get("originator") or "agent").lower()
+
+                        # 1. Mensagem do Usuário
+                        user_txt = TurnHistoryExtractor.extract_activity_text(act, role="user")
+                        if user_txt:
+                            print(f"{Colors.BOLD}{Colors.BLUE}[{ctime}] 👤 USUÁRIO:{Colors.RESET} {user_txt}")
+                            continue
+
+                        # 2. Mensagem ou Pergunta do Agente
+                        agent_txt = TurnHistoryExtractor.extract_activity_text(act, role="agent")
+                        if agent_txt:
+                            print(f"{Colors.BOLD}{Colors.GREEN}[{ctime}] 🤖 JULES:{Colors.RESET} {agent_txt}")
+                            continue
+
+                        # 3. Plano de Ação Gerado
+                        if "planGenerated" in act:
+                            plan = act["planGenerated"]
+                            steps = plan.get("steps", []) if isinstance(plan, dict) else []
+                            print(f"{Colors.BOLD}{Colors.YELLOW}[{ctime}] 📋 PLANO GERADO PELO AGENTE ({len(steps)} passos):{Colors.RESET}")
+                            for idx, step in enumerate(steps, 1):
+                                desc = step.get("description") or str(step)
+                                print(f"    {idx}. {desc}")
+                            continue
+
+                        # 4. Ação genérica ou bash command
+                        desc = act.get("description") or act.get("type") or "Atividade"
+                        print(f"{Colors.DIM}[{ctime}] ⚙️  {desc}{Colors.RESET}")
+
+                # Checa se entrou em estado de parada ou ação necessária
+                if current_state in JulesWatcher.FEEDBACK_STATES:
+                    print(f"\n{Colors.BOLD}{Colors.YELLOW}🔔 Sessão aguardando interação ({current_state})!{Colors.RESET}")
+                    print(f"👉 Para aprovar o plano: amb jules approve -s {clean_id}")
+                    print(f"👉 Para responder dúvida: amb jules reply -s {clean_id}\n")
+                    break
+
+                if current_state in JulesWatcher.TERMINAL_FAILURE_STATES:
+                    print(f"\n{Colors.BOLD}{Colors.RED}❌ Sessão encerrada com falha ({current_state}).{Colors.RESET}\n")
+                    break
+
+                if current_state in JulesWatcher.SUCCESS_STATES:
+                    pr_info = JulesClient.extract_pull_request(sess, activities=acts)
+                    pr_url = pr_info.get("url") if pr_info else "Não detectado"
+                    print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Sessão concluída com sucesso!{Colors.RESET}")
+                    print(f"  • Pull Request: {Colors.GREEN}{pr_url}{Colors.RESET}")
+                    print(f"👉 Para integrar ao Git: amb jules merge -s {clean_id}\n")
+                    break
+
+            except Exception as e:
+                log_error("JULES-STREAM", f"Erro transitório na leitura: {e}")
+
+            time.sleep(poll_interval)
+
+    except KeyboardInterrupt:
+        print(f"\n{Colors.DIM}Streaming encerrado pelo usuário.{Colors.RESET}\n")
 
 
 if __name__ == "__main__":

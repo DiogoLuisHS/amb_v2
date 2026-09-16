@@ -44,11 +44,9 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
         sid = s.get("name", "").split("/")[-1] or s.get("id")
         state = s.get("state", "UNKNOWN")
         title = s.get("title", "Sem título")
-        outputs = s.get("outputs", [])
-        prs = [o["pullRequest"] for o in outputs if "pullRequest" in o]
-        
-        pr_url = prs[0].get("url") if prs else None
-        pr_num = pr_url.split("/")[-1] if pr_url else None
+        pr_info = JulesClient.extract_pull_request(s)
+        pr_url = pr_info.get("url") if pr_info else None
+        pr_num = str(pr_info.get("number")) if pr_info and pr_info.get("number") else (pr_url.split("/")[-1] if pr_url else None)
         
         is_merged = (f"#{pr_num}" in git_history) if pr_num else False
 
@@ -160,6 +158,51 @@ def execute_deletion(client: JulesClient, sessions_to_delete: List[Dict[str, Any
     print("=" * 78 + "\n")
 
 
+def run_cleanup_sessions(
+    delete_mode: str = "merged",
+    dry_run: bool = True,
+    delete_id: Optional[str] = None,
+    client: Optional[JulesClient] = None
+) -> Dict[str, Any]:
+    """Serviço canônico de auditoria e limpeza de sessões do Jules para chamadas diretas de CLI e API (F1-M7)."""
+    c = client or JulesClient()
+    categorized = audit_project_sessions(c)
+    print_audit_report(categorized)
+
+    if delete_id:
+        found = False
+        for cat, items in categorized.items():
+            for item in items:
+                if item["session_id"] == delete_id:
+                    execute_deletion(c, [item], dry_run=dry_run)
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            try:
+                session_data = c.get_session(delete_id)
+                state = session_data.get("state", "UNKNOWN")
+                title = session_data.get("title", "Sessão Individual")
+                execute_deletion(c, [{"session_id": delete_id, "title": title, "state": state}], dry_run=dry_run)
+            except Exception as e:
+                print(f"{Colors.RED}Erro ao buscar sessão {delete_id}:{Colors.RESET} {e}")
+    elif delete_mode == "merged":
+        execute_deletion(c, categorized["merged"], dry_run=dry_run)
+    elif delete_mode == "failed":
+        execute_deletion(c, categorized["failed"], dry_run=dry_run)
+    elif delete_mode in ["all", "all_completed"]:
+        all_completed = categorized["merged"] + categorized["completed_no_pr"]
+        execute_deletion(c, all_completed, dry_run=dry_run)
+    elif not dry_run:
+        print(f"💡 Dica de Execução:")
+        print(f"  • Simular exclusão de PRs integrados: amb jules clean")
+        print(f"  • Excluir PRs já integrados no Git:   amb jules clean --force")
+        print(f"  • Excluir sessões falhas (FAILED):     amb jules clean --failed --force\n")
+
+    return categorized
+
+
 def main():
     parser = argparse.ArgumentParser(description="Auditoria e Limpeza de Sessões do Google Jules.")
     parser.add_argument("--dry-run", action="store_true", help="Simula as ações sem executar exclusões reais.")
@@ -169,42 +212,18 @@ def main():
     parser.add_argument("--delete-id", help="Exclui uma sessão específica por ID.")
 
     args = parser.parse_args()
-    client = JulesClient()
-    categorized = audit_project_sessions(client)
 
-    print_audit_report(categorized)
-
-    if args.delete_id:
-        found = False
-        for cat, items in categorized.items():
-            for item in items:
-                if item["session_id"] == args.delete_id:
-                    execute_deletion(client, [item], dry_run=args.dry_run)
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            try:
-                session_data = client.get_session(args.delete_id)
-                state = session_data.get("state", "UNKNOWN")
-                title = session_data.get("title", "Sessão Individual")
-                execute_deletion(client, [{"session_id": args.delete_id, "title": title, "state": state}], dry_run=args.dry_run)
-            except Exception as e:
-                print(f"{Colors.RED}Erro ao buscar sessão {args.delete_id}:{Colors.RESET} {e}")
-    elif args.delete_merged:
-        execute_deletion(client, categorized["merged"], dry_run=args.dry_run)
-    elif args.delete_failed:
-        execute_deletion(client, categorized["failed"], dry_run=args.dry_run)
+    mode = "merged"
+    if args.delete_failed:
+        mode = "failed"
     elif args.delete_all_completed:
-        all_completed = categorized["merged"] + categorized["completed_no_pr"]
-        execute_deletion(client, all_completed, dry_run=args.dry_run)
-    elif not args.dry_run:
-        print(f"💡 Dica de Execução:")
-        print(f"  • Simular exclusão de PRs integrados: python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-merged --dry-run")
-        print(f"  • Excluir PRs já integrados no Git:   python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-merged")
-        print(f"  • Excluir todas as sessões concluídas: python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-all-completed")
-        print(f"  • Excluir sessões falhas (FAILED):     python amb_v2/integrations/jules/tools/cleanup_sessions.py --delete-failed\n")
+        mode = "all_completed"
+
+    run_cleanup_sessions(
+        delete_mode=mode,
+        dry_run=args.dry_run,
+        delete_id=args.delete_id
+    )
 
 
 if __name__ == "__main__":

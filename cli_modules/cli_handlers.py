@@ -160,6 +160,11 @@ def cmd_jules(args):
             print(f"    https://jules.google.com/session/{sid}")
 
     elif sub == "get":
+        if getattr(args, "watch", False):
+            from integrations.jules.jules_watcher import stream_session_activities
+            stream_session_activities(args.session_id)
+            return
+
         from jules_client import JulesClient
         client = JulesClient()
         data = client.get_session(args.session_id)
@@ -171,16 +176,9 @@ def cmd_jules(args):
             log("JULES-STATUS", f"Sessão {sid}:", Colors.CYAN)
             print(f"  • Título:     {data.get('title') or 'Sem título'}")
             print(f"  • Estado:     {Colors.BOLD}{state}{Colors.RESET}")
-            outputs = data.get("outputs", {})
-            pr_url = None
-            if isinstance(outputs, list):
-                for item in outputs:
-                    if isinstance(item, dict) and item.get("pullRequest", {}).get("url"):
-                        pr_url = item["pullRequest"]["url"]
-            elif isinstance(outputs, dict):
-                pr_url = outputs.get("pullRequest", {}).get("url")
-            if pr_url:
-                print(f"  • Pull Request: {Colors.GREEN}{pr_url}{Colors.RESET}")
+            pr_info = JulesClient.extract_pull_request(data)
+            if pr_info and pr_info.get("url"):
+                print(f"  • Pull Request: {Colors.GREEN}{pr_info['url']}{Colors.RESET}")
             print(f"  • Painel Web:   https://jules.google.com/session/{sid}")
 
     elif sub == "create":
@@ -217,23 +215,18 @@ def cmd_jules(args):
         log("JULES", f"✅ Plano da sessão {args.session_id} aprovado com sucesso!", Colors.GREEN)
 
     elif sub == "merge":
-        from merge_session_pr import main as merge_main
-        sys.argv = ["merge_session_pr.py"] + (["--session-id", args.session_id] if getattr(args, "session_id", None) else []) + (["--auto-latest"] if getattr(args, "auto_latest", False) else [])
-        merge_main()
+        from integrations.jules.tools.merge_session_pr import run_merge_session_pr
+        run_merge_session_pr(
+            session_id=getattr(args, "session_id", None),
+            auto_latest=getattr(args, "auto_latest", False)
+        )
 
     elif sub in ["clean", "cleanup"]:
-        from cleanup_sessions import main as clean_main
-        clean_args = ["cleanup_sessions.py"]
-        if getattr(args, "failed", False):
-            clean_args.append("--delete-failed")
-        else:
-            clean_args.append("--delete-merged")
-            
-        if not getattr(args, "force", False):
-            clean_args.append("--dry-run")
-            
-        sys.argv = clean_args
-        clean_main()
+        from integrations.jules.tools.cleanup_sessions import run_cleanup_sessions
+        run_cleanup_sessions(
+            delete_mode="failed" if getattr(args, "failed", False) else "merged",
+            dry_run=not getattr(args, "force", False)
+        )
 
     else:
         print("Subcomando do Jules inválido. Use 'amb jules --help'.")

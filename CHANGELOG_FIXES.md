@@ -269,15 +269,47 @@ amb agent --role relay --loop --max-cycles 5
   - **Diagnóstico Modernizado (`amb check`):** Verificação de status Git, autenticação GitHub CLI (`gh`), credenciais mascaradas, binários de QA via `shutil.which`, verificação de segurança no `.gitignore` e suporte total à flag `--json`.
   - **Novas Opções na CLI:** `amb setup --force`, `--path <dir>`, `--dry-run`, `amb check --json`.
 
-### Expansão da Suíte de Testes Automatizados (40 testes passando)
-- Suíte expandida de 34 para **40 testes automatizados** com tempo de execução de ~0.47s:
-  - `tests/test_setup_and_analyzer.py` (6 testes novos: detecção Python, Node, Go, provisionamento, dry-run e diagnóstico JSON)
+### F1-M5 — Extração e Centralização do `QualityGatekeeper` (SRP & DRY)
+**Arquivos:** `pipeline/quality_gatekeeper.py`, `pipeline/__init__.py`, `pipeline/pipeline.py`, `integrations/jules/tools/merge_session_pr.py`, `config/config.py`, `tests/test_quality_gatekeeper.py`.
+- **Motivação:** A rotina de validação e execução de comandos de QA (`test`, `typecheck`, `build`, `lint`) estava duplicada linha por linha entre `pipeline/pipeline.py` e `integrations/jules/tools/merge_session_pr.py`, violando o Princípio de Responsabilidade Única (SRP) e o princípio DRY.
+- **Implementação:**
+  - Criado o módulo `pipeline/quality_gatekeeper.py` com a classe `QualityGatekeeper`.
+  - Métodos coesos e desacoplados:
+    - `detect_qa_commands(repo_root)`: Recupera comandos do `.amb/amb_project.json` (com suporte prioritário a `repo_root` em `load_project_json(repo_root)`) com fallback determinístico ao `ProjectAnalyzer`.
+    - `execute_command(cmd_str, label, cwd)`: Executa passos individuais de validação via subprocess com tratamento de saída, formatação visual e captura de falhas em Windows, Linux e macOS.
+    - `run_qa(repo_root)`: Executa toda a suíte de validação do projeto ativo e reporta status consolidado.
+  - Eliminação de todo o código duplicado de QA em `pipeline/pipeline.py` e `merge_session_pr.py` (tanto no pós-merge quanto no pós-patch), delegando exclusivamente ao `QualityGatekeeper`.
+  - Suíte de testes unitários dedicada criada em `tests/test_quality_gatekeeper.py` (4 testes passando).
+
+### F1-M7 — Refatoração e Modernização da Integração Google Jules & Desacoplamento CLI
+**Arquivos:** `integrations/jules/jules_client.py`, `integrations/jules/jules_watcher.py`, `integrations/jules/tools/merge_session_pr.py`, `integrations/jules/tools/cleanup_sessions.py`, `cli_modules/cli_handlers.py`, `integrations/jules/tools/*.py`, `.agents/skills/amb-jules-specialist/SKILL.md`, `tests/test_jules_integration.py`.
+- **Motivação:**
+  - A extração de Pull Requests da sessão Jules era divergente entre o `jules_watcher.py`, `merge_session_pr.py` e `cleanup_sessions.py` (alguns checavam `outputs`, outros regex em `activities`).
+  - O subcomando `amb jules get` não permitia acompanhamento contínuo em streaming.
+  - O handler CLI `cli_modules/cli_handlers.py` manipulava a variável global `sys.argv = [...]` para despachar `amb jules merge` e `amb jules cleanup`.
+  - Os 7 scripts utilitários em `integrations/jules/tools/` continham blocos manuais de 10 linhas de manipulação de `sys.path`.
+- **Implementação:**
+  - **Canonicidade na Detecção de PRs (`JulesClient.extract_pull_request`):** Método centralizado na classe `JulesClient` com suporte a `outputs` (lista de outputs estruturados com `pullRequest`, `url` e `title` ou dict) com fallback robusto por regex em `activities`.
+  - **Streaming em Tempo Real (`stream_session_activities`):** Implementado no `JulesWatcher` e exposto na CLI via `amb jules get <session_id> --watch` (`-w`), exibindo atualizações progressivas de passos e ações do Jules até a finalização da sessão.
+  - **Desacoplamento Completo da CLI:** Expostas funções canônicas `run_merge_session_pr(...)` e `run_cleanup_sessions(...)`. Eliminada 100% da mutação de `sys.argv` em `cli_modules/cli_handlers.py`.
+  - **Modernização de Ferramentas de Fachada:** Migrados todos os 7 scripts em `integrations/jules/tools/` (`create_session.py`, `get_session.py`, `list_sessions.py`, `list_sources.py`, `approve_plan.py`, `send_message.py`, `monitor_activities.py`) para utilizar `ensure_amb_env()`.
+  - **Atualização do Skill Specialist:** `.agents/skills/amb-jules-specialist/SKILL.md` atualizado para apontar para `integrations/jules/jules_watcher.py`.
+  - Suíte de testes unitários criada em `tests/test_jules_integration.py` (6 testes passando).
+
+---
+
+### Expansão da Suíte de Testes Automatizados (50 testes passando — 100% Green)
+- Suíte expandida de 40 para **50 testes automatizados** com tempo de execução de ~1.0s:
+  - `tests/test_jules_integration.py` (6 testes novos: extração de PR em outputs list/dict/activities, fallbacks e cleanup dry-run)
+  - `tests/test_quality_gatekeeper.py` (4 testes novos: detecção via json, fallback analyzer, execução de comandos e run_qa)
+  - `tests/test_setup_and_analyzer.py` (6 testes: detecção Python, Node, Go, provisionamento, dry-run e diagnóstico JSON)
   - `tests/test_bootstrap.py` (5 testes)
   - `tests/test_base_google_client.py` (5 testes)
   - `tests/test_auto_reply_srp.py` (7 testes)
   - `tests/test_git_service.py` (7 testes)
   - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
   - `tests/test_ai_context_builder.py` (2 testes)
+
 
 
 

@@ -37,67 +37,7 @@ from integrations.git.git_service import GitService
 from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
 
 
-
-class QualityGatekeeper:
-    """Valida o código localmente após o término da sessão remota com auto-detecção de stack."""
-
-    @staticmethod
-    def run_qa(repo_root: str) -> bool:
-        log("QA", "Executando verificação de integridade local...", Colors.CYAN)
-
-        def _run_qa_cmd(cmd_str: str, label: str) -> bool:
-            if not cmd_str.strip():
-                return True
-            print(f"\n[{Colors.BOLD}QA{Colors.RESET}] {cmd_str}")
-            import shlex
-            import shutil
-            parts = shlex.split(cmd_str.strip(), posix=(sys.platform != "win32"))
-            if not parts:
-                return True
-            bin_path = shutil.which(parts[0])
-            use_shell = False
-            if bin_path:
-                parts[0] = bin_path
-            else:
-                use_shell = True
-            proc = subprocess.run(
-                parts, cwd=repo_root,
-                capture_output=True, text=True, encoding="utf-8", errors="replace", shell=use_shell
-            )
-            if proc.returncode != 0:
-                if proc.stdout.strip():
-                    print(proc.stdout)
-                if proc.stderr.strip():
-                    print(proc.stderr)
-                log_error("QA", f"Falha no passo: {label}!")
-                return False
-            print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
-            return True
-
-        from config import load_project_json
-        proj = load_project_json()
-        qa_cfg = proj.get("qa", {})
-
-        # Auto-detecção de stack
-        if not qa_cfg:
-            if os.path.exists(os.path.join(repo_root, "package.json")):
-                qa_cfg = {"typecheck": "npm run typecheck", "build": "npm run build"}
-            elif os.path.exists(os.path.join(repo_root, "pyproject.toml")) or os.path.exists(os.path.join(repo_root, "requirements.txt")):
-                qa_cfg = {"python_syntax": "python -m py_compile cli.py"}
-            elif os.path.exists(os.path.join(repo_root, "go.mod")):
-                qa_cfg = {"go_build": "go build ./..."}
-            else:
-                qa_cfg = {}
-
-        if not qa_cfg:
-            print(f"{Colors.GREEN}✔ Nenhuma suíte de QA necessária para este repositório.{Colors.RESET}")
-            return True
-
-        for step_key, step_cmd in qa_cfg.items():
-            if not _run_qa_cmd(step_cmd, step_key):
-                return False
-
-        return True
+from pipeline.quality_gatekeeper import QualityGatekeeper
 
 
 class PipelineOrchestrator:

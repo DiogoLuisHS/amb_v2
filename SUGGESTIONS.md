@@ -31,11 +31,11 @@ Com a entrega bem-sucedida das bases fundamentais (Bootstrap, BaseGoogleClient, 
 
 ### 🔴 MUST HAVE (Frente 1) — Desduplicação Crítica & SRP Estrito
 
-| Item | Título | Alvo / Escopo Principal |
-| :--- | :--- | :--- |
-| **F1-M5** | Extração e Centralização do `QualityGatekeeper` | `pipeline/quality_gatekeeper.py` (desduplica `pipeline.py` e `merge_session_pr.py`) |
-| **F1-M6** | Unificação de Regras do Repositório (`RulesManager`) | `config/rules_manager.py` (desduplica `pipeline.py` e `cognitive_advisor.py`) |
-| **F1-M7** | Desacoplamento de Handlers CLI & Fim de `sys.argv` | `cli_modules/cli_handlers.py` (chamada direta de serviços de domínio) |
+| Item | Título | Alvo / Escopo Principal | Status |
+| :--- | :--- | :--- | :--- |
+| **F1-M5** | Extração e Centralização do `QualityGatekeeper` | `pipeline/quality_gatekeeper.py` (desduplica `pipeline.py` e `merge_session_pr.py`) | ✅ Concluído (v2.3) |
+| **F1-M6** | Unificação de Regras do Repositório (`RulesManager`) | `config/rules_manager.py` (desduplica `pipeline.py` e `cognitive_advisor.py`) | ⏳ Pendente |
+| **F1-M7** | Desacoplamento de Handlers CLI & Fim de `sys.argv` | `cli_modules/cli_handlers.py` (chamada direta de serviços de domínio) | ✅ Concluído (v2.3) |
 
 #### Detalhamento Técnico das Ações Must Have:
 
@@ -191,4 +191,4 @@ Todas as melhorias arquiteturais, refatorações SRP, novas funcionalidades e co
 
 👉 **[`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md)**
 
-Consulte o changelog para verificar o detalhamento técnico de cada entrega concluída (`F1-M1`, `F1-M2`, `F1-M3`, `F1-M4`, `F1-M8`, `F1-M9`), arquivos modificados, motivações, soluções arquiteturais e suíte de testes automatizados (40/40 passing).
+Consulte o changelog para verificar o detalhamento técnico de cada entrega concluída (`F1-M1`, `F1-M2`, `F1-M3`, `F1-M4`, `F1-M5`, `F1-M7`, `F1-M8`, `F1-M9`), arquivos modificados, motivações, soluções arquiteturais e suíte de testes automatizados (50/50 passing).

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """⚡ Jules Tool: monitor_activities (Facade)"""
-import sys, os, argparse, time
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur: break
-    _cur = _p
-for _s in ["config", "integrations/jules"]:
-    _p = os.path.normpath(os.path.join(_cur, *_s.split("/")))
-    if os.path.exists(_p) and _p not in sys.path: sys.path.insert(0, _p)
-from jules_client import JulesClient, Colors, log, log_error
+import sys
+import os
+import argparse
+import time
+
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
+
+from config import Colors, log, log_error
+from integrations.jules.jules_client import JulesClient
 
 def monitor_session(session_id: str, poll_interval: int = 5, client: JulesClient = None):
     c = client or JulesClient()
