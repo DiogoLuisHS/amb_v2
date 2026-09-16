@@ -46,7 +46,7 @@ def cmd_monitor(args):
         run_auto_advisor(auto_approve=args.auto_approve)
         return
 
-    from unified_monitor import UnifiedMonitor
+    from agents.monitor import UnifiedMonitor
     monitor = UnifiedMonitor(interval=args.interval, auto_approve=args.auto_approve)
     monitor.run(check_once=args.check_once)
 

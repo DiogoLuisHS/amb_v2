@@ -1,31 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-📡 AMB_V2 - Monitoramento: Emissor de Alertas Visuais e Sonoros (SRP)
-Localização: amb_v2/dashboard/watchers/alert_notifier.py
+📡 AMB_V2 - Apresentação CLI: Emissor de Alertas Visuais e Sonoros (SRP)
+Localização: amb_v2/cli_modules/alert_notifier.py
 Responsabilidade Única: Formatar e emitir alertas destacados no terminal com destaque de atenção e beeps.
 """
 
 import sys
 import os
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors
 
@@ -71,5 +56,5 @@ if __name__ == "__main__":
         source="Teste",
         title="Alerta de Exemplo",
         details="Isto é uma demonstração do banner de alerta.",
-        action_command="python amb_v2/dashboard/auto_advisor.py"
+        action_command="amb advisor"
     )

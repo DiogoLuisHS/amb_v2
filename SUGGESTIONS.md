@@ -1,94 +1,111 @@
 # 📊 AMB_V2 — Roadmap Estratégico e Priorização MoSCoW
 
-> **Data de Atualização:** 2026-09-14 | **Versão:** 2.1.0  
-> **Foco Estratégico:** Excelência Arquitetural (SRP & Desduplicação) e Consolidação Nativa no Ecossistema Google (**Google Jules**, **Google Stitch**, **Google Antigravity/Gemini**, **Google Cloud** e **Google Workspace**).
+> **Data de Atualização:** 2026-09-16 | **Versão:** 2.3.0  
+> **Foco Estratégico:** Excelência Arquitetural (SRP & Desduplicação Estrita), Evolução Robusta do Core Local (Zero Novas Dependências Externas) e Consolidação Nativa no Ecossistema Google (**Google Jules**, **Google Stitch**, **Google Antigravity/Gemini**, **Google Cloud** e **Google Workspace**).
 
 ---
 
-## 🎯 Visão Geral das Duas Frentes
+## 🎯 Visão Geral das Duas Frentes de Desenvolvimento
 
-Com a remoção completa das referências ao Render Cloud, o `amb_v2` se consolida como uma plataforma especializada de engenharia autônoma e orquestração de agentes. Para elevar o projeto ao nível de maturidade empresarial, definimos **duas frentes prioritárias de evolução**:
+Com a entrega bem-sucedida das bases fundamentais (Bootstrap, BaseGoogleClient, GitService e SRP do Auto-Reply), o `amb_v2` entra em sua fase de consolidação e escala. O roadmap de desenvolvimento ativo está rigorosamente estruturado em **duas frentes estratégicas**:
 
-1. **Frente 1 (Arquitetura & Engenharia):** Eliminação cirúrgica de redundâncias de código e aplicação estrita do **SRP (Single Responsibility Principle)**.
-2. **Frente 2 (Ecossistema Google):** Expansão das integrações com serviços gerenciados do Google (**Cloud Run**, **Google Chat**, **Secret Manager**, **Google Sheets**, **Cloud Logging** e **Gemini Multimodal**).
+1. **Frente 1 — Redução de Redundâncias, Aplicação Estrita do SRP & Evolução do Core Local:**  
+   Foco exclusivo no refinamento da base de código interna, eliminação de duplicações descobertas na auditoria técnica, desacoplamento rigoroso entre camadas (CLI, Pipeline, Loop, QA, Regras) e evolução contínua da experiência de desenvolvimento local — **estritamente sem novas integrações externas ou serviços em nuvem**.
+2. **Frente 2 — Expansão no Ecossistema Google & Serviços em Nuvem:**  
+   Conexão estratégica com serviços gerenciados de nuvem e ferramentas corporativas do Google (**Cloud Run**, **Google Chat Webhooks**, **Secret Manager**, **Google Sheets**, **Cloud Logging** e **Gemini Multimodal**).
 
----
-
-# 🏛️ FRENTE 1: Redução de Redundâncias & Aplicação Estrita do SRP
-
-### Diagnóstico de Débito Técnico Atual
-- **Duplicação de `sys.path`**: Mais de 12 arquivos repetem um bloco idêntico de 15 linhas de bootstrapping de diretórios.
-- **Acoplamento em `auto_reply.py`**: O módulo concentra 700+ linhas misturando parsing de conversação, inferência no Gemini, sanitização de Markdown e despacho de mensagens REST.
-- **Comandos Git e GitHub dispersos**: Chamadas a `subprocess.run(["git", ...])` e `gh` estão espalhadas em 6 locais diferentes sem interface única.
-- **Clientes HTTP sem base comum**: `jules_client.py` e `antigravity_client.py` reimplementam tratamento de cabeçalhos, logging e tratamento de exceções de rede.
+*(Nota: As entregas já finalizadas e validadas foram movidas para a seção final [🏁 Entregas Já Desenvolvidas e Integradas](#-entregas-já-desenvolvidas-e-integradas-fase-concluída).)*
 
 ---
 
-### 🔴 MUST HAVE (Frente 1) — Essenciais para Saúde e Manutenibilidade
+# 🏛️ FRENTE 1: Redução de Redundâncias, Aplicação Estrita do SRP & Evolução do Core Local (Sem Novas Integrações)
 
-#### 1. F1-M1 — Módulo Central de Bootstrap de Ambiente (`amb_bootstrap.py` / `config/bootstrap.py`) ✅ `[CONCLUÍDO]`
-- **Problema:** Cada script (`cli.py`, `pipeline.py`, `jules_watcher.py`, `local_agent_runner.py`, etc.) executa loops próprios para adicionar caminhos a `sys.path`.
-- **Solução:** Criado `config/bootstrap.py` e atalho global `amb_bootstrap.py`:
-  ```python
-  from config.bootstrap import ensure_amb_env
-  ensure_amb_env()
-  ```
-- **Impacto:** Eliminou mais de 180 linhas de código boilerplate duplicado e padronizou a resolução de imports no monorepo e módulos externos.
-
-#### 2. F1-M2 — Cliente Base Padronizado para APIs Google (`BaseGoogleClient`) ✅ `[CONCLUÍDO]`
-- **Problema:** Lógica de requisição, retries, headers de autenticação, captura de erros 429/503 e decodificação JSON duplicadas entre integrações.
-- **Solução:** Criado `integrations/common/base_google_client.py`:
-  - Retry automático com backoff exponencial + jitter (0.8x a 1.2x) para resiliência de quotas de IA.
-  - Normalização semântica de erros em `ApiExecutionError` com hints contextuais.
-  - Mascaramento automático de tokens e chaves de API nos logs e exceptions.
-- **Impacto:** Resiliência contra instabilidades transitórias de rede sem repetição de código em Jules e Antigravity/Gemini.
-
-#### 3. F1-M3 — Decomposição SRP de `auto_reply.py` ✅ `[CONCLUÍDO]`
-- **Problema:** `agents/auto_reply.py` acumulava responsabilidades distintas: extrair histórico de turnos, invocar o Gemini via Antigravity SDK, avaliar intenção humana, e postar a resposta de volta ao Jules.
-- **Solução:** Decomposto no pacote `agents/auto_reply_core/` com classes de responsabilidade única e fachada retrocompatível em `agents/auto_reply.py`:
-  - `TurnHistoryExtractor`: Filtra mensagens relevantes, elimina duplicatas e detecta a real pergunta do agente.
-  - `CognitiveAdvisor`: Consulta Gemini com contexto arquitetural e gera o parecer técnico.
-  - `JulesFeedbackDispatcher`: Envia a resposta/aprovação para a API do Jules e gerencia menus/lotes.
-- **Impacto:** Testabilidade unitária isolada de cada etapa e facilidade para mockar o Gemini e o Jules em pipelines de CI.
-
-#### 4. F1-M4 — Serviço Central de Abstração Git/GitHub (`GitService`) ✅ `[CONCLUÍDO]`
-- **Problema:** Comandos `git checkout`, `git rev-parse`, `git status` e chamadas ao `gh pr merge` ocorriam diretamente via `subprocess` em múltiplos locais.
-- **Solução:** Criado `integrations/git/git_service.py` isolando:
-  - Inspeção de branches, status de working directory, detecção de repositório remoto e commits.
-  - Operações completas de Pull Request via `gh` CLI (list, ready, review, merge) com validação fail-fast de autenticação.
-- **Impacto:** Isola dependências do executável do Git e permite testes com mocks seguros.
+### 🎯 Princípios Inegociáveis da Frente 1
+- **Zero Novas Dependências Externas:** Toda a arquitetura e persistência rodam localmente no ambiente de desenvolvimento (`.amb/`, SQLite/JSONL, Git local, terminal ANSI).
+- **Responsabilidade Única (SRP):** Cada arquivo, classe ou função deve ter uma única razão para mudar. CLI handlers apenas despacham; scripts chamam serviços de domínio; validações de QA pertencem a um gatekeeper isolado.
+- **DRY (Don't Repeat Yourself):** Eliminação de toda duplicação de lógica de execução de testes, polling de sessões, manipulação de `sys.path` e extração de regras.
+- **Alta Resiliência e Tolerância a Falhas:** Ciclos autônomos recuperáveis contra quedas de terminal, rede ou interrupções acidentais.
+- **100% Testabilidade com Mocks:** Cobertura de testes unitários isolados para cada componente refatorado.
 
 ---
 
-### 🟡 SHOULD HAVE (Frente 1) — Importantes para Maturidade
+### 🔴 MUST HAVE (Frente 1) — Desduplicação Crítica & SRP Estrito
 
-#### 1. F1-S1 — Orquestrador de Estados do Loop Autônomo (`LoopStateMachine`)
-- **Problema:** `agents/autonomous_loop.py` gerencia o ciclo inteiro (escolha de persona, despacho, polling de sessão, QA pipeline e auto-merge) em um único bloco de execução imperativo.
-- **Solução:** Implementar padrão State Machine com estados claros (`IDLE`, `DISPATCHING_JULES`, `MONITORING`, `RUNNING_LOCAL_QA`, `MERGING_PR`, `UPDATING_DIARY`).
-- **Impacto:** Permite pausar, retomar pós-crash (`.amb/loop_state.json`) e inspecionar visualmente a etapa exata de execução.
+| Item | Título | Alvo / Escopo Principal |
+| :--- | :--- | :--- |
+| **F1-M5** | Extração e Centralização do `QualityGatekeeper` | `pipeline/quality_gatekeeper.py` (desduplica `pipeline.py` e `merge_session_pr.py`) |
+| **F1-M6** | Unificação de Regras do Repositório (`RulesManager`) | `config/rules_manager.py` (desduplica `pipeline.py` e `cognitive_advisor.py`) |
+| **F1-M7** | Desacoplamento de Handlers CLI & Fim de `sys.argv` | `cli_modules/cli_handlers.py` (chamada direta de serviços de domínio) |
 
-#### 2. F1-S2 — Camada Unificada de Apresentação de Terminal (`ConsolePresenter`)
-- **Problema:** Formatação de tabelas, banners ANSI, barras divisórias e mensagens de erro são formatadas manualmente em dezenas de funções CLI.
-- **Solução:** Criar `cli_modules/presenter.py` com funções dedicadas para renderizar tabelas, listas formatadas, cards de status e progresso.
-- **Impacto:** Visual consistente em toda a CLI, respeitando flags `--json` ou `--quiet`.
+#### Detalhamento Técnico das Ações Must Have:
 
-#### 3. F1-S3 — Gerenciador de Configurações com Cache & Imutabilidade (`ConfigManager`)
-- **Problema:** `get_env()` e `load_project_json()` fazem I/O de disco repetido ao buscar `.env` e `amb_project.json`.
-- **Solução:** Criar classe Singleton `ConfigManager` que carrega uma única vez e provê acesso tipado e validado às configurações.
-- **Impacto:** Ganho de performance em loops de polling e sentinela.
+1. **F1-M5 — Extração e Centralização do `QualityGatekeeper` (`pipeline/quality_gatekeeper.py`)**
+   - **Descoberta Técnica (Auditoria):** A rotina de execução de QA (`_run_qa_cmd`, auto-detecção de stack por `package.json`/`pyproject.toml`/`go.mod`, resolução de binários via `shutil.which` e fallback de shell) está **duplicada quase linha por linha** entre `pipeline/pipeline.py` (L41-102) e `integrations/jules/tools/merge_session_pr.py` (L235-281).
+   - **Violação do SRP:** `merge_session_pr.py` tem a responsabilidade de aprovar e integrar Pull Requests, mas atualmente incorpora a execução e detecção de suíte de testes de código.
+   - **Solução:**
+     - Criar `pipeline/quality_gatekeeper.py` com a classe `QualityGatekeeper`.
+     - Expor métodos coesos: `run_qa(repo_root) -> bool` e `detect_stack_qa(repo_root) -> dict`.
+     - Substituir o código duplicado em `pipeline.py`, `merge_session_pr.py` e no loop autônomo por chamadas ao módulo central.
+
+2. **F1-M6 — Unificação de Regras do Repositório (`RulesManager` / `config/rules_manager.py`)**
+   - **Descoberta Técnica (Auditoria):** A resolução dos diretórios de regras (`.antigravity/rules/` vs `.gemini/rules/`), leitura, corte seguro de tamanho e filtragem de comentários/metadados é executada independentemente por `PipelineOrchestrator._extract_clean_rules` em `pipeline/pipeline.py` (L418-450) e por `CognitiveAdvisor.load_rules` / `_resolve_rules_dir` / `filter_rules_for_jules` em `agents/auto_reply_core/cognitive_advisor.py`.
+   - **Solução:**
+     - Criar `config/rules_manager.py` com classe `RulesManager`.
+     - Centralizar: resolução prioritária de diretório (`.antigravity/rules` ➔ `.gemini/rules`), leitura com integridade de markdown (fechamento correto de fences ```` ``` ````), sanitização de regras e cache em memória.
+     - Injetar `RulesManager` no `PipelineOrchestrator` e no `CognitiveAdvisor`.
+
+3. **F1-M7 — Desacoplamento de CLI Handlers & Fim da Mutação de `sys.argv` (`cli_modules/cli_handlers.py`)**
+   - **Descoberta Técnica (Auditoria):** Em `cli_modules/cli_handlers.py` (L215-232), os subcomandos `amb jules merge` e `amb jules cleanup` manipulam a variável global do interpretador `sys.argv = [...]` para chamar a função `main()` dos scripts de ferramentas.
+   - **Violação de Boas Práticas e SRP:** Mutações em `sys.argv` geram efeitos colaterais globais, impedem reentrância e acoplam o parser CLI ao parser do script invocado.
+   - **Solução:**
+     - Em `cleanup_sessions.py`, extrair a rotina de exclusão para função de domínio testável: `cleanup_sessions_service(client, delete_mode, dry_run) -> dict`.
+     - Em `merge_session_pr.py`, expor `approve_and_merge_pr(...)` com todos os parâmetros tipados.
+     - Fazer `cli_handlers.py` invocar diretamente essas funções de serviço.
 
 ---
 
-### 🟢 COULD HAVE (Frente 1) — Desejáveis para Próximas Versões
+### 🟡 SHOULD HAVE (Frente 1) — Evolução do Core Local & Robustez de Ciclo de Vida
 
-#### 1. F1-C1 — Decorators Declarativos para Comandos da CLI
-- **Problema:** `cli_parsers.py` e `cli_handlers.py` exigem sincronização manual de argumentos e mapeamento de funções.
-- **Solução:** Permitir registrar comandos via decorators `@amb_command("monitor")` diretamente nos módulos de domínio.
-- **Impacto:** Modularização extrema — novos módulos registram seus próprios comandos sem alterar o parser central.
+| Item | Título | Alvo / Escopo Principal |
+| :--- | :--- | :--- |
+| **F1-S1** | Orquestrador de Estados do Loop Autônomo (`LoopStateMachine`) | `.amb/loop_state.json`, comandos `pause`, `resume`, `status` |
+| **F1-S2** | Unificação de Polling e Monitor de Sessão (`SessionMonitor`) | Centralizar polling de `autonomous_loop.py`, `pipeline.py` e watcher |
+| **F1-S3** | Gerenciador Central de Configurações (`ConfigManager`) | `config/config_manager.py` (Singleton com cache e imutabilidade) |
+| **F1-S4** | Telemetria Local Estruturada & Comando `amb stats` | `.amb/telemetry.jsonl` e métricas consolidadas via CLI |
+| **F1-S5** | Engine Unificada de Templates de Persona (`PersonaEngine`) | `agents/persona_engine.py` (interpolação e validação sintática) |
 
-#### 2. F1-C2 — Engine Unificada de Templates de Persona (`PersonaEngine`)
-- **Problema:** Formatação de prompts das 10 personas espalhada entre arquivos markdown e código Python de bootstrap.
-- **Solução:** Centralizar a injeção de variáveis de ambiente (`{repo_name}`, `{stack}`, `{typecheck_cmd}`) em um motor de interpolação único.
+#### Detalhamento Técnico das Ações Should Have:
+
+1. **F1-S1 — Orquestrador de Estados do Loop Autônomo (`LoopStateMachine`)**
+   - **Diagnóstico:** `agents/autonomous_loop.py` opera como um loop síncrono monolítico em memória. Qualquer `Ctrl+C` acidental, fechamento de terminal ou reinicialização do sistema perde totalmente a contagem de ciclos, persona ativa, rotação de módulos e estado do PR em andamento.
+   - **Solução:** Implementar `LoopStateMachine` com persistência local atômica em `.amb/loop_state.json`. Estados: `IDLE`, `SELECTING_PERSONA`, `DISPATCHING_JULES`, `MONITORING_SESSION`, `RUNNING_LOCAL_QA`, `MERGING_PR`, `CYCLE_COMPLETED`, `PAUSED`, `FAILED`. Novos comandos CLI: `amb loop status`, `amb loop pause` e `amb loop resume`.
+
+2. **F1-S2 — Unificação de Polling e Monitoramento de Sessões (`SessionMonitor` & `SessionState`)**
+   - **Diagnóstico:** Três lógicas paralelas de monitoramento coexistem (`autonomous_loop.py`, `pipeline.py` e `jules_watcher.py`), checando strings mágicas idênticas (`AWAITING_USER_FEEDBACK`, `AWAITING_INPUT`, `AWAITING_PLAN_APPROVAL`, `COMPLETED`, `FAILED`).
+   - **Solução:** Definir enum canônico `SessionState` com helpers (`is_awaiting_feedback()`, `is_terminal()`, `is_success()`) e unificar o loop de polling em `SessionMonitor`.
+
+3. **F1-S3 — Gerenciador de Configurações com Cache em Memória (`ConfigManager`)**
+   - **Diagnóstico:** `get_env()`, `load_env_file()` e `load_project_json()` realizam dezenas de acessos síncronos a disco por minuto durante a rotação de agentes e watchers.
+   - **Solução:** Criar `ConfigManager` (Singleton) com leitura única na inicialização, cache em memória, imutabilidade dos valores lidos, fail-fast tipado e método `reload()` acionável via CLI.
+
+4. **F1-S4 — Telemetria Local Estruturada & Comando `amb stats` (`LocalTelemetry`)**
+   - **Diagnóstico:** Não existe nenhum histórico estruturado local das execuções do Jules, tempo de build do QA, taxa de sucesso de auto-respostas ou ciclos concluídos.
+   - **Solução:** Criar registrador estruturado append-only em `.amb/telemetry.jsonl` (arquivo local, zero envio para internet ou nuvem) e comando `amb stats` para exibir métricas consolidadas diretamente no terminal.
+
+5. **F1-S5 — Engine Unificada de Templates de Persona (`PersonaEngine`)**
+   - **Diagnóstico:** A resolução de personas está fragmentada entre `load_persona_content` em `autonomous_loop.py` (com dicionário hardcoded de fallbacks `relay`, `sentry`, `pixel`) e `discover_personas` em `local_agent_runner.py`.
+   - **Solução:** Criar `agents/persona_engine.py` unificando carregamento, fallbacks padrão, validação de sintaxe (`amb persona validate`) e interpolação de variáveis locais (`{repo_name}`, `{stack}`, `{entrypoints}`, `{rules}`, `{qa_command}`).
+
+---
+
+### 🟢 COULD HAVE (Frente 1) — Refinamentos de DX & Resiliência Offline
+
+| Item | Título | Alvo / Escopo Principal |
+| :--- | :--- | :--- |
+| **F1-C1** | Camada Centralizada de Apresentação de Terminal | `cli_modules/presenter.py` com tabelas adaptativas, `--json` e `--quiet` |
+| **F1-C2** | Sandbox Local e Sanitizador de Logs de QA | `.amb/logs/qa/` e extração concisa das 20 linhas de stacktrace |
+| **F1-C3** | Validador Pré-Commit de Regras Locais | Comando `amb validate --staged` como Git Hook local |
+| **F1-C4** | Fallback Local Offline com Gemma 2 via Ollama/AGY | Contingência offline para geração de pareceres e aprovação de planos |
 
 ---
 
@@ -96,120 +113,123 @@ Com a remoção completa das referências ao Render Cloud, o `amb_v2` se consoli
 
 | Item | Justificativa |
 | :--- | :--- |
-| **F1-W1 — Reescrever o Core em TypeScript** | O ecossistema Python nativo atende com excelência os SDKs de IA (Google GenAI, Jules REST) e automações CLI. |
-| **F1-W2 — Frameworks Complexos de Dependency Injection (DI)** | Adicionaria complexidade desnecessária. Injeção de dependência via construtores simples é suficiente. |
+| **F1-W1 — Novas Integrações em Nuvem na Frente 1** | Qualquer conexão com serviços de nuvem externos (Cloud Run, Chat Webhooks, Secret Manager, Sheets) pertence exclusivamente à **Frente 2**. |
+| **F1-W2 — Reescrever o Core em TypeScript / Rust** | O ecossistema Python nativo atende com velocidade e simplicidade as automações e SDKs de IA. |
+| **F1-W3 — Frameworks Pesados de Injeção de Dependência (DI)** | Adiciona sobrecarga e opacidade. Injeção explícita via construtores é clara, testável e sem mágica. |
+| **F1-W4 — Banco de Dados Relacional Externo (Postgres/MySQL) para Estado Local** | Arquivos JSON/JSONL e SQLite locais em `.amb/` são leves, portáveis, versionáveis e não exigem daemons de banco. |
 
 ---
 
-# 🌐 FRENTE 2: Expansão das Integrações no Ecossistema Google
+# 🌐 FRENTE 2: Expansão das Integrações no Ecossistema Google & Serviços em Nuvem
+
+> [!NOTE]
+> A Frente 2 é dedicada às conexões de nuvem e ferramentas colaborativas, construídas sobre a fundação desacoplada e testada entregue pela Frente 1.
 
 ### Visão Estratégica
-Substituir soluções fragmentadas de terceiros e alavancar a infraestrutura do Google para criar o ciclo de desenvolvimento autônomo mais integrado do mercado: **Stitch (UI) ➔ Gemini (Análise) ➔ Jules (Código) ➔ Cloud Run (Deploy) ➔ Google Workspace (Colaboração)**.
+Criar o ciclo contínuo de engenharia mais integrado do ecossistema Google:  
+**Stitch (UI Mockup) ➔ Gemini (Análise Multimodal) ➔ Jules (Código na VM Cloud) ➔ Cloud Run (Deploy Serverless) ➔ Google Workspace (Colaboração)**.
 
 ---
 
-### 🔴 MUST HAVE (Frente 2) — Substitutos Diretos & Capacidades Essenciais
+### 🔴 MUST HAVE (Frente 2) — Capacidades Cloud Fundamentais
+- **F2-M1 — Deploy Serverless Nativo com Google Cloud Run (`amb cloudrun`)**: Disparo de build e deploy automático pós-merge de PR com Scale-to-Zero e monitoramento de URL ativa.
+- **F2-M2 — Alertas e Interações no Google Chat (Workspace Webhooks)**: Notificações com Cards interativos no Google Chat para aprovação de planos e perguntas do Jules.
+- **F2-M3 — Pipeline Visual Stitch ➔ Gemini Multimodal ➔ Jules**: Envio de capturas visuais de telas do Stitch para análise de conformidade de design via Gemini Vision antes do despacho de código.
 
-#### 1. F2-M1 — Deploy Serverless Nativo com Google Cloud Run (`amb cloudrun`)
-- **Problema:** A remoção do Render deixou o ciclo "Design-to-Deploy" sem etapa final de publicação de web apps/APIs.
-- **Solução:** Criar módulo `integrations/gcp/cloud_run_client.py` e comandos CLI:
-  - `amb cloudrun deploy`: Dispara build e deploy automatizado no Cloud Run pós-merge do PR.
-  - `amb cloudrun status`: Inspeciona tráfego, status da revisão ativa e URL pública.
-  - `amb cloudrun logs`: Monitora logs de produção via Google Cloud Logging.
-- **Impacto:** Fecha o ciclo completo de entrega contínua dentro do ecossistema Google, com custos zero em repouso (Scale-to-Zero).
+### 🟡 SHOULD HAVE (Frente 2) — Governança e Operações em Nuvem
+- **F2-S1 — Sincronização com Google Secret Manager (`amb secret`)**: Gestão de segredos e chaves de API puxadas diretamente do GCP.
+- **F2-S2 — Exportação de Telemetria para Google Sheets**: Dashboard compartilhado em tempo real no Google Sheets / Looker Studio com métricas de produtividade.
+- **F2-S3 — Google Cloud Logging Estruturado**: Emissão de logs em JSON estruturado para observabilidade no Console GCP.
 
-#### 2. F2-M2 — Notificações e Interações no Google Chat (Workspace Webhooks)
-- **Problema:** Alertas urgentes do Jules ficam presos no terminal local se o desenvolvedor não estiver olhando a tela.
-- **Solução:** Integrar webhooks do Google Chat em `alert_notifier.py`:
-  - Alerta formatado com Cards interativos (Status Badge, Título da Sessão, Dúvida do Agente, Link direto para o painel Jules).
-  - Notificação de PR gerado e aprovado.
-  - Configuração simples via `GOOGLE_CHAT_WEBHOOK_URL` no `.env`.
-- **Impacto:** Notificação instantânea no celular ou desktop via Google Chat/Workspace da equipe.
-
-#### 3. F2-M3 — Pipeline Visual Stitch ➔ Gemini Multimodal ➔ Jules
-- **Problema:** Hoje o Stitch gera HTML, mas o Jules precisa de um prompt textual descritivo para traduzir isso em componentes React/Vue/Next do projeto.
-- **Solução:** O `pipeline.py` captura o screenshot gerado pelo Stitch, envia a imagem para o modelo multimodal **Gemini 2.5 Flash / Pro** comparar visualmente com as regras arquiteturais e gerar a especificação de código mais precisa para o Jules implementar.
-- **Impacto:** Elimina discrepâncias visuais entre o design do Stitch e o componente codificado no GitHub.
+### 🟢 COULD HAVE (Frente 2) — Integrações Complementares
+- **F2-C1 — Sincronização de Diários de Aprendizado com Google Docs / Drive (`amb docs sync`)**.
+- **F2-C2 — Google Cloud Build como Executor Remoto de QA**.
 
 ---
 
-### 🟡 SHOULD HAVE (Frente 2) — Produtividade e Governança
-
-#### 1. F2-S1 — Integração com Google Secret Manager (`amb secret`)
-- **Problema:** Chaves de API (`JULES_API_KEY`, `GEMINI_API_KEY`, `STITCH_API_KEY`) ficam armazenadas em texto puro no `.env` local.
-- **Solução:** Suporte a carregar e sincronizar variáveis diretamente do Google Secret Manager do projeto GCP associado:
-  ```bash
-  amb secret pull     # Preenche ou atualiza o .env local com as secrets da nuvem
-  amb secret push     # Sobe variáveis seguras do projeto para a nuvem
-  ```
-- **Impacto:** Segurança de nível corporativo e facilidade para onboarding de novos membros no time.
-
-#### 2. F2-S2 — Telemetria de Sessões e Produtividade em Google Sheets
-- **Problema:** Métricas de desempenho do Jules (duração de sessões, custos, número de PRs, assertividade das auto-respostas) não são tabuladas para análise.
-- **Solução:** Exportador leve via Google Sheets API (ou Service Account) que registra cada ciclo do loop em uma planilha compartilhada:
-  - Data/Hora, Persona utilizada, Session ID, Status, PR gerado, Tempo de resposta, Feedback do Gemini.
-- **Impacto:** Visibilidade executiva e dashboards em tempo real usando Google Looker Studio sobre a planilha.
-
-#### 3. F2-S3 — Google Cloud Logging Estruturado para o Sentinela
-- **Problema:** Logs do sentinela (`unified_monitor.py`) são locais. Quando rodando em VPS ou containers em background, não há rastreabilidade centralizada.
-- **Solução:** Emissão de logs estruturados em JSON no padrão Cloud Logging (severity, component, trace_id, payload).
-- **Impacto:** Auditoria de auditoria centralizada no console do Google Cloud Platform.
-
----
-
-### 🟢 COULD HAVE (Frente 2) — Recursos Complementares
-
-#### 1. F2-C1 — Exportação Automática de Diários e Specs para o Google Docs / Drive
-- **Problema:** Diários de aprendizado (`.amb/diarios/`) e especificações de tela só existem no repositório Markdown local.
-- **Solução:** Comando `amb docs sync` para converter diários em documentos compartilhados no Google Drive da equipe técnica.
-
-#### 2. F2-C2 — Suporte a Modelos Locais Gemma (Google DeepMind)
-- **Problema:** Quando offline ou com restrições severas de quota, o desenvolvedor não consegue rodar auto-respostas do Gemini.
-- **Solução:** Integrar modelos **Gemma 2 (2B/9B)** rodando localmente via Ollama ou Google GenAI SDK como fallback de emergência para as personas e advisor.
-
-#### 3. F2-C3 — Google Cloud Build como Validador Remoto de QA
-- **Problema:** Projetos com suites de teste muito pesadas podem travar a máquina do desenvolvedor durante o `run_local_qa`.
-- **Solução:** Disparar a suite de testes no Cloud Build e apenas aguardar o status final de sucesso/falha antes do merge.
-
----
-
-### 🔵 WON'T HAVE (Frente 2) — Fora do Escopo Desta Fase
-
-| Item | Justificativa |
-| :--- | :--- |
-| **F2-W1 — Gestão de Clusters Google Kubernetes Engine (GKE)** | Excessivamente complexo para automação de código ágil; Cloud Run atende 99% dos casos de uso de web apps e microsserviços. |
-| **F2-W2 — Data Warehouse no BigQuery** | O volume de dados de execuções é perfeitamente acomodado em JSONL local e Google Sheets. |
-
----
-
-# 📅 Cronograma Sugerido de Implementação por Sprints
+# 📅 Cronograma Atualizado de Sprints
 
 ```mermaid
 gantt
-    title AMB_V2 — Roadmap de Sprints (SRP + Google Ecosystem)
+    title AMB_V2 — Roadmap de Sprints (Frente 1 Core Local + Frente 2 Google Cloud)
     dateFormat  YYYY-MM-DD
-    section Sprint 1: Fundação & Resiliência
-    F1-M1 Centralizar Bootstrap (sys.path)       :a1, 2026-09-15, 3d
-    F1-M2 BaseGoogleClient com Retry Exponencial  :a2, after a1, 3d
-    F1-M4 GitService Centralizado                 :a3, after a1, 3d
-    F2-M2 Alertas Google Chat Webhook             :a4, after a2, 3d
-    section Sprint 2: Core Desacoplado & Cloud Run
-    F1-M3 Decomposição SRP auto_reply.py          :b1, 2026-09-24, 5d
-    F2-M1 Integração Google Cloud Run             :b2, after b1, 5d
-    F1-S1 LoopStateMachine no autonomous_loop     :b3, after b1, 4d
-    section Sprint 3: Multimodal & Governança
-    F2-M3 Pipeline Stitch + Gemini Multimodal     :c1, 2026-10-06, 5d
-    F2-S1 Google Secret Manager Sync              :c2, after c1, 4d
-    F2-S2 Telemetria em Google Sheets             :c3, after c1, 3d
+    section Sprint 2: Desduplicação & SRP Estrito (Frente 1)
+    F1-M8 Limpar Bootstrap no Dashboard         :done, b0, 2026-09-16, 1d
+    F1-M5 Centralizar QualityGatekeeper          :b1, 2026-09-17, 2d
+    F1-M6 Unificar RulesManager                  :b2, after b1, 2d
+    F1-M7 Desacoplar CLI Handlers (sys.argv)     :b3, after b2, 2d
+    section Sprint 3: Evolução do Core Local (Frente 1)
+    F1-S1 LoopStateMachine com Persistência      :c1, 2026-09-24, 3d
+    F1-S2 SessionMonitor & SessionState          :c2, after c1, 2d
+    F1-S3 ConfigManager com Cache                :c3, after c2, 2d
+    F1-S4 Telemetria Local (.amb/telemetry.jsonl):c4, after c3, 2d
+    F1-S5 PersonaEngine Unificado                :c5, after c4, 2d
+    section Sprint 4: Integrações Google Cloud (Frente 2)
+    F2-M2 Alertas Google Chat Webhook            :d1, 2026-10-06, 3d
+    F2-M1 Deploy no Google Cloud Run             :d2, after d1, 4d
+    F2-M3 Pipeline Stitch + Gemini Multimodal    :d3, after d2, 4d
+    F2-S1 Google Secret Manager Sync             :d4, after d3, 3d
+    F2-S2 Telemetria em Google Sheets            :d5, after d4, 3d
 ```
 
 ---
 
-### 📋 Resumo Comparativo MoSCoW
+### 📋 Matriz Comparativa MoSCoW Atualizada (Itens Ativos)
 
-| Categoria | Frente 1: SRP & Desduplicação | Frente 2: Ecossistema Google |
+| Categoria | Frente 1: Redução de Redundâncias, SRP & Evolução Local (Sem Nuvem) | Frente 2: Ecossistema Google & Serviços Cloud |
 | :--- | :--- | :--- |
-| 🔴 **MUST HAVE** | • Bootstrap unificado de `sys.path`<br>• `BaseGoogleClient` com retry/jitter<br>• Split SRP de `auto_reply.py`<br>• `GitService` centralizado | • Deploy em **Google Cloud Run**<br>• Alertas via **Google Chat Webhook**<br>• Pipeline Visual **Stitch ➔ Gemini Multimodal** |
-| 🟡 **SHOULD HAVE** | • `LoopStateMachine` com recuperação<br>• `ConsolePresenter` unificado<br>• `ConfigManager` singleton com cache | • **Google Secret Manager** para credenciais<br>• Telemetria em **Google Sheets**<br>• **Cloud Logging** estruturado |
-| 🟢 **COULD HAVE** | • Decorators dinâmicos na CLI<br>• Engine de templates de personas | • Sincronização de Docs/Drive<br>• Fallback local com **Gemma 2**<br>• QA remoto no **Cloud Build** |
-| 🔵 **WON'T HAVE** | • Reescrita em TypeScript<br>• Frameworks pesados de DI | • Clusters Google GKE<br>• Data Warehouse no BigQuery |
+| 🔴 **MUST HAVE** | • `QualityGatekeeper` centralizado (`pipeline/quality_gatekeeper.py`)<br>• `RulesManager` unificado (`config/rules_manager.py`)<br>• Desacoplamento de CLI Handlers (eliminação de `sys.argv`) | • Deploy Serverless em **Google Cloud Run**<br>• Notificações e Cards no **Google Chat Webhook**<br>• Pipeline Visual **Stitch ➔ Gemini Multimodal ➔ Jules** |
+| 🟡 **SHOULD HAVE** | • `LoopStateMachine` persistente (`.amb/loop_state.json`) com pause/resume<br>• `SessionMonitor` unificado com enum `SessionState`<br>• `ConfigManager` Singleton com cache em memória<br>• `LocalTelemetry` em `.amb/telemetry.jsonl` com comando `amb stats`<br>• `PersonaEngine` unificado com interpolação e validação | • Gestão de chaves no **Google Secret Manager**<br>• Telemetria compartilhada em **Google Sheets**<br>• Auditoria em **Google Cloud Logging** |
+| 🟢 **COULD HAVE** | • `ConsolePresenter` centralizado com suporte a `--json` e `--quiet`<br>• `LocalQASandbox` com armazenamento de logs em `.amb/logs/qa/`<br>• Validador local pré-commit (`amb validate --staged`)<br>• Contingência offline com **Gemma 2** via Ollama/AGY | • Sincronização com **Google Docs / Drive**<br>• QA remoto no **Google Cloud Build** |
+| 🔵 **WON'T HAVE** | • Novas dependências externas de nuvem nesta frente<br>• Reescrita em TypeScript / linguagens compiladas<br>• Frameworks pesados de injeção de dependência<br>• Bancos de dados relacionais externos para estado local | • Infraestrutura Kubernetes complexa (GKE)<br>• Data Lakehouse / BigQuery corporativo |
+
+---
+
+# 🏁 Entregas Já Desenvolvidas e Integradas (Fase Concluída)
+
+> [!NOTE]
+> Esta seção consolida todas as entregas técnicas já desenvolvidas, testadas e integradas na branch principal (`main`), servindo como base estável para as próximas sprints.
+
+| Item | Componente | Arquivos Criados / Modificados | Testes Automatizados | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **F1-M1** | Módulo Central de Bootstrap de Ambiente | `config/bootstrap.py`, `amb_bootstrap.py` | `tests/test_bootstrap.py` | ✅ **`[CONCLUÍDO]`** |
+| **F1-M2** | Cliente Base Resiliente para APIs Google | `integrations/common/base_google_client.py` | `tests/test_base_google_client.py` | ✅ **`[CONCLUÍDO]`** |
+| **F1-M3** | Decomposição SRP de `auto_reply.py` | `agents/auto_reply_core/` (`turn_history_extractor.py`, `cognitive_advisor.py`, `jules_feedback_dispatcher.py`) | `tests/test_auto_reply_srp.py`, `tests/test_auto_reply.py` | ✅ **`[CONCLUÍDO]`** |
+| **F1-M4** | Serviço Central de Abstração Git/GitHub CLI | `integrations/git/git_service.py` | `tests/test_git_service.py` | ✅ **`[CONCLUÍDO]`** |
+| **F1-M8** | Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas | `cli_modules/alert_notifier.py`, `integrations/jules/jules_watcher.py`, `agents/monitor.py` | `tests/test_bootstrap.py` | ✅ **`[CONCLUÍDO]`** |
+
+### Resumo das Soluções Entregues:
+
+1. **Módulo Central de Bootstrap de Ambiente (`config/bootstrap.py` e `amb_bootstrap.py`):**
+   - **O que foi feito:** Desenvolvida a função determinística `ensure_amb_env()` e `get_amb_root()`, criando também o atalho raiz `amb_bootstrap.py`.
+   - **Ganhos Arquiteturais:** Eliminação de mais de 180 linhas de duplicação de `sys.path` em mais de 10 scripts do projeto (`cli.py`, `pipeline.py`, `autonomous_loop.py`, `local_agent_runner.py`, `ai_context_builder.py`, `db_schema_reader.py`, etc.).
+   - **Validação:** Coberto por suíte de testes unitários com garantia de idempotência.
+
+2. **Cliente Base Padronizado para APIs Google (`BaseGoogleClient`):**
+   - **O que foi feito:** Criada a classe `BaseGoogleClient` em `integrations/common/base_google_client.py`.
+   - **Ganhos Arquiteturais:** Retries automáticos com backoff exponencial e jitter (0.8x a 1.2x), mascaramento preventivo de credenciais (`AIzaSy...`, chaves em query params e headers `Bearer`) em logs e normalização de falhas em `ApiExecutionError`. `JulesClient` e `AntigravityClient` refatorados para herdar da base.
+   - **Validação:** Coberto por suíte completa de testes com simulações de falhas de rede e rate limits 429.
+
+3. **Decomposição SRP de `auto_reply.py` (`agents/auto_reply_core/`):**
+   - **O que foi feito:** O antigo arquivo monolítico de mais de 350 linhas foi desmembrado em responsabilidades únicas:
+     - `TurnHistoryExtractor`: parsing estruturado de atividades e turnos do Jules.
+     - `CognitiveAdvisor`: resolução de regras e formulação de pareceres cognitivos via Gemini.
+     - `JulesFeedbackDispatcher`: envio seguro de feedbacks via REST e fluxos interativos/em lote.
+     - `agents/auto_reply.py` mantido como fachada retrocompatível.
+   - **Ganhos Arquiteturais:** Alta coesão, zero efeitos colaterais ocultos e testabilidade isolada de cada camada.
+   - **Validação:** Testes unitários dedicados em `test_auto_reply_srp.py` e preservação dos testes de fachada em `test_auto_reply.py`.
+
+4. **Serviço Central de Abstração Git e GitHub CLI (`GitService`):**
+   - **O que foi feito:** Implementado `integrations/git/git_service.py` centralizando comandos do Git (`branch`, `pull`, `checkout`, `log`, `status`, `apply`, `commit`, `push`) e operações do GitHub CLI (`gh pr list`, `ready`, `review`, `merge`).
+   - **Ganhos Arquiteturais:** Substituição de chamadas inline dispersas de `subprocess.run(["git", ...])` em 6 módulos críticos (`merge_session_pr.py`, `cleanup_sessions.py`, `project_analyzer.py`, `autonomous_loop.py`, `pipeline.py`, etc.).
+   - **Validação:** Coberto por testes unitários com mocks de comandos subprocess em `test_git_service.py`.
+
+5. **Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas (`F1-M8`):**
+   - **O que foi feito:** A pasta `dashboard/` (que não continha GUI web, apenas scripts de sentinela CLI) foi completamente eliminada. Seus componentes foram migrados para seus domínios canônicos sob estrita responsabilidade única:
+     - Alertas sonoros e banners ANSI migrados para `cli_modules/alert_notifier.py`.
+     - Sentinela de sessões do Jules migrado para `integrations/jules/jules_watcher.py`, com extração estruturada de PR desduplicada.
+     - Loop de monitoramento e sentinela contínuo migrado para `agents/monitor.py` (classe `UnifiedMonitor`), coabitando com os demais agentes.
+     - Fachada vazia `dashboard/auto_advisor.py` removida (a CLI já roteia diretamente para `agents/auto_reply.py`).
+     - `config/bootstrap.py` e `cli_handlers.py` higienizados.
+   - **Ganhos Arquiteturais:** Eliminação de falsa expectativa semântica, zero duplicação de extração de PR e coesão absoluta por domínio.
+   - **Validação:** Coberto por teste unitário dedicado `test_migrated_sentinel_modules()` em `tests/test_bootstrap.py`.

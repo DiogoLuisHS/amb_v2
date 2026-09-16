@@ -246,14 +246,28 @@ amb agent --role relay --loop --max-cycles 5
   - Migrados todos os locais que executavam comandos Git/GitHub dispersos para utilizar `GitService`.
   - Criada suíte de testes unitários `tests/test_git_service.py` com mocks seguros.
 
-### Expansão da Suíte de Testes Automatizados (33 testes passando)
-- Suíte expandida de 10 testes originais para **33 testes automatizados** com tempo de execução de 0.21s:
-  - `tests/test_bootstrap.py` (4 testes)
+### F1-M8 — Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas
+**Arquivos:** `cli_modules/alert_notifier.py`, `integrations/jules/jules_watcher.py`, `agents/monitor.py`, `tests/test_bootstrap.py`, `config/bootstrap.py`, `cli_modules/cli_handlers.py`.
+- **Motivação:** A pasta de topo `dashboard/` era semanticamente incorreta (não continha interface gráfica/web, apenas scripts de sentinela CLI) e fragmentava a arquitetura do projeto.
+- **Implementação:**
+  - Extinção total da pasta `dashboard/`.
+  - Migração de alertas e banners ANSI para `cli_modules/alert_notifier.py`.
+  - Migração do sentinela especializado para `integrations/jules/jules_watcher.py`, com desduplicação da extração de PR (`extract_pull_request`).
+  - Migração do loop de vigilância e auto-reply contínuo para `agents/monitor.py` (classe `UnifiedMonitor`), alinhado aos demais agentes autônomos.
+  - Eliminação da fachada redundante `dashboard/auto_advisor.py`.
+  - Remoção de `dashboard` de `CANONICAL_SUBMODULES` em `config/bootstrap.py` e atualização das rotas na CLI (`cli_modules/cli_handlers.py`).
+  - Adicionado teste unitário `test_migrated_sentinel_modules()` em `tests/test_bootstrap.py`.
+
+
+### Expansão da Suíte de Testes Automatizados (34 testes passando)
+- Suíte expandida de 10 testes originais para **34 testes automatizados** com tempo de execução de ~0.18s:
+  - `tests/test_bootstrap.py` (5 testes)
   - `tests/test_base_google_client.py` (5 testes)
   - `tests/test_auto_reply_srp.py` (7 testes)
   - `tests/test_git_service.py` (7 testes)
   - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
   - `tests/test_ai_context_builder.py` (2 testes)
+
 
 
 

@@ -46,3 +46,16 @@ def test_amb_bootstrap_import():
     import amb_bootstrap
     assert hasattr(amb_bootstrap, "ensure_amb_env")
     assert hasattr(amb_bootstrap, "get_amb_root")
+
+
+def test_migrated_sentinel_modules():
+    """Valida se os módulos migrados do sentinela/monitor utilizam o bootstrap e carregam sem erros."""
+    import cli_modules.alert_notifier as an
+    import integrations.jules.jules_watcher as jw
+    import agents.monitor as um
+
+    assert hasattr(an, "notify_attention")
+    assert hasattr(jw, "JulesWatcher")
+    assert hasattr(um, "run_monitor")
+    assert hasattr(um, "UnifiedMonitor")
+

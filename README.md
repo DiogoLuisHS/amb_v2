@@ -217,10 +217,10 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Setup & Env** | `amb setup` | `python config/setup_project.py` |
 | **Setup & Env** | `amb prompt` | `python config/setup_project.py --prompt` |
 | **Setup & Env** | `amb prompt --synthesize "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
-| **Vigilância** | `amb monitor` | `python dashboard/unified_monitor.py` |
-| **Vigilância** | `amb monitor -1` | `python dashboard/unified_monitor.py --check-once` |
-| **Vigilância** | `amb monitor -y` | `python dashboard/unified_monitor.py --auto-approve` |
-| **Vigilância** | `amb advisor` | `python dashboard/auto_advisor.py` |
+| **Vigilância** | `amb monitor` | `python agents/monitor.py` |
+| **Vigilância** | `amb monitor -1` | `python agents/monitor.py --check-once` |
+| **Vigilância** | `amb monitor -y` | `python agents/monitor.py --auto-approve` |
+| **Vigilância** | `amb advisor` | `python agents/auto_reply.py` |
 | **Interface** | `amb gui` (ou `amb ui`) | `python gui/wizard_app.py` |
 | **Personas** | `amb agent --list` | `python agents/local_agent_runner.py --list` |
 | **Personas** | `amb agent --role <nome>` | `python agents/local_agent_runner.py --role <nome>` |
@@ -258,8 +258,12 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 ├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
 ├── cli.py                           # CLI global unificada (Single Source of Truth)
 ├── cli_modules/                     # Handlers e parsers modulares da CLI (SRP)
+│   ├── alert_notifier.py            # Emissor de alertas visuais e sonoros
+│   ├── cli_handlers.py              # Despacho de subcomandos
+│   └── cli_parsers.py               # Definição de argumentos e subcomandos
 ├── config/
 │   ├── config.py                    # Gerenciador central de .env, validações e caminhos
+│   ├── bootstrap.py                 # Bootstrap centralizado de ambiente e sys.path
 │   └── setup_project.py             # Assistente de provisionamento e stack
 ├── gui/
 │   ├── README.md                    # Documentação do Assistente Gráfico
@@ -269,17 +273,17 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 │   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
 ├── agents/
 │   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico turn-by-turn
+│   ├── auto_reply_core/             # Núcleo SRP (TurnHistoryExtractor, CognitiveAdvisor, JulesFeedbackDispatcher)
 │   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
-│   └── local_agent_runner.py        # Executor dinâmico de personas
-├── dashboard/
-│   ├── unified_monitor.py           # Sentinela contínuo e loop de vigilância
-│   └── watchers/                    # Watchers especializados do Jules
+│   ├── local_agent_runner.py        # Executor dinâmico de personas
+│   └── monitor.py                   # Sentinela contínuo e loop de vigilância em tempo real
 ├── integrations/
 │   ├── antigravity/
 │   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
 │   │   └── tools/                   # Facades retrocompatíveis
 │   ├── jules/
 │   │   ├── jules_client.py          # Client REST API oficial do Jules
+│   │   ├── jules_watcher.py         # Sentinela e inspetor de sessões do Jules
 │   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
 │   └── stitch/
 │       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
@@ -334,5 +338,4 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 | [`config/README.md`](./config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
 | [`gui/README.md`](./gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
 | [`pipeline/README.md`](./pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
-| [`dashboard/README.md`](./dashboard/README.md) | Documentação do Sentinela e Monitor Unificado. |
 

@@ -1,53 +1,61 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-📡 AMB_V2 - Monitoramento: Sentinela do Google Jules (SRP)
-Localização: amb_v2/dashboard/watchers/jules_watcher.py
+📡 AMB_V2 - Google Jules: Sentinela e Inspetor de Sessões (SRP)
+Localização: amb_v2/integrations/jules/jules_watcher.py
 Responsabilidade Única: Inspecionar sessões e atividades do Jules em busca de perguntas,
-solicitações de aprovação de plano e falhas.
+solicitações de aprovação de plano, falhas e PRs pendentes de integração.
 """
 
 import sys
 import os
+from typing import List, Dict, Any, Optional
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config",
-    "agents",
-    "pipeline",
-    "dashboard",
-    "dashboard/watchers",
-    "integrations/jules",
-    "integrations/jules/tools",
-    "integrations/stitch",
-    "integrations/stitch/tools",
-    "integrations/antigravity",
-    "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import get_env, log_error, get_repo_name  # noqa: E402
-from jules_client import JulesClient  # noqa: E402
-from alert_notifier import notify_attention  # noqa: E402
+from integrations.jules.jules_client import JulesClient  # noqa: E402
+from cli_modules.alert_notifier import notify_attention  # noqa: E402
 
 
 class JulesWatcher:
-    """Vigia o estado das sessões do Jules."""
+    """Vigia o estado das sessões do Jules no repositório ativo."""
 
-    def __init__(self):
-        self.client = JulesClient() if get_env("JULES_API_KEY") else None
+    FEEDBACK_STATES = {
+        "AWAITING_USER_FEEDBACK",
+        "Awaiting User Feedback",
+        "AWAITING_INPUT",
+        "AWAITING_PLAN_APPROVAL",
+    }
+
+    TERMINAL_FAILURE_STATES = {
+        "FAILED",
+        "CANCELLED",
+    }
+
+    SUCCESS_STATES = {
+        "COMPLETED",
+        "SUCCEEDED",
+    }
+
+    def __init__(self, client: Optional[JulesClient] = None):
+        self.client = client or (JulesClient() if get_env("JULES_API_KEY") else None)
         self.notified_events = set()
 
-    def check(self) -> list[dict]:
+    @staticmethod
+    def extract_pull_request(session_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extrai metadados do Pull Request dos outputs da sessão."""
+        outputs = session_dict.get("outputs", [])
+        if isinstance(outputs, list):
+            for item in outputs:
+                if isinstance(item, dict) and "pullRequest" in item:
+                    return item["pullRequest"]
+        elif isinstance(outputs, dict) and "pullRequest" in outputs:
+            return outputs["pullRequest"]
+        return None
+
+    def check(self) -> List[Dict[str, Any]]:
         """Verifica todas as sessões e retorna alertas detectados."""
         if not self.client:
             return []
@@ -56,27 +64,19 @@ class JulesWatcher:
         try:
             repo = get_repo_name()
             sessions = self.client.list_sessions(page_size=30, repo_filter=repo)
-            # Mapeamento para otimizar busca de atividades em lote
             feedback_sessions = []
 
             for s in sessions:
                 session_id = s.get("name", "").split("/")[-1] or s.get("id")
                 state = s.get("state", "UNKNOWN")
-                if state in [
-                    "AWAITING_USER_FEEDBACK",
-                    "Awaiting User Feedback",
-                    "AWAITING_INPUT",
-                    "AWAITING_PLAN_APPROVAL",
-                ]:
+                if state in self.FEEDBACK_STATES:
                     event_key = f"state_feedback:{session_id}"
                     if event_key not in self.notified_events:
                         feedback_sessions.append(s)
 
-            # Busca em paralelo de atividades para otimizar N+1 queries
+            # Busca em paralelo de atividades para otimizar queries
             activities_cache = {}
-            if feedback_sessions and hasattr(
-                self.client, "list_activities_for_sessions"
-            ):
+            if feedback_sessions and hasattr(self.client, "list_activities_for_sessions"):
                 session_ids = [
                     s.get("name", "").split("/")[-1] or s.get("id")
                     for s in feedback_sessions
@@ -91,7 +91,7 @@ class JulesWatcher:
                 title = s.get("title", "Sem título")
 
                 # 1. Sessão que falhou ou foi cancelada
-                if state in ["FAILED", "CANCELLED"]:
+                if state in self.TERMINAL_FAILURE_STATES:
                     event_key = f"failed:{session_id}"
                     if event_key not in self.notified_events:
                         self.notified_events.add(event_key)
@@ -99,18 +99,13 @@ class JulesWatcher:
                             source="Google Jules",
                             title=f"Sessão falhou ou foi cancelada ({session_id})",
                             details=f"Título: {title}\nEstado: {state}\nPainel: https://jules.google.com/session/{session_id}",
-                            action_command=f"python amb_v2/integrations/jules/tools/get_session.py --session-id {session_id}",
+                            action_command=f"amb jules session {session_id}",
                         )
                         alerts.append({"type": "failed", "session_id": session_id})
                     continue
 
                 # 2. Sessão com estado explícito de feedback ou aprovação de plano
-                if state in [
-                    "AWAITING_USER_FEEDBACK",
-                    "Awaiting User Feedback",
-                    "AWAITING_INPUT",
-                    "AWAITING_PLAN_APPROVAL",
-                ]:
+                if state in self.FEEDBACK_STATES:
                     acts = activities_cache.get(session_id)
                     if acts is None:
                         try:
@@ -159,19 +154,9 @@ class JulesWatcher:
                         )
 
                 # 3. Notifica sessões concluídas para conferência e merge de PR
-                if state in ["COMPLETED", "SUCCEEDED"]:
-                    # Refinamento: verificar se a sessão de fato gerou um PR nos outputs
-                    has_pr = False
-                    outputs = s.get("outputs", [])
-                    if isinstance(outputs, list):
-                        for item in outputs:
-                            if isinstance(item, dict) and "pullRequest" in item:
-                                has_pr = True
-                                break
-                    elif isinstance(outputs, dict) and "pullRequest" in outputs:
-                        has_pr = True
-
-                    if has_pr:
+                if state in self.SUCCESS_STATES:
+                    pr_info = self.extract_pull_request(s)
+                    if pr_info:
                         event_key = f"completed:{session_id}"
                         if event_key not in self.notified_events:
                             self.notified_events.add(event_key)
@@ -185,6 +170,7 @@ class JulesWatcher:
                                 {
                                     "type": "completed_needs_merge",
                                     "session_id": session_id,
+                                    "pr": pr_info,
                                 }
                             )
                     continue

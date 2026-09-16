@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-📡 AMB_V2 - Monitoramento Unificado e Contínuo em Tempo Real
-Localização: amb_v2/dashboard/unified_monitor.py
-Responsabilidade Única: Executar o loop de vigilância dos módulos Google (Jules,
-Stitch, Antigravity) e notificar instantaneamente o desenvolvedor sobre erros ou dúvidas.
+📡 AMB_V2 - Agentes: Monitor e Sentinela Unificado em Tempo Real (SRP)
+Localização: amb_v2/agents/monitor.py
+Responsabilidade Única: Executar o loop de vigilância das sessões do ecossistema Google (Jules,
+Stitch, Antigravity) e notificar instantaneamente o desenvolvedor ou auto-responder dúvidas no piloto automático.
 """
 
 import os
@@ -13,31 +13,16 @@ import time
 import argparse
 from datetime import datetime
 
-# Bootstrap dinâmico de caminhos amb_v2
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-_AMB = _cur
-for _sub in [
-    "config", "agents", "pipeline", "dashboard", "dashboard/watchers",
-    "integrations/jules", "integrations/jules/tools",
-    "integrations/stitch", "integrations/stitch/tools",
-    "integrations/antigravity", "integrations/antigravity/tools",
-]:
-    _p = os.path.normpath(os.path.join(_AMB, *_sub.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
 
 from config import Colors, log, log_error, get_env
-from jules_watcher import JulesWatcher
-from alert_notifier import notify_info
+from integrations.jules.jules_watcher import JulesWatcher
+from cli_modules.alert_notifier import notify_info
 
 
 def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False):
-    """Loop principal de monitoramento unificado."""
+    """Loop principal de monitoramento e vigilância unificada."""
     print("\n" + "=" * 75)
     mode_text = f"{Colors.BOLD}{Colors.GREEN}[MODO AUTO-APPROVE ATIVO ⚡]{Colors.RESET}" if auto_approve else "[MODO MONITOR DE ALERTA]"
     print(f"{Colors.BOLD}{Colors.CYAN}📡 AMB_V2 — SENTINELA E MONITOR UNIFICADO DE ATENÇÃO (EM TEMPO REAL) {mode_text}{Colors.RESET}")
@@ -50,17 +35,17 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
     print(f"{Colors.DIM}Pressione Ctrl+C para encerrar o monitoramento a qualquer momento.{Colors.RESET}\n")
 
     jules_w = JulesWatcher()
-
     cycle = 1
+
     while True:
         try:
             now_str = datetime.now().strftime("%H:%M:%S")
             print(f"[{now_str}] 🔄 Rodada #{cycle}: Checando chats e status...", flush=True)
 
-            # 1. Jules
+            # 1. Checagem do Jules
             jules_alerts = jules_w.check()
 
-            # Se estiver em modo auto_approve e houver chats aguardando feedback
+            # Se estiver em modo auto_approve e houver sessões aguardando feedback
             if auto_approve and jules_alerts:
                 from auto_reply import advise_and_reply
                 for alt in jules_alerts:
@@ -93,7 +78,7 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 
 
 class UnifiedMonitor:
-    """Classe orientada a objetos para o Monitor Unificado AMB_V2."""
+    """Classe orientada a objetos para o Sentinela Unificado AMB_V2."""
 
     def __init__(self, interval: int = 15, auto_approve: bool = False):
         self.interval = interval
@@ -104,7 +89,7 @@ class UnifiedMonitor:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Monitor unificado de atenção para Jules, Stitch e Antigravity.")
+    parser = argparse.ArgumentParser(description="Sentinela unificado de atenção para Jules, Stitch e Antigravity.")
     parser.add_argument("--interval", "-i", type=int, default=15, help="Intervalo em segundos entre verificações (padrão: 15s).")
     parser.add_argument("--check-once", action="store_true", help="Executa apenas uma verificação e encerra.")
     parser.add_argument("--auto-approve", "-y", action="store_true", help="Piloto automático: gera respostas com Antigravity e envia sozinho para todas as dúvidas.")

@@ -162,7 +162,7 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
 
 5. Regras Mandatórias:
    - Zero Fallback: Sem supressão silenciosa de erros ou mascaramento de falhas.
-   - SRP: Mantenha cada script em seu submódulo oficial (config/, agents/, architecture/, integrations/, dashboard/).
+   - SRP: Mantenha cada script em seu submódulo oficial (config/, agents/, architecture/, integrations/, cli_modules/).
    - Dual-Theme Nativo: Respeite o Design System do projeto com suporte a Light e Dark Mode via tokens CSS.
 
 Ao finalizar, exiba o resumo da stack detectada e o status das chaves configuradas."""

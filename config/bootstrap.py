@@ -21,8 +21,6 @@ CANONICAL_SUBMODULES: List[str] = [
     "architecture",
     "pipeline",
     "gui",
-    "dashboard",
-    "dashboard/watchers",
     "integrations",
     "integrations/common",
     "integrations/git",
