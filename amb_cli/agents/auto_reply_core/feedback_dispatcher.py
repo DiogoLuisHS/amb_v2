@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 🤖 AMB_V2 - Despachador de Respostas e Gestor de Sessões do Jules (SRP)
-Localização: amb_v2/agents/auto_reply_core/feedback_dispatcher.py
+Localização: amb_cli/agents/auto_reply_core/feedback_dispatcher.py
 Responsabilidade Única: Interagir com a API do Jules para enviar mensagens,
 aprovar planos, listar sessões aguardando feedback e coordenar fluxos interativos/em lote.
 """

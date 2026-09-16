@@ -2,15 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 📡 AMB_V2 - Agentes: Monitor e Sentinela Unificado em Tempo Real (SRP)
-Localização: amb_v2/agents/monitor.py
+Localização: amb_cli/agents/monitor.py
 Responsabilidade Única: Executar o loop de vigilância das sessões do ecossistema Google (Jules,
 Stitch, Antigravity) e notificar instantaneamente o desenvolvedor ou auto-responder dúvidas no piloto automático.
 """
 
-import os
-import sys
 import time
-import argparse
 from datetime import datetime
 
 from config.bootstrap import ensure_amb_env
@@ -19,9 +16,10 @@ ensure_amb_env()
 from config import Colors, log, log_error, get_env
 from integrations.jules.jules_watcher import JulesWatcher
 from cli_modules.alert_notifier import notify_info
+from agents.auto_reply import advise_and_reply
 
 
-def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False):
+def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False) -> None:
     """Loop principal de monitoramento e vigilância unificada."""
     print("\n" + "=" * 75)
     mode_text = f"{Colors.BOLD}{Colors.GREEN}[MODO AUTO-APPROVE ATIVO ⚡]{Colors.RESET}" if auto_approve else "[MODO MONITOR DE ALERTA]"
@@ -47,7 +45,6 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 
             # Se estiver em modo auto_approve e houver sessões aguardando feedback
             if auto_approve and jules_alerts:
-                from auto_reply import advise_and_reply
                 for alt in jules_alerts:
                     if alt.get("type") in ["awaiting_feedback", "message"]:
                         sid = alt.get("session_id")
@@ -80,23 +77,19 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 class UnifiedMonitor:
     """Classe orientada a objetos para o Sentinela Unificado AMB_V2."""
 
-    def __init__(self, interval: int = 15, auto_approve: bool = False):
+    def __init__(self, interval: int = 15, auto_approve: bool = False) -> None:
         self.interval = interval
         self.auto_approve = auto_approve
 
-    def run(self, check_once: bool = False):
+    def run(self, check_once: bool = False) -> None:
+        """Executa o loop do monitoramento."""
         run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sentinela unificado de atenção para Jules, Stitch e Antigravity.")
-    parser.add_argument("--interval", "-i", type=int, default=15, help="Intervalo em segundos entre verificações (padrão: 15s).")
-    parser.add_argument("--check-once", action="store_true", help="Executa apenas uma verificação e encerra.")
-    parser.add_argument("--auto-approve", "-y", action="store_true", help="Piloto automático: gera respostas com Antigravity e envia sozinho para todas as dúvidas.")
-
-    args = parser.parse_args()
-    monitor = UnifiedMonitor(interval=args.interval, auto_approve=args.auto_approve)
-    monitor.run(check_once=args.check_once)
+def main() -> None:
+    """Ponto de entrada simplificado (sem parse de args, que agora fica na camada CLI)."""
+    monitor = UnifiedMonitor()
+    monitor.run()
 
 
 if __name__ == "__main__":

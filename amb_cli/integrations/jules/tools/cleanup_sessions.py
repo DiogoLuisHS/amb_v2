@@ -12,7 +12,7 @@ import os
 import argparse
 import subprocess
 import concurrent.futures
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()

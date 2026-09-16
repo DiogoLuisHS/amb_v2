@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-================================================================================
 🤖 AMB_V2 - AUTO REPLY & ADVISOR (JULES + ANTIGRAVITY) — FAÇADE SRP
-================================================================================
-Localização: amb_v2/agents/auto_reply.py
+Localização: amb_cli/agents/auto_reply.py
 Responsabilidade Única: Ponto de entrada e orquestrador que delega responsabilidades
 para as classes especializadas em agents/auto_reply_core:
   - TurnHistoryExtractor (parsing de atividades e detecção de turnos)
   - CognitiveAdvisor (regras, formulação de prompts e inferência Gemini)
   - JulesFeedbackDispatcher (despacho REST para o Jules e interface com o usuário)
-================================================================================
 """
 
 import argparse
@@ -29,16 +26,12 @@ from agents.auto_reply_core import (
 )
 
 
-# ---------------------------------------------------------------------------
-# 1. Funções Delegadas para TurnHistoryExtractor (Parsing de Histórico e Turnos)
-# ---------------------------------------------------------------------------
-
-def extract_activity_text(activity: dict, role: str = "agent") -> str:
+def extract_activity_text(activity: Dict[str, Any], role: str = "agent") -> str:
     """Extrai o texto de mensagens da API do Jules para qualquer formato retornado."""
     return TurnHistoryExtractor.extract_activity_text(activity, role=role)
 
 
-def get_last_conversation_turn(acts: list) -> Dict[str, Any]:
+def get_last_conversation_turn(acts: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Analisa a lista de atividades e determina quem falou por último e qual foi a última pergunta/plano."""
     return TurnHistoryExtractor.get_last_conversation_turn(acts)
 
@@ -49,10 +42,6 @@ def get_full_session_history(
     """Obtém a sessão, o prompt inicial, a conversa cronológica, a última dúvida e metadados."""
     return TurnHistoryExtractor.get_full_session_history(client, session_id)
 
-
-# ---------------------------------------------------------------------------
-# 2. Funções Delegadas para CognitiveAdvisor (Regras e Inferência Gemini)
-# ---------------------------------------------------------------------------
 
 def _filter_rules_for_jules(content: str) -> str:
     """Filtra seções de Git/VCS das regras para não enviar restrições limitantes ao Jules."""
@@ -79,10 +68,6 @@ def generate_ai_suggestion(
         current_question=current_question,
     )
 
-
-# ---------------------------------------------------------------------------
-# 3. Funções Delegadas para JulesFeedbackDispatcher (Despacho e Menus)
-# ---------------------------------------------------------------------------
 
 def advise_and_reply(
     session_id: str, auto_approve: bool = False, force: bool = False
@@ -128,11 +113,7 @@ def interactive_advisor_menu() -> None:
     run_auto_advisor(auto_approve=False)
 
 
-# ---------------------------------------------------------------------------
-# CLI Entrypoint
-# ---------------------------------------------------------------------------
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Gera sugestão de resposta via Antigravity com histórico completo do chat."
     )
