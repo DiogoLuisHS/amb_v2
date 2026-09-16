@@ -1,8 +1,7 @@
-# ✅ AMB_V2 — Changelog de Bugs Corrigidos & Features Implementadas
+# 📜 AMB_V2 — Changelog de Melhorias, Entregas & Bugs Corrigidos
 
-> Atualizado em: 2026-09-11
-
-Este documento registra todos os bugs corrigidos e features implementadas no ecossistema `amb_v2`.
+> **Data de Atualização:** 2026-09-16 | **Versão:** 2.3.0  
+> **Fonte Única da Verdade:** Este documento registra detalhadamente todas as melhorias arquiteturais, refatorações SRP, funcionalidades desenvolvidas e bugs corrigidos no ecossistema `amb_v2`. Para o planejamento futuro e backlog MoSCoW, consulte o [SUGGESTIONS.md](./SUGGESTIONS.md).
 
 ---
 

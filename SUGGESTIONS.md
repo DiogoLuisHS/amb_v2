@@ -14,7 +14,7 @@ Com a entrega bem-sucedida das bases fundamentais (Bootstrap, BaseGoogleClient, 
 2. **Frente 2 — Expansão no Ecossistema Google & Serviços em Nuvem:**  
    Conexão estratégica com serviços gerenciados de nuvem e ferramentas corporativas do Google (**Cloud Run**, **Google Chat Webhooks**, **Secret Manager**, **Google Sheets**, **Cloud Logging** e **Gemini Multimodal**).
 
-*(Nota: As entregas já finalizadas e validadas foram movidas para a seção final [🏁 Entregas Já Desenvolvidas e Integradas](#-entregas-já-desenvolvidas-e-integradas-fase-concluída).)*
+*(Nota: Para consultar o histórico completo de todas as entregas, refatorações SRP e melhorias já implementadas e validadas, acesse o [CHANGELOG_FIXES.md](./CHANGELOG_FIXES.md).)*
 
 ---
 
@@ -185,63 +185,10 @@ gantt
 
 ---
 
-# 🏁 Entregas Já Desenvolvidas e Integradas (Fase Concluída)
+## 📜 Histórico de Entregas & Melhorias Concluídas
 
-> [!NOTE]
-> Esta seção consolida todas as entregas técnicas já desenvolvidas, testadas e integradas na branch principal (`main`), servindo como base estável para as próximas sprints.
+Todas as melhorias arquiteturais, refatorações SRP, novas funcionalidades e correções de bugs já implementadas e validadas no repositório estão registradas e detalhadas exclusivamente em:
 
-| Item | Componente | Arquivos Criados / Modificados | Testes Automatizados | Status |
-| :--- | :--- | :--- | :--- | :---: |
-| **F1-M1** | Módulo Central de Bootstrap de Ambiente | `config/bootstrap.py`, `amb_bootstrap.py` | `tests/test_bootstrap.py` | ✅ **`[CONCLUÍDO]`** |
-| **F1-M2** | Cliente Base Resiliente para APIs Google | `integrations/common/base_google_client.py` | `tests/test_base_google_client.py` | ✅ **`[CONCLUÍDO]`** |
-| **F1-M3** | Decomposição SRP de `auto_reply.py` | `agents/auto_reply_core/` (`turn_history_extractor.py`, `cognitive_advisor.py`, `jules_feedback_dispatcher.py`) | `tests/test_auto_reply_srp.py`, `tests/test_auto_reply.py` | ✅ **`[CONCLUÍDO]`** |
-| **F1-M4** | Serviço Central de Abstração Git/GitHub CLI | `integrations/git/git_service.py` | `tests/test_git_service.py` | ✅ **`[CONCLUÍDO]`** |
-| **F1-M8** | Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas | `cli_modules/alert_notifier.py`, `integrations/jules/jules_watcher.py`, `agents/monitor.py` | `tests/test_bootstrap.py` | ✅ **`[CONCLUÍDO]`** |
-| **F1-M9** | Modernização de Setup (`amb setup`), Diagnóstico (`amb check`), Proteção `.env` e Persona Única (`engineer.md`) | `config/setup_project.py`, `config/setup_modules/`, `config/config.py`, `agents/` | `tests/test_setup_and_analyzer.py` | ✅ **`[CONCLUÍDO]`** |
+👉 **[`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md)**
 
-### Resumo das Soluções Entregues:
-
-1. **Módulo Central de Bootstrap de Ambiente (`config/bootstrap.py` e `amb_bootstrap.py`):**
-   - **O que foi feito:** Desenvolvida a função determinística `ensure_amb_env()` e `get_amb_root()`, criando também o atalho raiz `amb_bootstrap.py`.
-   - **Ganhos Arquiteturais:** Eliminação de mais de 180 linhas de duplicação de `sys.path` em mais de 10 scripts do projeto (`cli.py`, `pipeline.py`, `autonomous_loop.py`, `local_agent_runner.py`, `ai_context_builder.py`, `db_schema_reader.py`, etc.).
-   - **Validação:** Coberto por suíte de testes unitários com garantia de idempotência.
-
-2. **Cliente Base Padronizado para APIs Google (`BaseGoogleClient`):**
-   - **O que foi feito:** Criada a classe `BaseGoogleClient` em `integrations/common/base_google_client.py`.
-   - **Ganhos Arquiteturais:** Retries automáticos com backoff exponencial e jitter (0.8x a 1.2x), mascaramento preventivo de credenciais (`AIzaSy...`, chaves em query params e headers `Bearer`) em logs e normalização de falhas em `ApiExecutionError`. `JulesClient` e `AntigravityClient` refatorados para herdar da base.
-   - **Validação:** Coberto por suíte completa de testes com simulações de falhas de rede e rate limits 429.
-
-3. **Decomposição SRP de `auto_reply.py` (`agents/auto_reply_core/`):**
-   - **O que foi feito:** O antigo arquivo monolítico de mais de 350 linhas foi desmembrado em responsabilidades únicas:
-     - `TurnHistoryExtractor`: parsing estruturado de atividades e turnos do Jules.
-     - `CognitiveAdvisor`: resolução de regras e formulação de pareceres cognitivos via Gemini.
-     - `JulesFeedbackDispatcher`: envio seguro de feedbacks via REST e fluxos interativos/em lote.
-     - `agents/auto_reply.py` mantido como fachada retrocompatível.
-   - **Ganhos Arquiteturais:** Alta coesão, zero efeitos colaterais ocultos e testabilidade isolada de cada camada.
-   - **Validação:** Testes unitários dedicados em `test_auto_reply_srp.py` e preservação dos testes de fachada em `test_auto_reply.py`.
-
-4. **Serviço Central de Abstração Git e GitHub CLI (`GitService`):**
-   - **O que foi feito:** Implementado `integrations/git/git_service.py` centralizando comandos do Git (`branch`, `pull`, `checkout`, `log`, `status`, `apply`, `commit`, `push`) e operações do GitHub CLI (`gh pr list`, `ready`, `review`, `merge`).
-   - **Ganhos Arquiteturais:** Substituição de chamadas inline dispersas de `subprocess.run(["git", ...])` em 6 módulos críticos (`merge_session_pr.py`, `cleanup_sessions.py`, `project_analyzer.py`, `autonomous_loop.py`, `pipeline.py`, etc.).
-   - **Validação:** Coberto por testes unitários com mocks de comandos subprocess em `test_git_service.py`.
-
-5. **Extinção da Pasta `dashboard/` e Migração SRP dos Sentinelas (`F1-M8`):**
-   - **O que foi feito:** A pasta `dashboard/` (que não continha GUI web, apenas scripts de sentinela CLI) foi completamente eliminada. Seus componentes foram migrados para seus domínios canônicos sob estrita responsabilidade única:
-     - Alertas sonoros e banners ANSI migrados para `cli_modules/alert_notifier.py`.
-     - Sentinela de sessões do Jules migrado para `integrations/jules/jules_watcher.py`, com extração estruturada de PR desduplicada.
-     - Loop de monitoramento e sentinela contínuo migrado para `agents/monitor.py` (classe `UnifiedMonitor`), coabitando com os demais agentes.
-     - Fachada vazia `dashboard/auto_advisor.py` removida (a CLI já roteia diretamente para `agents/auto_reply.py`).
-     - `config/bootstrap.py` e `cli_handlers.py` higienizados.
-   - **Ganhos Arquiteturais:** Eliminação de falsa expectativa semântica, zero duplicação de extração de PR e coesão absoluta por domínio.
-   - **Validação:** Coberto por teste unitário dedicado `test_migrated_sentinel_modules()` em `tests/test_bootstrap.py`.
-
-6. **Modernização de Setup (`amb setup`), Diagnóstico (`amb check`), Proteção `.env` e Persona Única (`F1-M9`):**
-   - **O que foi feito:**
-     - Decomposição modular do setup em `config/setup_modules/` (`ProjectAnalyzer` e `AmbProvisioner`).
-     - Detecção expandida para Go (`go.mod`), Rust (`Cargo.toml`), gerenciadores Python modernos (`uv`, `poetry`) e monorepos (`pnpm-workspace`, `turbo`, `lerna`).
-     - Inferência determinística e persistência de comandos de QA no `.amb/amb_project.json` (`test`, `typecheck`, `build`, `lint`).
-     - Proteção preventiva e não-destrutiva de segurança: injeção automática de `.env`, `.env.local` e `.amb/telemetry.jsonl` no `.gitignore`, além de geração do `.env.example`.
-     - Consolidação das personas: remoção das 10 personas legadas hardcoded e padronização em uma única persona genérica de alta qualidade (`engineer.md` e diário `engineer.md`).
-     - Diagnóstico completo em `amb check` com suporte à flag `--json`, validação de binários de QA via `shutil.which` e checagem de integridade Git/GitHub CLI.
-   - **Ganhos Arquiteturais:** Setup determinístico sem risco de criar `.amb/` em pastas-mãe acidentalmente; garantia de que Pull Requests tenham suíte de QA pré-configurada; repositório protegido contra vazamento de credenciais; loop autônomo limpo com foco no Engenheiro Autônomo.
-   - **Validação:** Coberto por 6 testes unitários em `tests/test_setup_and_analyzer.py` (total de 40 testes 100% green na suíte).
+Consulte o changelog para verificar o detalhamento técnico de cada entrega concluída (`F1-M1`, `F1-M2`, `F1-M3`, `F1-M4`, `F1-M8`, `F1-M9`), arquivos modificados, motivações, soluções arquiteturais e suíte de testes automatizados (40/40 passing).
