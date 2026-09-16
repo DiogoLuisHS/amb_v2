@@ -125,6 +125,17 @@ Configuração manual via `.amb/amb_project.json`:
 2. Em `config/config.py`, chamada atualizada para `git.check_gh_auth(cwd=root, fail_silently=True)`. O comando `amb check --json` agora reporta `"authenticated": true` com total precisão.
 3. Em `GitService.get_status`, substituído `.strip()` por `.rstrip()` e sanitizado `.is_clean` para preservar os identificadores de coluna na saída porcelain do Git.
 
+### Bug #17 — Vazamento de sessões sem `sourceContext`, sobrescrita indevida de branch explícita e falha com URLs web no Google Jules
+**Arquivos:** `integrations/jules/jules_client.py`, `integrations/jules/tools/*.py`, `cli_modules/cli_handlers.py`
+**Causa:**
+1. Em `list_sessions`: quando um `repo_filter` era especificado, sessões que não possuíam `sourceContext.source` eram incluídas indevidamente pelo bloco `else: filtered.append(s)`, vazando sessões de outros projetos.
+2. Em `create_session`: a verificação `if not base_branch or base_branch in ["develop", "main"]` sobrescrevia a branch explicitamente definida pelo usuário se a branch local atual do Git fosse diferente, impedindo criar sessões mirando branches específicas.
+3. Em `get_session`, `send_message`, `approve_plan`, `delete_session` e ferramentas de linha de comando: a passagem de URLs completas do navegador (`https://jules.google.com/session/<id>`) causava erros HTTP 404/400 ou requisições malformadas por falta de normalização de rotas REST.
+**Fix aplicado:**
+1. `list_sessions` agora aplica filtro estrito: se `repo_filter` for informado, apenas sessões cujo `sourceContext.source` contenha ou termine com o repositório são retornadas.
+2. `create_session` respeita estritamente o parâmetro `base_branch` quando informado; apenas auto-detecta via Git local se `base_branch is None`.
+3. Implementado `JulesClient.normalize_session_id(session_id)` universal, aceitando ID puro, formato `sessions/<id>` ou URL completa do console do Jules em todos os métodos e ferramentas.
+
 ---
 
 ## 🚀 Features Implementadas
@@ -435,12 +446,45 @@ amb agent --role relay --loop --max-cycles 5
 
 ---
 
-### Expansão da Suíte de Testes Automatizados (83 testes passando — 100% Green)
-- Suíte expandida de 78 para **83 testes automatizados** com tempo de execução de ~2.1s:
-  - `tests/test_git_service.py` (12 testes: get_current_branch, detect_github_repo, is_clean, checkout_and_pull, check_gh_auth_failure, list_open_prs, pr_workflow_ready_approve_merge, get_detailed_status_and_upstream, get_diff_and_stash, pr_get_create_close, git_facade_tools, git_cli_handlers)
+### F1-M8 — Modernização e Robustecimento da Integração Google Jules REST API
+**Arquivos:** `integrations/jules/jules_client.py`, `integrations/jules/tools/*.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `.agents/skills/amb-jules-specialist/SKILL.md`, `integrations/jules/README.md`, `README.md`, `tests/test_jules_integration.py`.
+- **Motivação:**
+  - O `JulesClient` não possuía normalização de URLs/IDs, quebrando quando o usuário colava a URL do navegador.
+  - O método `list_sessions` sofria de vazamento de sessões sem `sourceContext`.
+  - O método `create_session` sobrescrevia a branch explicitamente definida pelo usuário caso coincidisse com valores padrão.
+  - Várias ferramentas de fachada (`list_sources`, `list_sessions`, `send_message`) continham lógica exclusiva em seus blocos `main()`, impossibilitando uso programático ou teste direto.
+  - Faltavam comandos de diagnóstico (`status`) e de listagem de fontes (`sources`) sob `amb jules`.
+- **Implementação:**
+  - **Robustecimento do `JulesClient` (`integrations/jules/jules_client.py`):**
+    - `normalize_session_id(session_id)`: normalização universal aceitando ID numérico, rota `sessions/<id>` ou URL completa do console do Jules (`https://jules.google.com/session/...`).
+    - `get_source(source_name)`: consulta de fontes e repositórios conectados.
+    - `get_status(repo_filter)`: diagnóstico consolidado com conectividade, chave, fontes e contagem de sessões ativas por estado.
+    - `list_sessions`: suporte a `state_filter` e correção do filtro estrito de repositório.
+    - `create_session`: respeito estrito a branches manuais sem sobrescrita.
+  - **Padronização das Ferramentas de Fachada (`integrations/jules/tools/`):**
+    - `list_sources.py`: expõe `run_list_sources(...)` com suporte a `--json`.
+    - `list_sessions.py`: expõe `run_list_sessions(...)` com filtros por `--all`, `--repo`, `--state` e `--json`.
+    - `get_session.py`: expõe `run_get_session(...)` com suporte integrado a `--watch` e `--json`.
+    - `create_session.py`: expõe `run_create_session(...)` com suporte a `--branch` / `-b` e `--json`.
+    - `approve_plan.py`: expõe `run_approve_plan(...)` com guardrail integrado de validação de plano e flag `--force`.
+    - `send_message.py`: expõe `run_send_message(...)` com guardrail contra mensagens consecutivas e flag `--force`.
+    - `monitor_activities.py`: delegando ao streaming avançado `stream_session_activities`.
+  - **CLI `amb jules` Enriquecida (`cli_modules/`):**
+    - Novos subcomandos de primeira classe: `amb jules status` e `amb jules sources`.
+    - Suporte a filtros (`--all`, `--repo`, `--state`), flags de controle (`--force`, `--branch`) e `--json` em todos os subcomandos.
+    - Suporte a argumento posicional transparente para ID ou URL de sessão em `get`, `approve`, `reply` e `merge`.
+  - **Documentação e Skills:**
+    - Atualizados `.agents/skills/amb-jules-specialist/SKILL.md`, `integrations/jules/README.md` e `README.md`.
+  - Suíte de testes unitários expandida em `tests/test_jules_integration.py` (de 6 para 15 testes passando).
+
+---
+
+### Expansão da Suíte de Testes Automatizados (92 testes passando — 100% Green)
+- Suíte expandida de 83 para **92 testes automatizados** com tempo de execução de ~2.1s:
+  - `tests/test_jules_integration.py` (15 testes: outputs list, outputs dict, activities fallback, empty fallback, watcher delegate, normalize session ID, explicit branch create, auto branch create, strict list filtering, get status and sources, approve plan guardrails and force, send message guardrails and force, facade tools, CLI handlers, cleanup sessions dry run)
+  - `tests/test_git_service.py` (12 testes)
   - `tests/test_antigravity_integration.py` (12 testes)
   - `tests/test_stitch_integration.py` (16 testes)
-  - `tests/test_jules_integration.py` (6 testes)
   - `tests/test_quality_gatekeeper.py` (4 testes)
   - `tests/test_setup_and_analyzer.py` (6 testes)
   - `tests/test_bootstrap.py` (5 testes)
@@ -448,6 +492,7 @@ amb agent --role relay --loop --max-cycles 5
   - `tests/test_auto_reply_srp.py` (7 testes)
   - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
   - `tests/test_ai_context_builder.py` (2 testes)
+
 
 
 

@@ -37,7 +37,7 @@ def detect_pr_from_session(session_id: str) -> Optional[int]:
     """Inspeciona os outputs da sessão e as atividades para extrair o número do PR via JulesClient."""
     client = JulesClient()
     try:
-        clean_id = session_id.split("/")[-1]
+        clean_id = JulesClient.normalize_session_id(session_id)
         sess = client.get_session(clean_id)
         act_res = client.list_activities(session_id=clean_id, page_size=25)
         activities = act_res.get("activities", []) if isinstance(act_res, dict) else (act_res if isinstance(act_res, list) else [])

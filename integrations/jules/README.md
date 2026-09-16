@@ -1,65 +1,38 @@
-# Jules Integration
+# Google Jules Integration (AMB_V2)
 
-This directory contains the integration with the Jules API.
+Esta pasta contém o cliente REST e as ferramentas de integração com a API **Google Jules v1alpha**.
 
-## Tools
-
-### `approve_plan.py`
-
-This script is used to approve a plan in a Jules session.
-
-**Validation Rule (Guardrail):**
-To ensure a plan actually exists before blindly attempting to approve it, `approve_plan.py` includes a guardrail.
-Before approving a plan, the script fetches the session's activities and examines the most recent one (determined by `createTime`).
-It verifies that the `originator` of this activity is 'agent' and that it contains a `planGenerated` key.
-If these conditions are not met, or if there are no activities, the script will abort and return the following error message:
-> "Error: There is no pending plan to approve."
-
-**Usage:**
-```bash
-python3 tools/approve_plan.py --session-id <session_id>
-```
-
-### `send_message.py`
-
-This script is used to send a message to a Jules session.
-
-**Validation Rule (Guardrail):**
-To prevent confusing the session state by sending consecutive messages before the agent has replied, `send_message.py` includes a guardrail.
-Before sending a message, the script checks the most recent activity in the session. If the most recent activity was originated by the user, the script will abort and return the following error message:
-> "Error: Please wait for the agent to reply before sending another message."
-
-It allows the message to be sent if the originator is 'agent', 'system', or if there are no prior activities.
-
-**Usage:**
-```bash
-python3 tools/send_message.py --session-id <session_id> --message "<your message>"
-```
+## Componentes
 
 ### `jules_client.py`
+Cliente HTTP autenticado derivado de `BaseGoogleClient`, com resiliência, retry exponencial com jitter e normalização universal de URLs/IDs (`normalize_session_id`).
+- Métodos principais: `create_session`, `get_session`, `list_sessions`, `list_sources`, `get_source`, `send_message`, `approve_plan`, `delete_session`, `list_activities`, `get_status`.
 
-This is the main REST API client for interacting with Jules.
+---
 
-### `cleanup_sessions.py`
+## Ferramentas Modulares (`tools/`)
 
-This script is used to audit and safely clean up Jules sessions for the current repository.
+| Ferramenta | Função de Serviço | Finalidade |
+|---|---|---|
+| `list_sources.py` | `run_list_sources(...)` | Lista fontes e repositórios GitHub conectados à conta Jules. |
+| `list_sessions.py` | `run_list_sessions(...)` | Lista sessões com filtros estritos de repositório, estado e suporte a `--json`. |
+| `get_session.py` | `run_get_session(...)` | Exibe metadados completos de uma sessão ou inicia streaming (`--watch`). |
+| `create_session.py` | `run_create_session(...)` | Despacha nova sessão com suporte a `--branch`, `--source` e `--json`. |
+| `approve_plan.py` | `run_approve_plan(...)` | Valida guardrail de plano pendente e aprova (suporta `--force`). |
+| `send_message.py` | `run_send_message(...)` | Envia mensagem com guardrail contra mensagens consecutivas do usuário (suporta `--force`). |
+| `monitor_activities.py`| `run_monitor_activities(...)` | Streaming em tempo real de logs, bash e planos da sessão. |
+| `merge_session_pr.py` | `run_merge_session_pr(...)` | Detecta PR, marca como pronto (draft), aprova, faz squash merge e roda QA. |
+| `cleanup_sessions.py` | `run_cleanup_sessions(...)` | Auditoria e exclusão segura de sessões na nuvem. |
 
-**Validation Rule (Guardrail):**
-To prevent accidentally deleting a session that is still running, `cleanup_sessions.py` includes a state validation guardrail.
-Before deleting a session, it verifies that the session is in a terminal state (`COMPLETED`, `SUCCEEDED`, `FAILED`, or `CANCELED`).
-If a session is in an active state like `RUNNING` or `PENDING`, the script will log a skip message and safely ignore it. This rule is enforced across all deletion methods, including bulk operations and explicit ID targeting (`--delete-id`).
+---
 
-**Usage:**
-```bash
-# Simulate deletion of sessions with merged PRs
-python3 tools/cleanup_sessions.py --delete-merged --dry-run
+## Guardrails de Segurança
 
-# Delete sessions with merged PRs
-python3 tools/cleanup_sessions.py --delete-merged
+1. **Aprovação de Plano (`approve_plan.py`):**
+   Verifica se a sessão está em estado de espera de aprovação (`AWAITING_PLAN_APPROVAL`) ou se a atividade recente possui `planGenerated` do agente antes de disparar o endpoint. Bypass disponível com `--force`.
 
-# Delete all completed sessions (merged or unmerged)
-python3 tools/cleanup_sessions.py --delete-all-completed
+2. **Mensagens Duplicadas (`send_message.py`):**
+   Verifica se a última atividade foi enviada pelo usuário, evitando duplicidades enquanto a VM do Jules processa. Bypass disponível com `--force`.
 
-# Delete a specific session by ID
-python3 tools/cleanup_sessions.py --delete-id <session_id>
-```
+3. **Exclusão Segura (`cleanup_sessions.py`):**
+   Apenas permite a exclusão de sessões em estados terminais (`COMPLETED`, `SUCCEEDED`, `FAILED`, `CANCELLED`). Sessões ativas são preservadas automaticamente.

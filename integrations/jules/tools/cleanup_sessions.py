@@ -41,7 +41,7 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
     }
 
     for s in sessions:
-        sid = s.get("name", "").split("/")[-1] or s.get("id")
+        sid = JulesClient.normalize_session_id(s.get("name", "") or s.get("id"))
         state = s.get("state", "UNKNOWN")
         title = s.get("title", "Sem título")
         pr_info = JulesClient.extract_pull_request(s)

@@ -118,24 +118,26 @@ Integração direta com o Google Jules para desenvolvimento remoto e gestão de 
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb jules list` | — | Lista as sessões recentes do repositório no Jules (`--limit <N>`). |
-| `amb jules get <id>` | — | Exibe detalhes da sessão, status da VM e URL do Pull Request. |
-| `amb jules get <id> --watch` | `-w` | Acompanha streaming em tempo real das atividades, mensagens e comandos bash. |
-| `amb jules get <id> --json` | — | Retorna o payload completo da sessão em JSON puro. |
-| `amb jules create -p "<prompt>"` | `--prompt` | Cria uma nova sessão no Jules vinculada ao repositório do `.env`. |
+| `amb jules status` | `check` | Diagnóstico de conectividade, API Key, fontes conectadas e sessões ativas (`--json`). |
+| `amb jules sources` | `source` | Lista repositórios e fontes conectados na conta Google Jules (`--json`). |
+| `amb jules list` | — | Lista sessões do repositório (`--limit`, `--all`, `--repo`, `--state`, `--json`). |
+| `amb jules get <id_ou_url>` | — | Exibe detalhes da sessão, status da VM e URL do Pull Request (`--json`). |
+| `amb jules get <id_ou_url> --watch`| `-w` | Acompanha streaming em tempo real das atividades, mensagens e comandos bash. |
+| `amb jules create -p "<prompt>"` | `--prompt` | Cria uma nova sessão no Jules vinculada ao repositório do `.env` (`--branch`, `--json`). |
 | `amb jules create -p "..." -t "<título>"` | `--title` | Cria uma sessão com título personalizado. |
 | `amb jules reply` | `advisor` | Abre menu interativo com IA para listar e responder dúvidas pendentes. |
-| `amb jules reply -s <id>` | `--session-id` | Gera sugestão com Gemini e responde turn-by-turn a uma sessão específica. |
-| `amb jules reply -s <id> -m "<texto>"` | `--message` | Envia mensagem manual direta para o chat da sessão no Jules. |
-| `amb jules reply -s <id> -y` | `--auto-approve` | Envia a resposta sugerida pelo Gemini imediatamente sem pedir confirmação. |
-| `amb jules approve -s <id>` | `--session-id` | Aprova o plano de ação formulado pelo agente (`:approvePlan`). |
-| `amb jules merge -s <id>` | `--session-id` | Detecta o PR da sessão, publica se Draft, aprova, faz merge e valida QA local. |
+| `amb jules reply <id>` | `--session-id` | Gera sugestão com Gemini e responde turn-by-turn a uma sessão específica. |
+| `amb jules reply <id> -m "<texto>"` | `--message` | Envia mensagem manual direta para o chat da sessão no Jules (`--force`). |
+| `amb jules reply <id> -y` | `--auto-approve`| Envia a resposta sugerida pelo Gemini imediatamente sem pedir confirmação. |
+| `amb jules approve <id>` | `--session-id` | Valida guardrails e aprova o plano de ação formulado pelo agente (`:approvePlan`, `--force`). |
+| `amb jules merge <id>` | `--session-id` | Detecta o PR da sessão, publica se Draft, aprova, faz merge e valida QA local (`--branch`). |
 | `amb jules merge --auto-latest` | — | Detecta e faz merge do Pull Request aberto mais recente (incluindo Drafts). |
-| `amb jules merge -s <id> --branch <b>` | `-b` | Define o branch-alvo do merge (padrão: `develop`). |
 | `amb jules clean` | `cleanup` | Audita e remove na nuvem do Jules as sessões já integradas no Git (`-f` para forçar). |
 | `amb jules clean --failed` | — | Remove as sessões que terminaram em estado de erro fatal (FAILED). |
+| `amb jules clean --merged` | — | Remove sessões com PRs já mesclados no Git. |
 
-> **💡 Publicação automática de Draft PRs:** o Jules sempre cria PRs como **Draft**. O pipeline `amb jules merge` executa `gh pr ready` automaticamente antes do merge, sem necessidade de intervenção manual.
+> **💡 Normalização Universal de IDs:** Todos os comandos do Jules aceitam ID puro (`175...`), formato REST (`sessions/175...`) ou URL direta do navegador (`https://jules.google.com/session/175...`).
+> **💡 Publicação automática de Draft PRs:** O Jules sempre cria PRs como **Draft**. O pipeline `amb jules merge` executa `gh pr ready` automaticamente antes do merge, sem necessidade de intervenção manual.
 
 ```bash
 # Exemplos:

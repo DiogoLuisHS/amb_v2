@@ -45,26 +45,60 @@ class JulesClient(BaseGoogleClient):
         """Executa requisição HTTP autenticada via BaseGoogleClient com retry exponencial e jitter."""
         return self.execute_request(method=method, path_or_url=path, params=params, data=data)
 
-    # 1. Sources
+    # 1. Normalização & Helpers
+    @staticmethod
+    def normalize_session_id(session_id: str) -> str:
+        """
+        Normaliza strings de ID de sessão, aceitando:
+        - ID numérico/alfanumérico puro: '17502412430766789460'
+        - Rota REST: 'sessions/17502412430766789460'
+        - URL web: 'https://jules.google.com/session/17502412430766789460'
+        - URLs com parâmetros de query ou barras no final.
+        """
+        if not session_id:
+            return ""
+        raw = str(session_id).strip().rstrip("/")
+        if "jules.google.com/session/" in raw:
+            raw = raw.split("jules.google.com/session/")[-1].split("/")[0].split("?")[0]
+        elif "sessions/" in raw:
+            raw = raw.split("sessions/")[-1].split("/")[0].split("?")[0]
+        return raw.strip()
+
+    # 2. Sources
     def list_sources(self, page_size: int = 50) -> List[Dict[str, Any]]:
         res = self._request("GET", "sources", params={"pageSize": page_size})
         return res.get("sources", [])
 
-    # 2. Sessions
-    def create_session(self, prompt: str, source_name: Optional[str] = None, title: Optional[str] = None, base_branch: Optional[str] = None) -> Dict[str, Any]:
+    def get_source(self, source_name: str) -> Dict[str, Any]:
+        """Retorna detalhes de uma fonte/repositório conectado no Jules."""
+        clean = source_name.strip().lstrip("/")
+        path = clean if clean.startswith("sources/") else f"sources/{clean}"
+        return self._request("GET", path)
+
+    # 3. Sessions
+    def create_session(
+        self,
+        prompt: str,
+        source_name: Optional[str] = None,
+        title: Optional[str] = None,
+        base_branch: Optional[str] = None
+    ) -> Dict[str, Any]:
         if os.path.isfile(prompt):
             try:
                 with open(prompt, "r", encoding="utf-8") as f:
                     prompt = f.read()
             except Exception:
                 pass
-        from config import get_repo_name, find_repo_root
+        from config import get_repo_name
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
-        
-        # Auto-detecta branch ativa do repositório local se não especificada
-        if not base_branch or base_branch in ["develop", "main"]:
-            from integrations.git.git_service import GitService
-            base_branch = GitService().get_current_branch()
+
+        # Se base_branch não for especificada, auto-detecta branch ativa do repositório local
+        if not base_branch:
+            try:
+                from integrations.git.git_service import GitService
+                base_branch = GitService().get_current_branch()
+            except Exception:
+                base_branch = None
         base_branch = base_branch or "main"
 
         payload = {
@@ -80,10 +114,9 @@ class JulesClient(BaseGoogleClient):
             payload["title"] = title
         return self._request("POST", "sessions", data=payload)
 
-
     def get_session(self, session_id: str) -> Dict[str, Any]:
-        path = session_id if session_id.startswith("sessions/") else f"sessions/{session_id}"
-        return self._request("GET", path)
+        clean_id = self.normalize_session_id(session_id)
+        return self._request("GET", f"sessions/{clean_id}")
 
     @staticmethod
     def extract_pull_request(
@@ -118,21 +151,29 @@ class JulesClient(BaseGoogleClient):
 
         return None
 
-    def list_sessions(self, page_size: int = 50, repo_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_sessions(
+        self,
+        page_size: int = 50,
+        repo_filter: Optional[str] = None,
+        state_filter: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         res = self._request("GET", "sessions", params={"pageSize": page_size})
         sessions = res.get("sessions", [])
-        if repo_filter:
-            target = repo_filter.lower().strip()
-            filtered = []
-            for s in sessions:
+        filtered = []
+        target = repo_filter.lower().strip() if repo_filter else None
+        target_state = state_filter.upper().strip() if state_filter else None
+
+        for s in sessions:
+            if target:
                 s_src = s.get("sourceContext", {}).get("source", "").lower()
-                if s_src:
-                    if target in s_src or s_src.endswith(target):
-                        filtered.append(s)
-                else:
-                    filtered.append(s)
-            return filtered
-        return sessions
+                if not s_src or (target not in s_src and not s_src.endswith(target)):
+                    continue
+            if target_state:
+                if (s.get("state") or "").upper() != target_state:
+                    continue
+            filtered.append(s)
+
+        return filtered
 
     def send_message(self, session_id: str, message: str) -> Dict[str, Any]:
         if os.path.isfile(message):
@@ -141,24 +182,75 @@ class JulesClient(BaseGoogleClient):
                     message = f.read()
             except Exception:
                 pass
-        clean_id = session_id.split("/")[-1]
+        clean_id = self.normalize_session_id(session_id)
         path = f"sessions/{clean_id}:sendMessage"
         return self._request("POST", path, data={"prompt": message})
 
     def approve_plan(self, session_id: str) -> Dict[str, Any]:
-        clean_id = session_id.split("/")[-1]
+        clean_id = self.normalize_session_id(session_id)
         path = f"sessions/{clean_id}:approvePlan"
         return self._request("POST", path, data={})
 
     def delete_session(self, session_id: str) -> Dict[str, Any]:
-        clean_id = session_id.split("/")[-1]
+        clean_id = self.normalize_session_id(session_id)
         path = f"sessions/{clean_id}"
         return self._request("DELETE", path)
 
-    # 3. Activities
+    def get_status(self, repo_filter: Optional[str] = None) -> Dict[str, Any]:
+        """Retorna diagnóstico completo de conectividade, chave, fontes e sessões ativas."""
+        from config import get_repo_name, get_env
+        target_repo = repo_filter or get_repo_name()
+        key = get_env("JULES_API_KEY")
+
+        status: Dict[str, Any] = {
+            "api_key_configured": bool(key),
+            "api_reachable": False,
+            "sources_count": 0,
+            "active_repo": target_repo,
+            "repo_connected": False,
+            "sessions_total": 0,
+            "sessions_awaiting_feedback": 0,
+            "sessions_in_progress": 0,
+            "sessions_completed": 0,
+            "sessions_failed": 0,
+            "error": None,
+        }
+
+        if not key:
+            status["error"] = "JULES_API_KEY não configurada no ambiente."
+            return status
+
+        try:
+            sources = self.list_sources()
+            status["api_reachable"] = True
+            status["sources_count"] = len(sources)
+            if target_repo:
+                target_norm = target_repo.lower().strip()
+                status["repo_connected"] = any(
+                    target_norm in (s.get("name") or "").lower() for s in sources
+                )
+
+            sessions = self.list_sessions(page_size=50, repo_filter=target_repo)
+            status["sessions_total"] = len(sessions)
+            for s in sessions:
+                st = (s.get("state") or "UNKNOWN").upper()
+                if "AWAITING" in st:
+                    status["sessions_awaiting_feedback"] += 1
+                elif "IN_PROGRESS" in st or "RUNNING" in st or "STARTING" in st:
+                    status["sessions_in_progress"] += 1
+                elif "COMPLETED" in st or "SUCCEEDED" in st:
+                    status["sessions_completed"] += 1
+                elif "FAIL" in st or "CANCEL" in st:
+                    status["sessions_failed"] += 1
+        except Exception as e:
+            status["error"] = str(e)
+
+        return status
+
+    # 4. Activities
     def list_activities(self, session_id: str, page_size: int = 50, fetch_all: bool = True) -> Dict[str, Any]:
         """Lista atividades da sessão. Se fetch_all=True, percorre todas as páginas para capturar as atividades mais recentes."""
-        clean_id = session_id.split("/")[-1]
+        clean_id = self.normalize_session_id(session_id)
         path = f"sessions/{clean_id}/activities"
         
         if not fetch_all:

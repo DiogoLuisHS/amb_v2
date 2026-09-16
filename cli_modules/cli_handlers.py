@@ -150,84 +150,111 @@ def cmd_jules(args):
     """Roteia comandos específicos da integração com o Google Jules."""
     sub = args.jules_cmd
 
-    if sub == "list":
-        from jules_client import JulesClient
+    if sub in ["status", "check"]:
+        from integrations.jules.jules_client import JulesClient
         client = JulesClient()
-        sessions = client.list_sessions(page_size=args.limit)
-        log("JULES", f"Sessões recentes ({len(sessions)}):", Colors.CYAN)
-        for s in sessions:
-            sid = s.get("name", "").split("/")[-1] or s.get("id")
-            title = s.get("title") or "Sem título"
-            state = s.get("state", "UNKNOWN")
-            print(f"  • [{Colors.BOLD}{sid}{Colors.RESET}] {title} ({state})")
-            print(f"    https://jules.google.com/session/{sid}")
+        res = client.get_status(repo_filter=getattr(args, "repo", None))
+        if getattr(args, "json", False):
+            print(json.dumps(res, indent=2, ensure_ascii=False))
+        else:
+            print(f"\n{Colors.BOLD}{Colors.CYAN}=== ☁️ DIAGNÓSTICO GOOGLE JULES ==={Colors.RESET}\n")
+            key_st = f"{Colors.GREEN}Configurada{Colors.RESET}" if res["api_key_configured"] else f"{Colors.RED}Ausente{Colors.RESET}"
+            print(f"  • API Key:           {key_st}")
+            reach_st = f"{Colors.GREEN}Conectada{Colors.RESET}" if res["api_reachable"] else f"{Colors.RED}Inacessível ({res.get('error')}){Colors.RESET}"
+            print(f"  • API REST:          {reach_st}")
+            print(f"  • Fontes na Conta:   {Colors.BOLD}{res['sources_count']}{Colors.RESET}")
+            print(f"  • Repositório Alvo:  {Colors.BOLD}{res['active_repo'] or 'Não detectado'}{Colors.RESET}")
+            repo_st = f"{Colors.GREEN}Sim{Colors.RESET}" if res["repo_connected"] else f"{Colors.YELLOW}Não encontrado nas fontes conectadas{Colors.RESET}"
+            print(f"  • Repo Conectado:    {repo_st}")
+            print(f"\n  • Sessões do Repo:   Total: {Colors.BOLD}{res['sessions_total']}{Colors.RESET} | Aguardando: {Colors.YELLOW}{res['sessions_awaiting_feedback']}{Colors.RESET} | Em Progresso: {Colors.CYAN}{res['sessions_in_progress']}{Colors.RESET} | Concluídas: {Colors.GREEN}{res['sessions_completed']}{Colors.RESET} | Falhas: {Colors.RED}{res['sessions_failed']}{Colors.RESET}\n")
+
+    elif sub in ["sources", "source"]:
+        from integrations.jules.tools.list_sources import run_list_sources
+        run_list_sources(as_json=getattr(args, "json", False))
+
+    elif sub == "list":
+        from integrations.jules.tools.list_sessions import run_list_sessions
+        run_list_sessions(
+            limit=getattr(args, "limit", 10),
+            repo=getattr(args, "repo", None),
+            all_repos=getattr(args, "all", False),
+            state=getattr(args, "state", None),
+            as_json=getattr(args, "json", False)
+        )
 
     elif sub == "get":
-        if getattr(args, "watch", False):
-            from integrations.jules.jules_watcher import stream_session_activities
-            stream_session_activities(args.session_id)
+        sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
+        if not sid:
+            log_error("JULES", "Informe o ID da sessão.")
             return
-
-        from jules_client import JulesClient
-        client = JulesClient()
-        data = client.get_session(args.session_id)
-        if getattr(args, "json", False):
-            print(json.dumps(data, indent=2))
-        else:
-            sid = data.get("name", "").split("/")[-1] or data.get("id")
-            state = data.get("state", "UNKNOWN")
-            log("JULES-STATUS", f"Sessão {sid}:", Colors.CYAN)
-            print(f"  • Título:     {data.get('title') or 'Sem título'}")
-            print(f"  • Estado:     {Colors.BOLD}{state}{Colors.RESET}")
-            pr_info = JulesClient.extract_pull_request(data)
-            if pr_info and pr_info.get("url"):
-                print(f"  • Pull Request: {Colors.GREEN}{pr_info['url']}{Colors.RESET}")
-            print(f"  • Painel Web:   https://jules.google.com/session/{sid}")
+        from integrations.jules.tools.get_session import run_get_session
+        run_get_session(
+            session_id=sid,
+            watch=getattr(args, "watch", False),
+            as_json=getattr(args, "json", False)
+        )
 
     elif sub == "create":
-        from jules_client import JulesClient
-        client = JulesClient()
-        res = client.create_session(prompt=args.prompt, title=args.title)
-        sid = res.get("name", "").split("/")[-1] or res.get("id")
-        log("JULES", f"Sessão criada com sucesso: {sid}", Colors.GREEN)
-        print(f"Painel: https://jules.google.com/session/{sid}")
+        from integrations.jules.tools.create_session import run_create_session
+        run_create_session(
+            prompt=args.prompt,
+            title=getattr(args, "title", None),
+            base_branch=getattr(args, "branch", None),
+            source_name=getattr(args, "source", None),
+            as_json=getattr(args, "json", False)
+        )
 
     elif sub in ["reply", "advisor", "ask"]:
         sid = getattr(args, "session_id_flag", None) or getattr(args, "session_id", None)
         if sid:
-            sid = str(sid).strip().rstrip("/").split("/")[-1]
+            from integrations.jules.jules_client import JulesClient
+            sid = JulesClient.normalize_session_id(sid)
+
         if getattr(args, "message", None):
-            from jules_client import JulesClient
-            client = JulesClient()
             if not sid:
                 log_error("JULES", "Informe o ID da sessão ao usar --message direta.")
                 return
-            client.send_message(session_id=sid, message=args.message)
-            log("JULES", f"✅ Mensagem direta enviada para a sessão {sid}!", Colors.GREEN)
+            from integrations.jules.tools.send_message import run_send_message
+            run_send_message(
+                session_id=sid,
+                message=args.message,
+                force=getattr(args, "force", False)
+            )
         elif sid:
             from auto_reply import advise_and_reply
-            advise_and_reply(session_id=sid, auto_approve=args.auto_approve)
+            advise_and_reply(session_id=sid, auto_approve=getattr(args, "auto_approve", False))
         else:
             from auto_reply import run_auto_advisor
-            run_auto_advisor(auto_approve=args.auto_approve)
+            run_auto_advisor(auto_approve=getattr(args, "auto_approve", False))
 
     elif sub == "approve":
-        from jules_client import JulesClient
-        client = JulesClient()
-        client.approve_plan(session_id=args.session_id)
-        log("JULES", f"✅ Plano da sessão {args.session_id} aprovado com sucesso!", Colors.GREEN)
+        sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
+        if not sid:
+            log_error("JULES", "Informe o ID da sessão para aprovação.")
+            return
+        from integrations.jules.tools.approve_plan import run_approve_plan
+        run_approve_plan(
+            session_id=sid,
+            force=getattr(args, "force", False),
+            as_json=getattr(args, "json", False)
+        )
 
     elif sub == "merge":
+        sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
         from integrations.jules.tools.merge_session_pr import run_merge_session_pr
         run_merge_session_pr(
-            session_id=getattr(args, "session_id", None),
-            auto_latest=getattr(args, "auto_latest", False)
+            session_id=sid,
+            auto_latest=getattr(args, "auto_latest", False),
+            target_branch=getattr(args, "branch", "main")
         )
 
     elif sub in ["clean", "cleanup"]:
         from integrations.jules.tools.cleanup_sessions import run_cleanup_sessions
+        delete_mode = "failed" if getattr(args, "failed", False) else ("merged" if getattr(args, "merged", False) else "merged")
+        delete_id = getattr(args, "id", None)
         run_cleanup_sessions(
-            delete_mode="failed" if getattr(args, "failed", False) else "merged",
+            delete_mode=delete_mode,
+            delete_id=delete_id,
             dry_run=not getattr(args, "force", False)
         )
 
