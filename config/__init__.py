@@ -28,6 +28,11 @@ from .bootstrap import (
     add_to_sys_path,
     CANONICAL_SUBMODULES,
 )
+from .rules_manager import (
+    RulesManager,
+    get_rules_manager,
+    load_project_rules,
+)
 
 __all__ = [
     "Colors",
@@ -45,6 +50,9 @@ __all__ = [
     "get_device_type",
     "parse_design_tokens_from_text",
     "get_design_system_config",
+    "RulesManager",
+    "get_rules_manager",
+    "load_project_rules",
     "main",
     "ensure_amb_env",
     "get_amb_root",

@@ -2,7 +2,7 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate,
-    cmd_pipeline, cmd_schema, cmd_context
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity
 )
 
 def create_parser():
@@ -160,6 +160,34 @@ def create_parser():
     s_call.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
     p_stitch.set_defaults(func=cmd_stitch)
 
+    # 9. amb antigravity (alias: amb agy)
+    p_agy = subparsers.add_parser("antigravity", aliases=["agy"], help="Comandos de inferência cognitiva e SDK Google Antigravity.")
+    agy_subs = p_agy.add_subparsers(dest="agy_cmd", help="Subcomandos do Antigravity")
+
+    a_status = agy_subs.add_parser("status", aliases=["check"], help="Verifica status do runtime agy, chaves e regras ativas.")
+    a_status.add_argument("--json", action="store_true", help="Exibe o status em formato JSON estruturado.")
+
+    a_prompt = agy_subs.add_parser("prompt", aliases=["synthesize", "synth"], help="Sintetiza uma ideia informal em prompt executivo formal com IA.")
+    a_prompt.add_argument("--idea", "-i", required=True, help="Ideia informal ou requisito a sintetizar.")
+    a_prompt.add_argument("--role", "-r", default="general", help="Especialidade ou papel da persona (padrão: general).")
+    a_prompt.add_argument("--output", "-o", help="Caminho do arquivo para salvar o prompt sintetizado.")
+
+    a_val = agy_subs.add_parser("validate", aliases=["audit", "lint"], help="Audita conformidade arquitetural de um arquivo contra as regras do repositório.")
+    a_val.add_argument("file", help="Caminho do arquivo a ser auditado.")
+    a_val.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
+
+    a_rules = agy_subs.add_parser("rules", help="Lista e inspeciona as regras arquiteturais descobertas no projeto.")
+    a_rules.add_argument("--json", action="store_true", help="Exibe a lista de regras em JSON.")
+    a_rules.add_argument("--content", "-c", action="store_true", help="Exibe o conteúdo integral consolidado das regras.")
+
+    a_run = agy_subs.add_parser("run", aliases=["eval"], help="Executa inferência direta com prompt arbitrário via modelo cognitivo.")
+    a_run.add_argument("prompt", help="Prompt para inferência cognitiva.")
+    a_run.add_argument("--system", "-s", help="Instrução de sistema opcional.")
+    a_run.add_argument("--model", "-m", help="Modelo específico do Gemini (ex: gemini-3.8-flash).")
+    a_run.add_argument("--temperature", "-t", type=float, default=0.2, help="Temperatura de amostragem (padrão: 0.2).")
+    a_run.add_argument("--output", "-o", help="Salva a saída em arquivo.")
+    p_agy.set_defaults(func=cmd_antigravity)
+
     # 10. amb validate
     p_val = subparsers.add_parser("validate", aliases=["lint", "audit"], help="Audita um arquivo contra as regras arquiteturais do repositório.")
     p_val.add_argument("file", help="Caminho do arquivo de código a ser auditado.")
@@ -174,7 +202,7 @@ def create_parser():
     p_pipe.add_argument("--skip-stitch", action="store_true", help="Pula a geração de UI no Stitch, indo direto ao Jules.")
     p_pipe.add_argument("--no-qa", action="store_true", help="Desabilita o teste QA local automático no final.")
     p_pipe.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos no Jules automaticamente.")
-    p_pipe.add_argument("--repo", "-r", help="Repositório GitHub no formato 'dono/repo' (padrão: auto-detectado via git).")
+    p_pipe.add_argument("--repo", help="Repositório GitHub no formato 'dono/repo' (padrão: auto-detectado via git).")
     p_pipe.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help="Tipo de dispositivo para geração do Stitch.")
     p_pipe.add_argument("--edit-screen-id", help="Refina uma tela existente no Stitch em vez de criar uma nova.")
     p_pipe.add_argument("--screen-id", help="Utiliza uma tela já existente no Stitch como ponto de partida (não recria).")

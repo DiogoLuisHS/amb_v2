@@ -34,7 +34,7 @@ Com a entrega bem-sucedida das bases fundamentais (Bootstrap, BaseGoogleClient, 
 | Item | Título | Alvo / Escopo Principal | Status |
 | :--- | :--- | :--- | :--- |
 | **F1-M5** | Extração e Centralização do `QualityGatekeeper` | `pipeline/quality_gatekeeper.py` (desduplica `pipeline.py` e `merge_session_pr.py`) | ✅ Concluído (v2.3) |
-| **F1-M6** | Unificação de Regras do Repositório (`RulesManager`) | `config/rules_manager.py` (desduplica `pipeline.py` e `cognitive_advisor.py`) | ⏳ Pendente |
+| **F1-M6** | Unificação de Regras do Repositório (`RulesManager`) | `config/rules_manager.py` (desduplica `pipeline.py` e `cognitive_advisor.py`) | ✅ Concluído (v2.3) |
 | **F1-M7** | Desacoplamento de Handlers CLI & Fim de `sys.argv` | `cli_modules/cli_handlers.py` (chamada direta de serviços de domínio) | ✅ Concluído (v2.3) |
 
 #### Detalhamento Técnico das Ações Must Have:

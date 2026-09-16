@@ -358,9 +358,46 @@ amb agent --role relay --loop --max-cycles 5
 
 ---
 
-### Expansão da Suíte de Testes Automatizados (62 testes passando — 100% Green)
-- Suíte expandida de 50 para **62 testes automatizados** com tempo de execução de ~1.26s:
-  - `tests/test_stitch_integration.py` (12 testes novos: checagem de Node.js, módulo ausente, generate, edit, get, list, get_project, variants, sync, call_tool, fachadas e resolução dinâmica de deviceType)
+---
+
+### F1-M6 — Unificação de Regras do Repositório (RulesManager) & Modernização da Integração Google Antigravity SDK
+**Arquivos:** `config/rules_manager.py`, `config/__init__.py`, `integrations/antigravity/antigravity_client.py`, `integrations/antigravity/tools/synthesize_prompt.py`, `integrations/antigravity/tools/validate_architecture.py`, `agents/auto_reply_core/cognitive_advisor.py`, `pipeline/pipeline.py`, `cli_modules/cli_parsers.py`, `cli_modules/cli_handlers.py`, `.agents/skills/amb-antigravity-specialist/SKILL.md`, `README.md`, `tests/test_antigravity_integration.py`.
+- **Motivação:**
+  - Existiam premissas tecnológicas gravadas *a priori* (`"TypeScript estrito"`, `"0 any"`, `"contratos Zod"`) espalhadas em `antigravity_client.py`, `pipeline.py` e `cognitive_advisor.py`, violando o princípio poliglota agnóstico do AMB_V2.
+  - A lógica de descoberta de diretórios de regras (`.antigravity/rules/` vs `.gemini/rules/`), corte de caracteres, fechamento de fences markdown e caching estava duplicada e desarticulada em 4 arquivos distintos.
+  - O arquivo `antigravity_client.py` continha um bloco duplicado de código `if __name__ == "__main__":` no final.
+  - Não existiam subcomandos unificados sob `amb antigravity` / `amb agy`.
+  - As ferramentas em `integrations/antigravity/tools/` usavam o loop arcaico de `sys.path`.
+- **Implementação:**
+  - **Criação do `RulesManager` (`config/rules_manager.py`):**
+    - Descoberta hierárquica e prioritária de regras: diretório explícito ➔ `.antigravity/rules/` ➔ `.gemini/rules/` ➔ `.agents/rules/` ➔ `rules/` ➔ arquivos de regras na raiz (`AGENTS.md`, `GEMINI.md`).
+    - Fechamento seguro de code fences markdown abertas (```` ``` ````) quando trechos são truncados por orçamento de tokens.
+    - Sanitização de frontmatter YAML e comentários HTML.
+    - Cache em memória por diretório e tamanho, com método de invalidação `RulesManager.invalidate_cache()`.
+    - Filtragem contextual por especialidade de agente (`filter_rules_for_agent`).
+  - **Erradicação de Premissas Tecnológicas *A Priori*:**
+    - Substituição de suposições fixas de TypeScript/Zod por regras derivadas exclusivamente do projeto ativo via `RulesManager`.
+    - Validação poliglota (`validate_code`), detectando a linguagem a partir da extensão do arquivo (`.py`, `.go`, `.ts`, `.rs`, `.java`, etc.).
+  - **Modernização de `AntigravityClient`:**
+    - Resolução hierárquica dinâmica de modelo cognitivo (`model` explícito > `ANTIGRAVITY_MODEL`/`GEMINI_MODEL` no `.env` > `amb_project.json` > padrão `"gemini-3.8-flash"`).
+    - Método de diagnóstico unificado `get_status()` retornando estado do runtime, API Key, `agy` CLI e regras ativas.
+    - Parâmetros dinâmicos de geração (`temperature`, `max_output_tokens`).
+  - **Desacoplamento e Injeção de Regras:**
+    - `CognitiveAdvisor` e `PipelineOrchestrator` agora delegam a extração de regras diretamente ao `RulesManager`.
+  - **Fachadas Modernizadas:**
+    - `synthesize_prompt.py` e `validate_architecture.py` migrados para `ensure_amb_env()`, expondo as funções de serviço `run_synthesize_prompt` e `run_validate_architecture`.
+  - **Nova CLI Unificada `amb antigravity` (alias `amb agy`):**
+    - Subcomandos: `status` (ou `check`), `rules`, `prompt` (ou `synthesize`), `validate` (ou `audit`), `run` (ou `eval`).
+  - **Atualização de Documentação e Skills:**
+    - Atualizados `.agents/skills/amb-antigravity-specialist/SKILL.md` e `README.md`.
+  - Suíte de testes unitários criada em `tests/test_antigravity_integration.py` (12 testes passando).
+
+---
+
+### Expansão da Suíte de Testes Automatizados (78 testes passando — 100% Green)
+- Suíte expandida de 66 para **78 testes automatizados** com tempo de execução de ~1.44s:
+  - `tests/test_antigravity_integration.py` (12 testes novos: RulesManager sanitization/fences, hierarquia de diretórios, cache/invalidação, filtragem por papel, resolução dinâmica de modelo, get_status, generate REST, fallback para agy CLI, síntese zero a priori, validação poliglota, fachadas de serviço e handlers da CLI amb agy)
+  - `tests/test_stitch_integration.py` (16 testes)
   - `tests/test_jules_integration.py` (6 testes)
   - `tests/test_quality_gatekeeper.py` (4 testes)
   - `tests/test_setup_and_analyzer.py` (6 testes)
@@ -370,6 +407,7 @@ amb agent --role relay --loop --max-cycles 5
   - `tests/test_git_service.py` (7 testes)
   - `tests/test_auto_reply.py` (8 testes retrocompatíveis)
   - `tests/test_ai_context_builder.py` (2 testes)
+
 
 
 

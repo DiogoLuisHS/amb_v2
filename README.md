@@ -256,6 +256,11 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 | **Stitch SDK** | `amb stitch variants -s <id>` | `python integrations/stitch/tools/generate_variants.py` |
 | **Stitch SDK** | `amb stitch sync` | `python integrations/stitch/tools/sync_design_system.py` |
 | **Stitch SDK** | `amb stitch get -s <id> [-o tela.html]` | `python integrations/stitch/tools/get_screen.py` |
+| **Antigravity** | `amb agy status` | `python cli.py agy status` |
+| **Antigravity** | `amb agy rules` | `python cli.py agy rules` |
+| **Antigravity** | `amb agy prompt -i "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
+| **Antigravity** | `amb agy validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
+| **Antigravity** | `amb agy run "..."` | `python cli.py agy run "..."` |
 | **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
 | **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
 | **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |

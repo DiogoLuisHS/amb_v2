@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🤖 AMB_V2 - Consultor Cognitivo e Gerador de Respostas (SRP)
+🧠 AMB_V2 - Cognitive Advisor (SRP Core)
 Localização: amb_v2/agents/auto_reply_core/cognitive_advisor.py
-Responsabilidade Única: Carregar regras arquiteturais do repositório, montar o prompt técnico
-contextualizado e invocar o Antigravity/Gemini para formular sugestões técnicas ao Jules.
+Responsabilidade Única: Formulação e geração cognitiva de respostas técnicas contextuais
+utilizando o cliente Antigravity/Gemini e as regras centralizadas via RulesManager.
 """
 
-import functools
 import os
+import functools
 from typing import Optional
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, find_repo_root, log_error
+from config import Colors, find_repo_root, log_error, RulesManager, get_rules_manager
 from integrations.antigravity.antigravity_client import AntigravityClient
 
 
@@ -28,6 +28,7 @@ class CognitiveAdvisor:
     ):
         self.client = antigravity_client or AntigravityClient()
         self._custom_rules_dir = rules_dir
+        self.rules_manager = RulesManager.get_instance(custom_rules_dir=rules_dir)
 
     @staticmethod
     def filter_rules_for_jules(content: str) -> str:
@@ -53,12 +54,13 @@ class CognitiveAdvisor:
                 skip = False
             if not skip:
                 lines.append(line)
+            return_content = "\n".join(lines)
         return "\n".join(lines)
 
     @classmethod
     @functools.lru_cache(maxsize=128)
     def load_rules(cls, rules_dir: str) -> str:
-        """Carrega e cacheia o conteúdo das regras para evitar I/O redundante."""
+        """Carrega e cacheia o conteúdo das regras filtradas para evitar I/O redundante."""
         rules_context = ""
         if os.path.exists(rules_dir):
             for f in sorted(os.listdir(rules_dir)):
@@ -77,10 +79,10 @@ class CognitiveAdvisor:
         return rules_context
 
     def _resolve_rules_dir(self) -> str:
-        """Determina o diretório de regras ativo."""
-        if self._custom_rules_dir and os.path.exists(self._custom_rules_dir):
-            return self._custom_rules_dir
-
+        """Determina o diretório de regras ativo delegando para o RulesManager."""
+        resolved = self.rules_manager.resolve_rules_dir(custom_dir=self._custom_rules_dir)
+        if resolved:
+            return resolved
         root = find_repo_root()
         rules_dir = os.path.join(root, ".antigravity", "rules")
         if not os.path.exists(rules_dir):
@@ -96,7 +98,7 @@ class CognitiveAdvisor:
     ) -> tuple[str, str]:
         """Gera a instrução do sistema e o prompt estruturado para o modelo cognitivo."""
         rules_dir = self._resolve_rules_dir()
-        rules_context = self.load_rules(rules_dir)
+        rules_context = self.load_rules(rules_dir) if rules_dir and os.path.exists(rules_dir) else self.rules_manager.load_rules()
 
         system_instruction = (
             "Você é o Antigravity Cognitive Advisor para o Google Jules. "
@@ -132,7 +134,7 @@ Prompt de Despacho:
 INSTRUÇÃO DE FORMULAÇÃO DA RESPOSTA:
 ================================================================================
 1. FOCO NA ÚLTIMA MENSAGEM: Responda diretamente ao que o agente perguntou ou propôs na Seção 3.
-2. USE O CONTEXTO COMPLETO: Utilize o histórico da Seção 2 e as regras da Seção 4 para não autorizar desvios, alterações indevidas em código funcional ou violações de contratos Zod/TypeScript.
+2. USE O CONTEXTO COMPLETO: Utilize o histórico da Seção 2 e as regras da Seção 4 para não autorizar desvios, alterações indevidas em código funcional ou violações dos contratos e padrões da stack do projeto.
 3. SE HOUVER DESVIO: Dê instruções corretivas claras e diretas para o agente retomar o objetivo original da Seção 1.
 4. SE O TRABALHO ESTIVER CORRETO: Aprove a proposta e instrua o agente a rodar os testes/build e abrir o Pull Request.
 
@@ -170,7 +172,7 @@ Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do J
                 )
             elif any(k in q_lower for k in ["plan", "approve"]):
                 return (
-                    "Approved. Please proceed with the proposed plan, adhering strictly to existing TypeScript contracts and zero runtime errors."
+                    "Approved. Please proceed with the proposed plan, adhering strictly to repository architecture, contracts and zero runtime errors."
                 )
             else:
                 return (

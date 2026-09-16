@@ -35,6 +35,7 @@ from integrations.stitch.stitch_client import generate_screen, get_screen, edit_
 from integrations.jules.jules_client import JulesClient
 from integrations.git.git_service import GitService
 from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
+from config import RulesManager, get_rules_manager
 
 
 from pipeline.quality_gatekeeper import QualityGatekeeper
@@ -210,12 +211,8 @@ class PipelineOrchestrator:
                 screen_title=screen_title
             )
 
-        # 2. Leitura e extração segura e limpa das regras do repositório
-        rules_dir = os.path.join(repo_root, ".antigravity", "rules")
-        if not os.path.exists(rules_dir):
-            rules_dir = os.path.join(repo_root, ".gemini", "rules")
-
-        rules_summary = cls._extract_clean_rules(rules_dir)
+        # 2. Leitura e extração segura e limpa das regras do repositório via RulesManager
+        rules_summary = cls._extract_clean_rules()
 
         # 3. Montagem do Prompt Executivo Consolidado
         # GARANTIA CRÍTICA: O jules_prompt e o stitch_prompt são preservados 100% integrais
@@ -271,7 +268,7 @@ class PipelineOrchestrator:
             "",
             "## 🛡️ 3. DIRETRIZES ARQUITETURAIS MANDATÓRIAS",
             "- **Separação Estrita de Responsabilidades (SRP)**: Cada módulo, serviço e componente deve possuir responsabilidade única.",
-            "- **Tipagem Estrita**: TypeScript rigoroso, interfaces explícitas, 0 `any`.",
+            "- **Tipagem Estrita**: Tipagem rigorosa da stack do projeto, contratos explícitos e sem tipos genéricos opacos.",
             "- **Integridade Local**: Todo o código implementado deve passar no typecheck e no build sem erros.",
             "",
             rules_summary if rules_summary else "",
@@ -357,58 +354,9 @@ class PipelineOrchestrator:
         return stitch_prompt, jules_prompt
 
     @classmethod
-    def _extract_clean_rules(cls, rules_dir: str, max_chars_per_file: int = 1500) -> str:
-        """
-        Lê e extrai regras do repositório garantindo:
-        1. Formatação Markdown 100% íntegra (fechamento de blocos ```, sem cortes no meio de palavras).
-        2. Limite saudável de caracteres por arquivo para não inflar desnecessariamente o prompt.
-        3. Preservação de tópicos, diretrizes e convenções arquiteturais.
-        """
-        if not rules_dir or not os.path.exists(rules_dir):
-            return ""
-
-        extracted = []
-        for rf in sorted(os.listdir(rules_dir)):
-            if not rf.endswith(".md"):
-                continue
-            fpath = os.path.join(rules_dir, rf)
-            try:
-                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
-                    content = f.read().strip()
-                if not content:
-                    continue
-
-                if len(content) <= max_chars_per_file:
-                    clean_text = content
-                else:
-                    slice_point = max_chars_per_file
-                    newline_idx = content.rfind("\n\n", 0, slice_point)
-                    if newline_idx > max_chars_per_file // 2:
-                        slice_point = newline_idx
-                    else:
-                        line_idx = content.rfind("\n", 0, slice_point)
-                        if line_idx > max_chars_per_file // 2:
-                            slice_point = line_idx
-                        else:
-                            space_idx = content.rfind(" ", 0, slice_point)
-                            if space_idx > 0:
-                                slice_point = space_idx
-
-                    clean_text = content[:slice_point].rstrip() + "\n..."
-
-                # Garantir que não existam code blocks abertos (```)
-                fence_count = clean_text.count("```")
-                if fence_count % 2 != 0:
-                    clean_text += "\n```"
-
-                extracted.append(f"### 📋 Regras: {rf}\n{clean_text}")
-            except Exception:
-                pass
-
-        if not extracted:
-            return ""
-
-        return "\n\n".join(extracted)
+    def _extract_clean_rules(cls, rules_dir: Optional[str] = None, max_chars_per_file: int = 1500) -> str:
+        """Lê e extrai regras do repositório utilizando o RulesManager centralizado."""
+        return get_rules_manager(custom_dir=rules_dir).load_rules(rules_dir=rules_dir)
 
     @classmethod
     def _clean_html_for_summary(cls, html: str) -> str:

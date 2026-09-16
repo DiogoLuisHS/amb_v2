@@ -1,31 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""🧠 Antigravity Tool: validate_architecture (Facade)"""
+"""
+🧠 Antigravity Tool: validate_architecture (Facade)
+Localização: amb_v2/integrations/antigravity/tools/validate_architecture.py
+Responsabilidade Única: Prover CLI e ponto de entrada funcional para auditoria arquitetural
+de arquivos de código contra as diretrizes do repositório ativo.
+"""
 
 import sys
 import os
+import json
 import argparse
+from typing import Optional, Dict, Any
 
-_cur = os.path.dirname(os.path.abspath(__file__))
-while _cur and os.path.basename(_cur) != "amb_v2":
-    _p = os.path.dirname(_cur)
-    if _p == _cur:
-        break
-    _cur = _p
-for _s in ["config", "integrations/antigravity"]:
-    _p = os.path.normpath(os.path.join(_cur, *_s.split("/")))
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
-from antigravity_client import validate_code, log_error  # noqa: E402
+from config.bootstrap import ensure_amb_env
+ensure_amb_env()
+
+from config import Colors, log, log_error, ApiExecutionError
+from integrations.antigravity.antigravity_client import validate_code
+
+
+def run_validate_architecture(
+    file_path: str,
+    rules_context: Optional[str] = None
+) -> str:
+    """Executa auditoria de arquitetura e conformidade em um arquivo de código."""
+    return validate_code(file_path=file_path, rules_context=rules_context)
 
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("file", help="Caminho do arquivo")
+    p = argparse.ArgumentParser(description="Audita o código contra as diretrizes e regras arquiteturais do projeto.")
+    p.add_argument("file", help="Caminho do arquivo a ser auditado.")
+    p.add_argument("--json", action="store_true", help="Exibe o resultado em formato JSON estruturado.")
     args = p.parse_args()
+
     try:
-        res = validate_code(args.file)
-        print(res)
+        res = run_validate_architecture(file_path=args.file)
+        if args.json:
+            print(json.dumps({"file": args.file, "report": res}, indent=2, ensure_ascii=False))
+        else:
+            print(res)
     except Exception as e:
         log_error("ANTIGRAVITY", str(e))
         sys.exit(1)
