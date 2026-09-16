@@ -500,7 +500,24 @@ amb agent --role relay --loop --max-cycles 5
     - `pyproject.toml` e `setup.py` atualizados para o pacote `amb-cli` v2.3.0 apontando para `amb = "amb_cli.cli:main"`.
     - Criado `docs/README.md` com documentação da nova topologia.
     - Criado `tests/conftest.py` e configurado `pytest` com `pythonpath = [".", "amb_cli"]`.
-  - **Validação:** 100% dos testes unitários passando (92/92 testes green).
+### Governança Cognitiva & Padrões de Desenvolvimento no `.agents/rules/`
+**Arquivos:** `.agents/rules/01_single_responsibility.md`, `.agents/rules/02_atomization_and_ai_context.md`, `.agents/rules/03_dry_and_zero_redundancy.md`, `.agents/rules/04_code_quality_and_typing.md`, `.agents/rules/05_concise_documentation.md`, `.agents/rules/06_git_safety_and_compatibility.md`, `.agents/rules/amb_standards.md`.
+- **Motivação:**
+  - Estabelecer diretrizes claras, auditáveis e estruturadas para humanos e agentes de IA autônomos (Google Antigravity, Jules e Gemini Advisor).
+  - Prevenir inchaço de arquivos ("god files"), garantir granularidade compatível com janelas de contexto de LLMs e eliminar redundâncias de lógica.
+  - Padronizar tipagem estrita, hierarquia de exceções `AmbError`, simplificação de comentários e segurança em operações Git.
+- **Implementação:**
+  - **01 (SRP):** Separação estrita de camadas (`cli_parsers`, `cli_handlers`, `tools/`, `*client.py`) e declaração obrigatória de responsabilidade única.
+  - **02 (Atomização & IA):** Limite de 100 a 250 linhas (teto de 300) para máxima atenção e raciocínio de modelos de linguagem sem alucinação.
+  - **03 (DRY & Zero Redundância):** Proibição de lógica duplicada; herança unificada em `BaseGoogleClient` e resolução única de paths em `bootstrap.py`/`config.py`.
+  - **04 (Qualidade, Tipagem & Erros):** Type hints em 100% das funções públicas, hierarquia `AmbError`, Fail-Fast (`require_env`) e suporte nativo a `--json`.
+  - **05 (Documentação Concisa):** Docstrings declarativas de 1 a 3 linhas ("o quê" e "por quê"), eliminação de comentários óbvios e de ruídos/banners decorativos.
+  - **06 (Segurança Git & Retrocompatibilidade):** Uso estrito de `git mv`, shims na raiz, guardrails (`--force`, `--dry-run`) e suíte de testes sempre verde.
+  - **Manifesto Mestre (`amb_standards.md`):** Atualizado como índice consolidado de governança do ecossistema.
+- **Validação:**
+  - `amb agy rules`: 7 arquivos descobertos e sumarizados dinamicamente pelo `RulesManager`.
+  - `amb validate amb_cli/cli.py`: Auditoria em tempo real pelo Antigravity confirmando a aplicação das novas regras.
+  - Suíte de 92 testes automatizados 100% verde (`pytest`).
 
 ---
 
