@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "amb-cli"
-version = "2.0.0"
+version = "2.3.0"
 description = "CLI Global do AMB_V2 - Automação, Agentes de Manutenção e Integrações de Engenharia"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,12 +13,16 @@ dependencies = [
 ]
 
 [project.scripts]
-amb = "cli:main"
+amb = "amb_cli.cli:main"
 
 [tool.setuptools]
-py-modules = ["cli"]
+py-modules = ["cli", "amb_bootstrap"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["*"]
-exclude = ["tests*", "scratch*"]
+include = ["amb_cli*"]
+exclude = ["tests*", "scratch*", "docs*"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "amb_cli"]
+testpaths = ["tests"]

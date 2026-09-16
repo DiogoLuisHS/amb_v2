@@ -477,6 +477,31 @@ amb agent --role relay --loop --max-cycles 5
     - Atualizados `.agents/skills/amb-jules-specialist/SKILL.md`, `integrations/jules/README.md` e `README.md`.
   - Suíte de testes unitários expandida em `tests/test_jules_integration.py` (de 6 para 15 testes passando).
 
+### Refatoração Arquitetural Modular: Separação de Código Fonte no Pacote `amb_cli/` (v2.3.0)
+**Arquivos:** `amb_cli/`, `docs/`, `cli.py`, `amb_bootstrap.py`, `pyproject.toml`, `setup.py`, `tests/conftest.py`.
+- **Motivação:**
+  - Separar com precisão o código-fonte executável da aplicação em relação a arquivos de documentação, testes unitários, metadados e arquivos de configuração de repositório.
+  - Eliminar poluição da raiz do projeto, mantendo um padrão de empacotamento canônico Python (PEP 517/621).
+  - Preservar 100% do histórico Git de todos os módulos (`git mv`).
+  - Assegurar retrocompatibilidade total com shims raiz (`python cli.py` e `import amb_bootstrap`) e compatibilidade nativa com módulo (`python -m amb_cli`).
+- **Implementação:**
+  - **Mapeamento e Migração para `amb_cli/`:**
+    - Movidos 65 arquivos via `git mv`: `agents`, `architecture`, `cli_modules`, `config`, `gui`, `integrations`, `pipeline`, `cli.py`, `amb_bootstrap.py`.
+    - Criado `amb_cli/__init__.py` com `__version__ = "2.3.0"` e auto-bootstrap.
+    - Criado `amb_cli/__main__.py` viabilizando `python -m amb_cli`.
+  - **Bootstrap Resiliente e Multi-Camada (`amb_cli/config/bootstrap.py`):**
+    - `get_amb_root()` localiza deterministamente a raiz do repositório (`amb_v2`).
+    - `get_amb_package_dir()` localiza o diretório do pacote (`amb_cli`).
+    - `ensure_amb_env()` e injeção em tempo de importação configuram automaticamente `amb_root`, `pkg_dir` e todos os submódulos canônicos no `sys.path`.
+  - **Shims de Retrocompatibilidade Raiz:**
+    - Raiz `cli.py` delega transparentemente para `amb_cli.cli:main`.
+    - Raiz `amb_bootstrap.py` delega para o bootstrap canônico dentro de `amb_cli`.
+  - **Configuração de Pacote e Testes:**
+    - `pyproject.toml` e `setup.py` atualizados para o pacote `amb-cli` v2.3.0 apontando para `amb = "amb_cli.cli:main"`.
+    - Criado `docs/README.md` com documentação da nova topologia.
+    - Criado `tests/conftest.py` e configurado `pytest` com `pythonpath = [".", "amb_cli"]`.
+  - **Validação:** 100% dos testes unitários passando (92/92 testes green).
+
 ---
 
 ### Expansão da Suíte de Testes Automatizados (92 testes passando — 100% Green)

@@ -9,7 +9,7 @@ _root = Path(__file__).resolve().parent.parent
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
 
-from config.bootstrap import get_amb_root, ensure_amb_env, add_to_sys_path, CANONICAL_SUBMODULES
+from config.bootstrap import get_amb_root, get_amb_package_dir, ensure_amb_env, add_to_sys_path, CANONICAL_SUBMODULES
 
 
 def test_get_amb_root():
@@ -23,23 +23,27 @@ def test_ensure_amb_env():
     assert root.exists()
     assert str(root) in sys.path
     
+    pkg_dir = get_amb_package_dir()
     # Verifica se os submódulos que existem fisicamente foram adicionados ao sys.path
     for sub in CANONICAL_SUBMODULES:
         parts = sub.replace("\\", "/").split("/")
-        sub_dir = root.joinpath(*parts)
+        sub_dir = pkg_dir.joinpath(*parts)
+        if not sub_dir.exists():
+            sub_dir = root.joinpath(*parts)
         if sub_dir.exists():
             assert str(sub_dir) in sys.path
 
 
 def test_add_to_sys_path():
-    root = get_amb_root()
+    pkg_dir = get_amb_package_dir()
     # Adicionar caminho existente
-    config_dir = root / "config"
+    config_dir = pkg_dir / "config"
     result = add_to_sys_path(config_dir)
     assert str(config_dir) in sys.path
     
     # Adicionar novamente deve retornar False (idempotente)
     assert add_to_sys_path(config_dir) is False
+
 
 
 def test_amb_bootstrap_import():

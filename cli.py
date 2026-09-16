@@ -1,58 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🚀 AMB_V2 - CLI Global e Unificada de Automação de Engenharia
-Comando: `amb`
-Responsabilidade Única: Ponto de entrada CLI que detecta o repositório onde o terminal
-está aberto, configura os paths do Python e invoca o parser de CLI.
+🚀 AMB_V2 - Wrapper Raiz de Compatibilidade
+Permite a execução direta via `python cli.py` delegando para o pacote `amb_cli`.
 """
-
-import os
 import sys
+from pathlib import Path
 
-from config.bootstrap import ensure_amb_env
+ROOT_DIR = Path(__file__).resolve().parent
+PKG_DIR = ROOT_DIR / "amb_cli"
+for p in [str(PKG_DIR), str(ROOT_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from amb_cli.config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError  # noqa: E402
-from cli_modules.cli_parsers import create_parser  # noqa: E402
-
-
-def banner():
-    print(f"\n{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.CYAN}🚀 AMB_V2 CLI — SISTEMA UNIFICADO DE AUTOMAÇÃO E AGENTES{Colors.RESET}")
-    print(f"📁 Repositório Ativo: {Colors.GREEN}{get_repo_name()}{Colors.RESET} ({find_repo_root()})")
-    print(f"{Colors.BOLD}{Colors.CYAN}==========================================================================={Colors.RESET}\n")
-
-
-# -------------------------------------------------------------
-# MAIN CLI ENTRYPOINT
-# -------------------------------------------------------------
-def main():
-    load_env_file()
-
-    parser = create_parser()
-    args = parser.parse_args()
-
-    if not getattr(args, "command", None):
-        banner()
-        parser.print_help()
-        sys.exit(0)
-
-    try:
-        if hasattr(args, "func"):
-            args.func(args)
-        else:
-            parser.print_help()
-    except AmbError as ae:
-        log_error("AMB", str(ae), getattr(ae, "hint", None))
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\n👋 Operação cancelada pelo usuário.")
-        sys.exit(0)
-    except Exception as e:
-        log_error("AMB", f"Erro inesperado: {e}")
-        sys.exit(1)
-
+from amb_cli.cli import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
