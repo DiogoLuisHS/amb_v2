@@ -11,8 +11,8 @@ Este diretório centraliza a configuração do projeto, personas autônomas e di
 | 📦 **Repositório GitHub** | `DiogoLuisHS/amb_v2` |
 | 🛠️ **Stack Principal** | `python` |
 | ⚡ **Gerenciador de Pacotes** | `pip` |
-| 🧩 **Frameworks & Libs** | `Genérico` |
-| 📜 **Regras Arquiteturais** | `Nenhuma pasta de regras identificada` |
+| 🧩 **Frameworks & Libs** | `Pytest` |
+| 📜 **Regras Arquiteturais** | `.agents/rules` |
 
 ### 🛡️ Comandos de QA Configurados:
 - **Test**: `pytest`

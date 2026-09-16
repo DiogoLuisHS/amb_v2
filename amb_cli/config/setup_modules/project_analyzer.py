@@ -165,7 +165,7 @@ class ProjectAnalyzer:
             stack["package_manager"] = "cargo"
 
         # 5. Rules Directory
-        for candidate in [".antigravity/rules", ".gemini/rules", "rules"]:
+        for candidate in [".antigravity/rules", ".gemini/rules", ".agents/rules", "rules"]:
             if os.path.exists(os.path.join(root, candidate)):
                 stack["rules_dir"] = candidate
                 break
