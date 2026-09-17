@@ -25,3 +25,21 @@ def upload_asset_core(client: Any, file_path: str, project_id: Optional[str] = N
     }
     log("STITCH", f"Enviando asset {os.path.basename(abs_path)} para o projeto {proj_id}...", Colors.CYAN)
     return client._run_node_command("upload_asset", payload)
+
+
+def save_screen_html_core(screen_data: Dict[str, Any], output_path: str) -> str:
+    """Salva o DOM HTML extraído da tela em um arquivo local."""
+    html_code = screen_data.get("htmlCode", "")
+    if not html_code:
+        for msg in screen_data.get("messages", []):
+            if "<html" in msg or "<div" in msg:
+                html_code = msg
+                break
+
+    out_abs = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(out_abs), exist_ok=True)
+    with open(out_abs, "w", encoding="utf-8") as f:
+        f.write(html_code or "<!-- Nenhum código HTML extraído do Stitch -->\n")
+    log("STITCH", f"Código HTML salvo em: {out_abs}", Colors.GREEN)
+    return out_abs
+

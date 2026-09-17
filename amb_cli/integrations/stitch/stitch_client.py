@@ -22,9 +22,18 @@ from config import (
     get_env,
     get_device_type,
     ApiExecutionError,
-    ConfigurationError
+    ConfigurationError,
 )
-from amb_cli.integrations.stitch.stitch_core.asset_manager import download_assets_core, upload_asset_core
+from amb_cli.integrations.stitch.stitch_core.asset_manager import (
+    download_assets_core,
+    upload_asset_core,
+    save_screen_html_core,
+)
+from amb_cli.integrations.stitch.stitch_core.project_manager import (
+    get_project_core,
+    create_project_core,
+    list_projects_core,
+)
 from amb_cli.integrations.stitch.stitch_core.design_sync import (
     create_design_system_core,
     update_design_system_core,
@@ -87,22 +96,7 @@ class StitchClient:
         except json.JSONDecodeError:
             return {"output": proc.stdout.strip()}
 
-    @staticmethod
-    def save_screen_html(screen_data: Dict[str, Any], output_path: str) -> str:
-        """Salva o DOM HTML extraído da tela em um arquivo local."""
-        html_code = screen_data.get("htmlCode", "")
-        if not html_code:
-            for msg in screen_data.get("messages", []):
-                if "<html" in msg or "<div" in msg:
-                    html_code = msg
-                    break
-
-        out_abs = os.path.abspath(output_path)
-        os.makedirs(os.path.dirname(out_abs), exist_ok=True)
-        with open(out_abs, "w", encoding="utf-8") as f:
-            f.write(html_code or "<!-- Nenhum código HTML extraído do Stitch -->\n")
-        log("STITCH", f"Código HTML salvo em: {out_abs}", Colors.GREEN)
-        return out_abs
+    save_screen_html = staticmethod(save_screen_html_core)
 
     def generate_screen(
         self,
@@ -188,31 +182,16 @@ class StitchClient:
 
     def get_project(self, project_id: Optional[str] = None) -> Dict[str, Any]:
         """Obtém metadados do projeto e do Design System no Stitch."""
-        proj_id = project_id or self.project_id or require_env("STITCH_PROJECT_ID")
-        payload = {"name": f"projects/{proj_id}", "projectId": proj_id}
-        log("STITCH", f"Consultando metadados do projeto {proj_id}...", Colors.CYAN)
-        return self._run_node_command("get_project", payload)
+        return get_project_core(self, project_id)
 
     def create_project(self, title: Optional[str] = None) -> Dict[str, Any]:
         """Cria um novo projeto/workspace no Stitch SDK."""
-        payload = {}
-        if title:
-            payload["title"] = title
-        log("STITCH", f"Criando novo projeto no Stitch{' (' + title + ')' if title else ''}...", Colors.CYAN)
-        return self._run_node_command("create_project", payload)
+        return create_project_core(self, title)
 
     def list_projects(self, filter_view: Optional[str] = None) -> List[Dict[str, Any]]:
         """Lista todos os projetos Stitch acessíveis ao usuário."""
-        payload = {}
-        if filter_view:
-            payload["filter"] = filter_view
-        log("STITCH", "Listando projetos Stitch...", Colors.CYAN)
-        res = self._run_node_command("list_projects", payload)
-        if isinstance(res, dict) and "projects" in res:
-            return res["projects"]
-        if isinstance(res, list):
-            return res
-        return []
+        return list_projects_core(self, filter_view)
+
 
     def generate_variants(
         self,
@@ -294,51 +273,24 @@ class StitchClient:
 
 
 # Funções utilitárias avulsas para import direto e compatibilidade retroativa
-def generate_screen(prompt: str, **kwargs) -> Dict[str, Any]:
-    return StitchClient().generate_screen(prompt, **kwargs)
+from amb_cli.integrations.stitch.stitch_core.helpers import (
+    generate_screen,
+    edit_screen,
+    get_screen,
+    list_screens,
+    get_project,
+    create_project,
+    list_projects,
+    generate_variants,
+    download_assets,
+    upload_asset,
+    create_design_system,
+    update_design_system,
+    list_design_systems,
+    apply_design_system,
+    sync_design_system,
+    call_tool,
+)
 
-def edit_screen(screen_id: str, prompt: str, **kwargs) -> Dict[str, Any]:
-    return StitchClient().edit_screen(screen_id, prompt, **kwargs)
 
-def get_screen(screen_id: str, **kwargs) -> Dict[str, Any]:
-    return StitchClient().get_screen(screen_id, **kwargs)
-
-def list_screens(project_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    return StitchClient().list_screens(project_id)
-
-def get_project(project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().get_project(project_id)
-
-def create_project(title: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().create_project(title)
-
-def list_projects(filter_view: Optional[str] = None) -> List[Dict[str, Any]]:
-    return StitchClient().list_projects(filter_view)
-
-def generate_variants(screen_id: str, prompt: str, count: int = 3, **kwargs) -> Dict[str, Any]:
-    return StitchClient().generate_variants(screen_id, prompt, variant_count=count, **kwargs)
-
-def download_assets(output_dir: str, project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().download_assets(output_dir, project_id)
-
-def upload_asset(file_path: str, project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().upload_asset(file_path, project_id)
-
-def create_design_system(design_system: Dict[str, Any], project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().create_design_system(design_system, project_id)
-
-def update_design_system(asset_name: str, design_system: Dict[str, Any], project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().update_design_system(asset_name, design_system, project_id)
-
-def list_design_systems(project_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    return StitchClient().list_design_systems(project_id)
-
-def apply_design_system(asset_id: str, selected_screen_instances: List[Dict[str, str]], project_id: Optional[str] = None) -> Dict[str, Any]:
-    return StitchClient().apply_design_system(asset_id, selected_screen_instances, project_id)
-
-def sync_design_system(design_md_path: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-    return StitchClient().sync_design_system(design_md_path, **kwargs)
-
-def call_tool(tool_name: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    return StitchClient().call_tool(tool_name, payload)
 
