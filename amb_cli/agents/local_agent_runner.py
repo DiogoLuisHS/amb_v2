@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🤖 AMB_V2 - Local Agent (Antigravity & Jules) Runner
-Localização: amb_cli/agents/local_agent_runner.py
-Responsabilidade Única: Descobrir e executar personas de agentes estáticos definidos
-no projeto, despachando para a API do Jules na nuvem ou executando localmente via Antigravity CLI.
+Descobre e executa personas de agentes estáticos (remoto ou local).
 """
 
 import os
@@ -38,28 +35,29 @@ def get_personas_directory(custom_dir: Optional[str] = None) -> str:
 
     amb_personas = os.path.join(root, ".amb", "personas")
     if os.path.exists(amb_personas) and os.path.isdir(amb_personas):
-        md_files = [f for f in os.listdir(amb_personas) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
-        if md_files:
-            return os.path.abspath(amb_personas)
+        return os.path.abspath(amb_personas)
 
     jules_personas = os.path.join(root, ".jules", "personas")
     if os.path.exists(jules_personas) and os.path.isdir(jules_personas):
         return os.path.abspath(jules_personas)
 
-    jules_dir = os.path.join(root, ".jules")
-    if os.path.exists(jules_dir) and os.path.isdir(jules_dir):
-        md_files = [f for f in os.listdir(jules_dir) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
-        if md_files:
-            return os.path.abspath(jules_dir)
-
     candidates = [
+        os.path.join(root, ".amb"),
+        os.path.join(root, ".jules"),
         os.path.join(root, "amb_cli", "agents", "personas"),
         os.path.join(os.path.dirname(__file__), "personas"),
         os.path.join(root, "amb_cli", "integrations", "antigravity", "personas"),
     ]
+
     for p in candidates:
-        if os.path.exists(p):
-            return os.path.abspath(p)
+        if os.path.exists(p) and os.path.isdir(p):
+            # If it's one of the legacy non-personas dirs, check for md files
+            if os.path.basename(p) in (".amb", ".jules"):
+                md_files = [f for f in os.listdir(p) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
+                if md_files:
+                    return os.path.abspath(p)
+            else:
+                return os.path.abspath(p)
 
     default_dir = os.path.join(root, ".amb", "personas")
     os.makedirs(default_dir, exist_ok=True)
@@ -96,8 +94,9 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
             lines = [l.strip() for l in content.split("\n") if l.strip() and not l.startswith("#")]
             if lines:
                 summary = lines[0][:120] + ("..." if len(lines[0]) > 120 else "")
-        except Exception:
-            pass
+        except (OSError, IOError) as e:
+            log_error("AGENT", f"Erro ao ler arquivo da persona '{fname}': {e}")
+            continue
 
         personas[key] = {
             "key": key,
@@ -159,8 +158,8 @@ def execute_single_persona(
                         rel_path = os.path.relpath(dpath, root).replace("\\", "/")
                         full_prompt = f"{full_prompt}\n\n---\n\n🧠 HISTÓRICO & APRENDIZADOS PRÉVIOS DO REPOSITÓRIO ({rel_path}):\n{diario_content}"
                         break
-            except Exception:
-                pass
+            except (OSError, IOError) as e:
+                log_error("AGENT", f"Erro ao ler diário '{dpath}': {e}")
 
     if task:
         full_prompt = f"{full_prompt}\n\n---\n\n🎯 ESCOPO ESPECÍFICO ADICIONAL SOLICITADO:\n{task}"
@@ -185,6 +184,11 @@ def execute_single_persona(
         print(f"👉 Para monitorar: amb jules get {sid}\n")
         return
 
+    run_local_agent(full_prompt, root, title)
+
+
+def run_local_agent(full_prompt: str, root: str, title: str) -> int:
+    """Executa o agente localmente usando o Google Antigravity SDK (agy CLI)."""
     log("AGENT", f"Iniciando agente local no repositório...", Colors.CYAN)
     try:
         proc = subprocess.run(
@@ -197,6 +201,7 @@ def execute_single_persona(
         if proc.returncode != 0:
             raise ApiExecutionError(f"Agente local encerrou com código {proc.returncode}")
         log("AGENT", f"✅ Execução de '{title}' finalizada com sucesso!", Colors.GREEN)
+        return proc.returncode
     except FileNotFoundError:
         raise ApiExecutionError(
             "CLI 'agy' não encontrada no PATH do sistema.",
