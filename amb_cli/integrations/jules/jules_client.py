@@ -7,17 +7,14 @@ Responsabilidade Única: Executar chamadas HTTP autenticadas para o endpoint ofi
 """
 
 import os
-import sys
-import json
-import urllib.request
-import urllib.error
 from typing import Dict, Any, Optional, List
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, require_env, ApiExecutionError
+from config import Colors, log_error, require_env
 from integrations.common.base_google_client import BaseGoogleClient
+from integrations.jules.jules_core.session_helpers import normalize_session_id, extract_pull_request, compute_status
 
 
 class JulesClient(BaseGoogleClient):
@@ -42,29 +39,19 @@ class JulesClient(BaseGoogleClient):
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Executa requisição HTTP autenticada via BaseGoogleClient com retry exponencial e jitter."""
         return self.execute_request(method=method, path_or_url=path, params=params, data=data)
 
-    # 1. Normalização & Helpers
     @staticmethod
     def normalize_session_id(session_id: str) -> str:
-        """
-        Normaliza strings de ID de sessão, aceitando:
-        - ID numérico/alfanumérico puro: '17502412430766789460'
-        - Rota REST: 'sessions/17502412430766789460'
-        - URL web: 'https://jules.google.com/session/17502412430766789460'
-        - URLs com parâmetros de query ou barras no final.
-        """
-        if not session_id:
-            return ""
-        raw = str(session_id).strip().rstrip("/")
-        if "jules.google.com/session/" in raw:
-            raw = raw.split("jules.google.com/session/")[-1].split("/")[0].split("?")[0]
-        elif "sessions/" in raw:
-            raw = raw.split("sessions/")[-1].split("/")[0].split("?")[0]
-        return raw.strip()
+        return normalize_session_id(session_id)
 
-    # 2. Sources
+    @staticmethod
+    def extract_pull_request(
+        session_dict: Dict[str, Any],
+        activities: Optional[List[Dict[str, Any]]] = None
+    ) -> Optional[Dict[str, Any]]:
+        return extract_pull_request(session_dict, activities)
+
     def list_sources(self, page_size: int = 50) -> List[Dict[str, Any]]:
         res = self._request("GET", "sources", params={"pageSize": page_size})
         return res.get("sources", [])
@@ -75,7 +62,6 @@ class JulesClient(BaseGoogleClient):
         path = clean if clean.startswith("sources/") else f"sources/{clean}"
         return self._request("GET", path)
 
-    # 3. Sessions
     def create_session(
         self,
         prompt: str,
@@ -92,7 +78,6 @@ class JulesClient(BaseGoogleClient):
         from config import get_repo_name
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
 
-        # Se base_branch não for especificada, auto-detecta branch ativa do repositório local
         if not base_branch:
             try:
                 from integrations.git.git_service import GitService
@@ -117,39 +102,6 @@ class JulesClient(BaseGoogleClient):
     def get_session(self, session_id: str) -> Dict[str, Any]:
         clean_id = self.normalize_session_id(session_id)
         return self._request("GET", f"sessions/{clean_id}")
-
-    @staticmethod
-    def extract_pull_request(
-        session_dict: Dict[str, Any],
-        activities: Optional[List[Dict[str, Any]]] = None
-    ) -> Optional[Dict[str, Any]]:
-        """Extrai metadados do Pull Request (url, number) dos outputs da sessão ou das atividades com fallback via regex."""
-        # 1. Inspeciona outputs estruturados da sessão
-        outputs = session_dict.get("outputs", [])
-        if isinstance(outputs, list):
-            for item in outputs:
-                if isinstance(item, dict) and "pullRequest" in item:
-                    pr_info = item["pullRequest"]
-                    if isinstance(pr_info, dict) and pr_info.get("url"):
-                        return pr_info
-        elif isinstance(outputs, dict) and "pullRequest" in outputs:
-            pr_info = outputs["pullRequest"]
-            if isinstance(pr_info, dict) and pr_info.get("url"):
-                return pr_info
-
-        # 2. Inspeciona activities fornecidas via regex resiliente
-        if activities and isinstance(activities, list):
-            import re
-            for act in activities:
-                txt = str(act)
-                m = re.search(r"(https://github\.com/[^/]+/[^/]+/pull/(\d+))", txt)
-                if m:
-                    return {
-                        "url": m.group(1),
-                        "number": int(m.group(2))
-                    }
-
-        return None
 
     def list_sessions(
         self,
@@ -202,52 +154,40 @@ class JulesClient(BaseGoogleClient):
         target_repo = repo_filter or get_repo_name()
         key = get_env("JULES_API_KEY")
 
-        status: Dict[str, Any] = {
-            "api_key_configured": bool(key),
-            "api_reachable": False,
-            "sources_count": 0,
-            "active_repo": target_repo,
-            "repo_connected": False,
-            "sessions_total": 0,
-            "sessions_awaiting_feedback": 0,
-            "sessions_in_progress": 0,
-            "sessions_completed": 0,
-            "sessions_failed": 0,
-            "error": None,
-        }
-
         if not key:
-            status["error"] = "JULES_API_KEY não configurada no ambiente."
-            return status
+            return {
+                "api_key_configured": False,
+                "api_reachable": False,
+                "sources_count": 0,
+                "active_repo": target_repo,
+                "repo_connected": False,
+                "sessions_total": 0,
+                "sessions_awaiting_feedback": 0,
+                "sessions_in_progress": 0,
+                "sessions_completed": 0,
+                "sessions_failed": 0,
+                "error": "JULES_API_KEY não configurada no ambiente."
+            }
 
         try:
             sources = self.list_sources()
-            status["api_reachable"] = True
-            status["sources_count"] = len(sources)
-            if target_repo:
-                target_norm = target_repo.lower().strip()
-                status["repo_connected"] = any(
-                    target_norm in (s.get("name") or "").lower() for s in sources
-                )
-
             sessions = self.list_sessions(page_size=50, repo_filter=target_repo)
-            status["sessions_total"] = len(sessions)
-            for s in sessions:
-                st = (s.get("state") or "UNKNOWN").upper()
-                if "AWAITING" in st:
-                    status["sessions_awaiting_feedback"] += 1
-                elif "IN_PROGRESS" in st or "RUNNING" in st or "STARTING" in st:
-                    status["sessions_in_progress"] += 1
-                elif "COMPLETED" in st or "SUCCEEDED" in st:
-                    status["sessions_completed"] += 1
-                elif "FAIL" in st or "CANCEL" in st:
-                    status["sessions_failed"] += 1
+            return compute_status(sources, sessions, key, target_repo)
         except Exception as e:
-            status["error"] = str(e)
+            return {
+                "api_key_configured": bool(key),
+                "api_reachable": False,
+                "sources_count": 0,
+                "active_repo": target_repo,
+                "repo_connected": False,
+                "sessions_total": 0,
+                "sessions_awaiting_feedback": 0,
+                "sessions_in_progress": 0,
+                "sessions_completed": 0,
+                "sessions_failed": 0,
+                "error": str(e)
+            }
 
-        return status
-
-    # 4. Activities
     def list_activities(self, session_id: str, page_size: int = 50, fetch_all: bool = True) -> Dict[str, Any]:
         """Lista atividades da sessão. Se fetch_all=True, percorre todas as páginas para capturar as atividades mais recentes."""
         clean_id = self.normalize_session_id(session_id)
@@ -274,9 +214,7 @@ class JulesClient(BaseGoogleClient):
 
     def list_activities_for_sessions(self, session_ids: List[str], page_size: int = 50, max_workers: int = 10) -> Dict[str, Dict[str, Any]]:
         import concurrent.futures
-
         results = {}
-
         def fetch_for_session(sid):
             try:
                 act_res = self.list_activities(session_id=sid, page_size=page_size)
@@ -285,7 +223,6 @@ class JulesClient(BaseGoogleClient):
                 from config import log_error
                 log_error("JULES-CLIENT", f"Falha ao buscar atividades da sessão {sid}: {e}")
                 return sid, []
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_sid = {executor.submit(fetch_for_session, sid): sid for sid in session_ids}
             for future in concurrent.futures.as_completed(future_to_sid):
@@ -297,9 +234,7 @@ class JulesClient(BaseGoogleClient):
                     from config import log_error
                     log_error("JULES-CLIENT", f"Erro fatal ao processar atividades da sessão {sid}: {e}")
                     results[sid] = []
-
         return results
-
 
 if __name__ == "__main__":
     try:
