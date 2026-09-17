@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🔁 AMB_V2 - Loop Autônomo Contínuo de Engenharia (Jules + Antigravity)
-Localização: amb_cli/agents/autonomous_loop.py
-Responsabilidade Única: Orquestrar ciclos contínuos de desenvolvimento autônomo,
-delegando monitoramento a loop_core.session_assistant e despacho a loop_core.cycle_dispatcher.
-
-Exemplos de Uso:
-  amb agent --role engineer --loop --max-cycles 3
-  amb agent --all --loop --max-cycles 2
-  python amb_cli/agents/autonomous_loop.py --all --max-cycles 2
+Responsabilidade Única: Orquestrador de alto nível dos ciclos de desenvolvimento autônomo contínuo, delegando despacho e preparação de contexto para `amb_cli/agents/loop_core/cycle_dispatcher.py` e monitoramento/assistência cognitiva para `amb_cli/agents/loop_core/session_assistant.py`.
 """
 
 import os
@@ -27,11 +19,7 @@ from integrations.git.git_service import GitService
 from integrations.jules.jules_client import JulesClient
 from agents.local_agent_runner import get_personas_directory, discover_personas
 from agents.loop_core.session_assistant import monitor_and_assist_session
-from agents.loop_core.cycle_dispatcher import (
-    build_ai_context,
-    dispatch_jules_session,
-    handle_pr_merge,
-)
+from agents.loop_core.cycle_dispatcher import build_ai_context, dispatch_jules_session, handle_pr_merge
 
 
 def load_persona_content(role: str) -> tuple[str, str]:
@@ -110,36 +98,22 @@ def run_autonomous_loop(
 
     modules_list = modules or [""]
 
-    print("\n" + "=" * 75)
-    print(
-        f"{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}"
-    )
+    print(f"\n{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}")
     print(f"📁 Repositório: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {branch})")
     if prompts_to_run:
-        print(
-            f"📄 Prompts no Lote ({len(prompts_to_run)}): {Colors.BOLD}{', '.join([p.name for p in prompts_to_run])}{Colors.RESET}"
-        )
+        print(f"📄 Prompts no Lote ({len(prompts_to_run)}): {Colors.BOLD}{', '.join([p.name for p in prompts_to_run])}{Colors.RESET}")
     else:
-        print(
-            f"🤖 Personas no Ciclo ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}"
-        )
+        print(f"🤖 Personas no Ciclo ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}")
     if modules and modules != [""]:
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
-    print(
-        f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}"
-    )
-    print("=" * 75 + "\n")
+    print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}\n")
 
     completed_cycles = 0
 
     while True:
         completed_cycles += 1
 
-        print("\n" + "#" * 75)
-        print(
-            f"🔄 {Colors.BOLD}CICLO #{completed_cycles} DE {max_cycles if max_cycles else '∞'}{Colors.RESET}"
-        )
-        print("#" * 75 + "\n")
+        print(f"\n🔄 {Colors.BOLD}CICLO #{completed_cycles} DE {max_cycles if max_cycles else '∞'}{Colors.RESET}\n")
 
         for item_idx, item in enumerate(items_to_run, 1):
             current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
@@ -218,7 +192,7 @@ def run_autonomous_loop(
         time.sleep(wait_seconds)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)")
     parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
