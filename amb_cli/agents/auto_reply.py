@@ -2,12 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 🤖 AMB_V2 - AUTO REPLY & ADVISOR (JULES + ANTIGRAVITY) — FAÇADE SRP
-Localização: amb_cli/agents/auto_reply.py
-Responsabilidade Única: Ponto de entrada e orquestrador que delega responsabilidades
-para as classes especializadas em agents/auto_reply_core:
-  - TurnHistoryExtractor (parsing de atividades e detecção de turnos)
-  - CognitiveAdvisor (regras, formulação de prompts e inferência Gemini)
-  - JulesFeedbackDispatcher (despacho REST para o Jules e interface com o usuário)
+Ponto de entrada que delega para classes especializadas em auto_reply_core.
 """
 
 import argparse
@@ -17,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log_error
+from config import log_error
 from integrations.jules.jules_client import JulesClient
 from agents.auto_reply_core import (
     TurnHistoryExtractor,
@@ -90,11 +85,13 @@ def get_pending_sessions(client: Optional[JulesClient] = None) -> List[Dict[str,
 
 
 def _process_auto_approve_batch(pending: List[Dict[str, Any]]) -> None:
+    """Processa lote de sessões pendentes com auto-aprovação."""
     dispatcher = JulesFeedbackDispatcher()
     dispatcher.process_auto_approve_batch(pending)
 
 
 def _process_interactive_menu(pending: List[Dict[str, Any]]) -> None:
+    """Processa sessões pendentes através de menu interativo."""
     dispatcher = JulesFeedbackDispatcher()
     dispatcher.process_interactive_menu(pending)
 
@@ -106,14 +103,17 @@ def run_auto_advisor(auto_approve: bool = False) -> None:
 
 
 def auto_reply_all_pending(auto_approve: bool = True) -> None:
+    """Processa todas as sessões pendentes utilizando auto-aprovação."""
     run_auto_advisor(auto_approve=auto_approve)
 
 
 def interactive_advisor_menu() -> None:
+    """Abre o menu interativo para processar sessões pendentes."""
     run_auto_advisor(auto_approve=False)
 
 
 def main() -> None:
+    """Ponto de entrada do CLI para o Auto Reply."""
     parser = argparse.ArgumentParser(
         description="Gera sugestão de resposta via Antigravity com histórico completo do chat."
     )
