@@ -4,88 +4,48 @@
 ================================================================================
 🚀 AMB_V2 - PIPELINE AUTÔNOMO DESIGN-TO-CODE (ORQUESTRADOR UNIFICADO)
 ================================================================================
-Localização: amb_v2/pipeline/pipeline.py
-Responsabilidade Única: Orquestrar sequencialmente o fluxo ponta a ponta
-utilizando os módulos atômicos isolados de amb_v2 (Setup, Stitch, Jules, Antigravity).
-
-Fluxo em 6 Fases:
-  1. 📄 Parsing do Prompt (Separação Visual / Engenharia)
-  2. 🎨 Geração Visual no Stitch SDK (@google/stitch-sdk)
-  3. 🚪 Gatekeeper 1 (Aprovação / Refinamento / Variantes)
-  4. 🧠 Síntese Cognitiva com Antigravity SDK & Regras Arquiteturais
-  5. ⚡ Despacho & Monitoramento em Tempo Real no Jules (REST API v1alpha)
-  6. 🛡️ Gatekeeper 2 (QA Local: Typecheck & Build de Produção)
-================================================================================
 """
-
 import os
 import sys
-import re
-import json
-import time
 import argparse
-import subprocess
-from pathlib import Path
+from typing import Optional
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name, get_env, get_device_type, require_env, AmbError, ConfigurationError
-from integrations.stitch.stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
+from config import Colors, log, log_error, find_repo_root, get_repo_name, AmbError
 from integrations.jules.jules_client import JulesClient
 from integrations.git.git_service import GitService
-from integrations.antigravity.antigravity_client import AntigravityClient, synthesize_prompt, validate_architecture
-from config import RulesManager, get_rules_manager
-
+from integrations.antigravity.antigravity_client import AntigravityClient
+from config import get_rules_manager
 
 from pipeline.quality_gatekeeper import QualityGatekeeper
-
+from amb_cli.pipeline.pipeline_core.prompt_builder import parse_single_prompt, clean_html_for_summary, synthesize_stitch_ui, build_executive_prompt
+from amb_cli.pipeline.pipeline_core.design_stage import process_design_stage
 
 class PipelineOrchestrator:
     """Orquestrador do Pipeline AMB_V2."""
 
     @classmethod
     def run(
-        cls,
-        prompt_file: str = None,
-        stitch_prompt_file: str = None,
-        jules_prompt_file: str = None,
-        auto_approve: bool = False,
-        skip_stitch: bool = False,
-        no_qa: bool = False,
-        resume_session: str = None,
-        device_type: str = None,
-        edit_screen_id: str = None,
-        screen_id: str = None,
-        sync_ds: bool = False,
-        starting_branch: str = None
+        cls, prompt_file: str = None, stitch_prompt_file: str = None, jules_prompt_file: str = None,
+        auto_approve: bool = False, skip_stitch: bool = False, no_qa: bool = False,
+        resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
+        screen_id: str = None, sync_ds: bool = False, starting_branch: str = None
     ):
         repo_root = find_repo_root()
         repo_name = get_repo_name()
 
-        # Auto-detecta branch atual do Git local se não fornecida explicitamente
-        if not starting_branch:
-            starting_branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root)
-        starting_branch = starting_branch or "main"
+        starting_branch = starting_branch or GitService(repo_root=repo_root).get_current_branch(cwd=repo_root) or "main"
 
-        # -------------------------------------------------------------
-        # RESUME SESSION (Se solicitado)
-        # -------------------------------------------------------------
         if resume_session:
-            log("PIPELINE", f"Retomando monitoramento da sessão existente: {resume_session}", Colors.HEADER)
+            log("PIPELINE", f"Retomando monitoramento: {resume_session}", Colors.HEADER)
             cls._monitor_jules_session(resume_session, repo_root, no_qa)
             return
 
-        # -------------------------------------------------------------
-        # ETAPA 1: LEITURA DOS ARQUIVOS DE PROMPT
-        # -------------------------------------------------------------
         log("ETAPA 1/6", f"📄 Lendo arquivos de prompt...", Colors.HEADER)
-        
-        stitch_prompt = ""
-        jules_prompt = ""
-        file_label = ""
+        stitch_prompt, jules_prompt, file_label = "", "", ""
 
-        # Arquivos dedicados (--stitch-prompt / --jules-prompt)
         if stitch_prompt_file and os.path.exists(stitch_prompt_file):
             with open(stitch_prompt_file, "r", encoding="utf-8", errors="replace") as f:
                 stitch_prompt = f.read().strip()
@@ -96,337 +56,84 @@ class PipelineOrchestrator:
                 jules_prompt = f.read().strip()
             file_label += os.path.basename(jules_prompt_file)
 
-        # Arquivo unificado (prompt_file posicional ou legado)
         if prompt_file and os.path.exists(prompt_file):
-            if not file_label:
-                file_label = os.path.basename(prompt_file)
+            file_label = file_label or os.path.basename(prompt_file)
             with open(prompt_file, "r", encoding="utf-8", errors="replace") as f:
                 raw_content = f.read().strip()
             p_stitch, p_jules = cls._parse_single_prompt(raw_content)
-            if not stitch_prompt:
-                stitch_prompt = p_stitch
-            if not jules_prompt:
-                jules_prompt = p_jules
+            stitch_prompt = stitch_prompt or p_stitch
+            jules_prompt = jules_prompt or p_jules
 
         file_label = file_label.strip() or "Tarefa Não Identificada"
 
-        print("\n" + "=" * 75)
-        print(f"{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE UNIFICADO AMB_V2: {file_label}{Colors.RESET}")
-        print(f"📁 Repositório Alvo: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {starting_branch})")
-        print("=" * 75)
+        print(f"\n{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE: {file_label}{Colors.RESET}")
+        log("PARSER", f"Visual: {len(stitch_prompt)} chars | Dev: {len(jules_prompt)} chars", Colors.DIM)
 
-        log("PARSER", f"Prompt Visual: {len(stitch_prompt)} chars | Prompt Dev: {len(jules_prompt)} chars", Colors.DIM)
-
-        # Sincronização de Design System se solicitado
-        if sync_ds:
-            log("ETAPA 1.1", "🎨 Sincronizando Design Tokens locais com o Stitch...", Colors.HEADER)
-            try:
-                sync_design_system()
-            except Exception as e:
-                log_error("SYNC-DS", f"Aviso na sincronização de tokens: {e}")
-
-        # -------------------------------------------------------------
-        # ETAPA 2: DESIGN NO GOOGLE STITCH SDK
-        # -------------------------------------------------------------
-        stitch_html = ""
-        current_screen_id = screen_id or edit_screen_id
-        screenshot_url = ""
-        screen_title = ""
+        current_screen_id, stitch_html, screenshot_url, screen_title = screen_id or edit_screen_id, "", "", ""
 
         if not skip_stitch:
-            log("ETAPA 2/6", "🎨 Processando Layout Visual no Stitch SDK...", Colors.HEADER)
-            if current_screen_id and not edit_screen_id:
-                log("STITCH", f"Buscando tela existente ID: {current_screen_id}...", Colors.CYAN)
-                screen_data = get_screen(screen_id=current_screen_id)
-            elif edit_screen_id:
-                log("STITCH", f"Refinando tela ID {edit_screen_id} com novo prompt...", Colors.CYAN)
-                screen_data = edit_screen(screen_id=edit_screen_id, prompt=stitch_prompt)
-            else:
-                target_dev = device_type or get_device_type()
-                dev_label = f" ({target_dev})" if target_dev else ""
-                log("STITCH", f"Disparando geração de nova tela visual{dev_label}...", Colors.CYAN)
-                screen_data = generate_screen(prompt=stitch_prompt, device_type=target_dev)
+            d_res = process_design_stage(stitch_prompt, current_screen_id, edit_screen_id, device_type, auto_approve, sync_ds)
+            if d_res.get("cancelled"): return
+            current_screen_id = d_res.get("current_screen_id")
+            stitch_html = d_res.get("stitch_html")
+            screenshot_url = d_res.get("screenshot_url")
+            screen_title = d_res.get("screen_title")
 
-            current_screen_id = screen_data.get("screenId") or current_screen_id
-            stitch_html = screen_data.get("htmlCode", "")
-            screenshot_url = screen_data.get("screenshotUrl", "")
-            screen_title = screen_data.get("title", "")
-
-            print("\n" + "-" * 75)
-            print(f"✨ {Colors.BOLD}Mockup Stitch Gerado com Sucesso!{Colors.RESET}")
-            print(f"🆔 Screen ID: {Colors.GREEN}{current_screen_id}{Colors.RESET}")
-            if screen_title:
-                print(f"🏷️ Título: {screen_title}")
-            if screenshot_url:
-                print(f"🖼️ Screenshot: {Colors.BLUE}{screenshot_url}{Colors.RESET}")
-            print(f"📦 DOM HTML Extraído: {len(stitch_html)} caracteres")
-            print("-" * 75 + "\n")
-
-            # -------------------------------------------------------------
-            # ETAPA 3: GATEKEEPER 1 (INTERATIVIDADE VISUAL)
-            # -------------------------------------------------------------
-            if not auto_approve:
-                log("ETAPA 3/6", "🚪 Gatekeeper 1: Decisão de Design e Layout", Colors.HEADER)
-                print("Escolha a próxima ação:")
-                print("  [1] Aprovar mockup e seguir para Síntese Cognitiva & Jules (Recomendado)")
-                print("  [2] Refinar visual com nova instrução no Stitch")
-                print("  [3] Gerar 3 variantes de design alternativas")
-                print("  [4] Cancelar execução")
-                
-                try:
-                    choice = input(f"\n{Colors.BOLD}Opção [1-4] (Padrão: 1): {Colors.RESET}").strip() or "1"
-                except (EOFError, KeyboardInterrupt):
-                    choice = "1"
-
-                if choice == "2":
-                    instruction = input(f"{Colors.BOLD}Digite a instrução de refinamento: {Colors.RESET}").strip()
-                    if instruction:
-                        log("STITCH", f"Refinando tela {current_screen_id}...", Colors.CYAN)
-                        screen_data = edit_screen(screen_id=current_screen_id, prompt=instruction)
-                        stitch_html = screen_data.get("htmlCode", "")
-                        screenshot_url = screen_data.get("screenshotUrl", "")
-                        print(f"✅ Refinamento concluído. Nova screenshot: {screenshot_url}")
-                elif choice == "3":
-                    log("STITCH", f"Gerando variantes para a tela {current_screen_id}...", Colors.CYAN)
-                    vars_data = generate_variants(screen_id=current_screen_id, count=3)
-                    print(f"✅ Variantes geradas: {json.dumps(vars_data, indent=2)}")
-                elif choice == "4":
-                    print(f"{Colors.YELLOW}Execução cancelada pelo usuário.{Colors.RESET}")
-                    return
-
-        # -------------------------------------------------------------
-        # ETAPA 4: SÍNTESE COGNITIVA E CONSOLIDAÇÃO DO PROMPT PARA O JULES
-        # -------------------------------------------------------------
         log("ETAPA 4/6", "🧠 Síntese Cognitiva e Consolidação do Prompt para o Jules...", Colors.HEADER)
-        
-        # 1. Resumo estruturado de alta densidade do Stitch (Design)
         stitch_summary = ""
         if not skip_stitch and (stitch_html or stitch_prompt):
-            log("ANTIGRAVITY", "Consolidando e sintetizando especificação visual do Stitch com IA...", Colors.CYAN)
             client_agy = AntigravityClient()
-            stitch_summary = cls._synthesize_stitch_ui(
-                client_agy=client_agy,
-                stitch_prompt=stitch_prompt,
-                stitch_html=stitch_html,
-                screen_title=screen_title
-            )
+            stitch_summary = cls._synthesize_stitch_ui(client_agy, stitch_prompt, stitch_html, screen_title)
 
-        # 2. Leitura e extração segura e limpa das regras do repositório via RulesManager
         rules_summary = cls._extract_clean_rules()
 
-        # 3. Montagem do Prompt Executivo Consolidado
-        # GARANTIA CRÍTICA: O jules_prompt e o stitch_prompt são preservados 100% integrais
-        prompt_sections = [
-            "# 🚀 ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE FULLSTACK (DESIGN-TO-DEPLOY)",
-            f"**Repositório**: `{repo_name}`",
-            f"**Branch de Trabalho**: `{starting_branch}`",
-            f"**Arquivo de Especificação**: `{file_label.strip()}`",
-            "",
-            "---",
-            "",
-            "## 🎯 1. REQUISITOS DE ENGENHARIA & BACKEND (INTEGRAL)",
-            jules_prompt if jules_prompt else "Implementar funcionalidade conforme padrões do repositório.",
-            "",
-        ]
+        executive_prompt = build_executive_prompt(
+            repo_name, starting_branch, file_label, jules_prompt, stitch_prompt,
+            current_screen_id, screen_title, screenshot_url, stitch_summary, rules_summary, skip_stitch
+        )
 
-        if not skip_stitch and (current_screen_id or stitch_summary or screenshot_url or stitch_prompt):
-            meta_items = []
-            if current_screen_id:
-                meta_items.append(f"- **Screen ID (Stitch)**: `{current_screen_id}`")
-            if screen_title:
-                meta_items.append(f"- **Título da Tela**: {screen_title}")
-            if screenshot_url:
-                meta_items.append(f"- **Screenshot de Referência Visual**: {screenshot_url}")
+        log("PIPELINE", f"Prompt consolidado para o Jules gerado!", Colors.GREEN)
 
-            stitch_section_parts = [
-                "---",
-                "",
-                "## 🎨 2. ESPECIFICAÇÃO DE INTERFACE, UI & FRONTEND (STITCH SPEC)",
-                "> ⚠️ **DIRETRIZ FULLSTACK OBRIGATÓRIA PARA O PLANO DO JULES**:",
-                "> Você DEVE planejar e implementar TANTO a camada de backend/dados (Seção 1) QUANTO os componentes de interface no frontend descritos nesta seção.",
-                "> Crie ou atualize todos os arquivos de componentes de UI (páginas, abas, modais, formulários, rotas frontend) necessários para refletir fielmente o design.",
-                "",
-            ]
-
-            if meta_items:
-                stitch_section_parts.append("### Metadados do Mockup Stitch:\n" + "\n".join(meta_items) + "\n")
-
-            if stitch_summary:
-                stitch_section_parts.append(
-                    "### 🏛️ Arquitetura Visual Sintetizada (Layout & Componentes):\n" + stitch_summary.strip() + "\n"
-                )
-
-            if stitch_prompt:
-                stitch_section_parts.append(
-                    "### 📐 Especificação Detalhada da UI & Wireframe (Integral):\n" + stitch_prompt.strip() + "\n"
-                )
-
-            prompt_sections.extend(stitch_section_parts)
-
-        prompt_sections.extend([
-            "---",
-            "",
-            "## 🛡️ 3. DIRETRIZES ARQUITETURAIS MANDATÓRIAS",
-            "- **Separação Estrita de Responsabilidades (SRP)**: Cada módulo, serviço e componente deve possuir responsabilidade única.",
-            "- **Tipagem Estrita**: Tipagem rigorosa da stack do projeto, contratos explícitos e sem tipos genéricos opacos.",
-            "- **Integridade Local**: Todo o código implementado deve passar no typecheck e no build sem erros.",
-            "",
-            rules_summary if rules_summary else "",
-        ])
-
-        executive_prompt = "\n".join(filter(lambda s: s is not None, prompt_sections)).strip()
-
-        log("PIPELINE", f"Prompt consolidado para o Jules gerado com sucesso!", Colors.GREEN)
-        print(f"  📊 {Colors.BOLD}Estatísticas do Prompt Consolidado:{Colors.RESET}")
-        print(f"     • Prompt de Engenharia (Jules): {len(jules_prompt)} caracteres (100% preservado)")
-        if stitch_prompt:
-            print(f"     • Prompt Visual (Stitch): {len(stitch_prompt)} caracteres (100% preservado)")
-        if stitch_summary:
-            print(f"     • Resumo Arquitetural do Stitch: {len(stitch_summary)} caracteres (ultra-denso)")
-        print(f"     • Prompt Final para o Jules: {len(executive_prompt)} caracteres (~{len(executive_prompt.split())} palavras)\n")
-
-        # -------------------------------------------------------------
-        # ETAPA 5: DESPACHO NO GOOGLE JULES (REST API)
-        # -------------------------------------------------------------
         log("ETAPA 5/6", "⚡ Despachando Tarefa na Cloud do Google Jules...", Colors.HEADER)
         jules_client = JulesClient()
-        source_name = f"sources/github/{repo_name}"
-
         session_resp = jules_client.create_session(
             prompt=executive_prompt,
-            source_name=source_name,
+            source_name=f"sources/github/{repo_name}",
             title=f"Task: {file_label.replace('.md', '').replace('_', ' ').title()}",
             base_branch=starting_branch
         )
 
         session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get("id", "")
-        if not session_id:
-            raise AmbError(f"Resposta inválida ao criar sessão no Jules: {session_resp}")
+        if not session_id: raise AmbError(f"Resposta inválida Jules: {session_resp}")
 
-        print("\n" + "=" * 75)
-        print(f"🎉 {Colors.BOLD}Sessão Remota Iniciada no Google Jules!{Colors.RESET}")
-        print(f"🆔 Session ID: {Colors.GREEN}{session_id}{Colors.RESET}")
-        print(f"🔗 Acompanhe em: {Colors.BLUE}https://jules.google.com/sessions/{session_id}{Colors.RESET}")
-        print("=" * 75 + "\n")
+        print(f"🎉 {Colors.BOLD}Sessão Iniciada: {Colors.GREEN}{session_id}{Colors.RESET}")
 
-        # -------------------------------------------------------------
-        # ETAPA 6: MONITORAMENTO EM TEMPO REAL & QA
-        # -------------------------------------------------------------
         cls._monitor_jules_session(session_id, repo_root, no_qa)
 
     @classmethod
     def _monitor_jules_session(cls, session_id: str, repo_root: str, no_qa: bool = False):
-        """Monitora as atividades do Jules, responde a planos e dúvidas com IA e executa o QA ao término."""
         client = JulesClient()
         from agents.autonomous_loop import monitor_and_assist_session
-        
-        final_state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
-
-        # -------------------------------------------------------------
-        # GATEKEEPER 2: QA LOCAL
-        # -------------------------------------------------------------
+        monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
         if not no_qa:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
             QualityGatekeeper.run_qa(repo_root)
 
     @staticmethod
     def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
-        """Extrai seção visual e seção de engenharia de um único arquivo markdown se presentes."""
-        stitch_prompt = ""
-        jules_prompt = ""
-
-        # Divide por seções estruturadas se presentes
-        parts = re.split(r"(?i)#+\s*(?:1\.\s*)?(?:🎨\s*)?especificação\s+visual", markdown_text)
-        if len(parts) > 1:
-            sub = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", parts[1])
-            stitch_prompt = sub[0].strip()
-            if len(sub) > 1:
-                jules_prompt = sub[1].strip()
-        else:
-            parts_jules = re.split(r"(?i)#+\s*(?:2\.\s*)?(?:⚡\s*)?especificação\s+de\s+engenharia", markdown_text)
-            if len(parts_jules) > 1:
-                stitch_prompt = parts_jules[0].strip()
-                jules_prompt = parts_jules[1].strip()
-            else:
-                stitch_prompt = markdown_text.strip()
-                jules_prompt = markdown_text.strip()
-
-        return stitch_prompt, jules_prompt
+        return parse_single_prompt(markdown_text)
 
     @classmethod
     def _extract_clean_rules(cls, rules_dir: Optional[str] = None, max_chars_per_file: int = 1500) -> str:
-        """Lê e extrai regras do repositório utilizando o RulesManager centralizado."""
         return get_rules_manager(custom_dir=rules_dir).load_rules(rules_dir=rules_dir)
 
     @classmethod
     def _clean_html_for_summary(cls, html: str) -> str:
-        """Remove scripts, styles pesados, SVGs gigantes e base64 para focar na semântica da interface."""
-        import re
-        if not html:
-            return ""
-        # Remove comentários HTML
-        html = re.sub(r'<!--[\s\S]*?-->', '', html)
-        # Remove <script> tags
-        html = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', html, flags=re.IGNORECASE)
-        # Remove <style> tags
-        html = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', html, flags=re.IGNORECASE)
-        # Simplifica tags <svg> com paths gigantes
-        html = re.sub(r'<svg\b[^>]*>[\s\S]*?<\/svg>', '[Ícone SVG]', html, flags=re.IGNORECASE)
-        # Remove base64 data URLs
-        html = re.sub(r'data:image\/[a-zA-Z]+;base64,[^\s"\']+', '[Imagem Base64]', html)
-        # Limita espaços em branco consecutivos
-        html = re.sub(r'\s+', ' ', html).strip()
-        return html[:10000]
+        return clean_html_for_summary(html)
 
     @classmethod
     def _synthesize_stitch_ui(cls, client_agy: AntigravityClient, stitch_prompt: str, stitch_html: str, screen_title: str) -> str:
-        """Gera um resumo executivo da UI do Stitch em Markdown de alta densidade e concisão."""
-        cleaned_dom = cls._clean_html_for_summary(stitch_html)
-        
-        system_instruction = (
-            "Você é um Arquiteto de Software e Especialista em Design System / Frontend. "
-            "Sua missão é analisar o layout e os componentes visuais gerados no Stitch e sintetizá-los "
-            "em um RESUMO ARQUITETURAL EXECUTIVO DE ALTA DENSIDADE (máximo 200 a 350 palavras). "
-            "NÃO inclua código HTML nem CSS cru. Estruture obrigatoriamente nos seguintes tópicos: "
-            "1. Estrutura de Layout (grid, flex, containers, seções principais); "
-            "2. Componentes Identificados (cards, tabelas, modais, formulários, listas); "
-            "3. Elementos Interativos & Ações (botões primários/secundários, inputs, filtros, dropdowns); "
-            "4. Tokens de Design (paleta de cores predominante, tipografia, espaçamento e estados visuais). "
-            "Seja extremamente direto e denso para que um agente engenheiro (Jules) implemente a interface com fidelidade absoluta."
-        )
-
-        prompt_input = f"""Nome da Tela: {screen_title or 'Interface do Usuário'}
-Diretrizes Visuais do Stitch Prompt:
-{stitch_prompt if stitch_prompt else 'Conforme estrutura semântica abaixo.'}
-
-DOM Semântico Limpo da Tela:
-{cleaned_dom if cleaned_dom else 'Sem DOM extraído, basear-se estritamente no prompt de design.'}
-"""
-        try:
-            summary = client_agy.generate_text(prompt=prompt_input, system_instruction=system_instruction)
-            if summary and len(summary.strip()) > 30:
-                clean_sum = summary.strip()
-                # Garante integridade de code blocks
-                if clean_sum.count("```") % 2 != 0:
-                    clean_sum += "\n```"
-                return clean_sum
-        except Exception as e:
-            log("STITCH", f"Aviso na síntese de UI via IA ({e}). Usando resumo estruturado de fallback.", Colors.YELLOW)
-
-        # Fallback caso IA não responda
-        fallback_lines = []
-        if stitch_prompt:
-            fallback_text = stitch_prompt[:500].rstrip()
-            if len(stitch_prompt) > 500:
-                fallback_text += "..."
-            fallback_lines.append(f"- **Especificação Visual Original**: {fallback_text}")
-        fallback_lines.extend([
-            "- **Layout**: Interface modular baseada nos componentes descritos na especificação de design.",
-            "- **Diretrizes de Estilo**: Respeitar a identidade visual e tokens do repositório.",
-        ])
-        return "\n".join(fallback_lines)
-
-
+        return synthesize_stitch_ui(client_agy, stitch_prompt, stitch_html, screen_title)
 
 def main():
     parser = argparse.ArgumentParser(description="Pipeline Autônomo Design-to-Code (AMB_V2)")
@@ -437,7 +144,7 @@ def main():
     parser.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto ao Jules")
     parser.add_argument("--no-qa", action="store_true", help="Não executa a verificação local de typecheck/build ao final")
     parser.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules")
-    parser.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default=None, help="Tipo de dispositivo alvo para o Stitch (padrão: lê de amb_project.json ou .env)")
+    parser.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default=None, help="Tipo de dispositivo alvo para o Stitch")
     parser.add_argument("--screen-id", help="ID de tela existente no Stitch para reaproveitar")
     parser.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt")
     parser.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar")
@@ -451,18 +158,10 @@ def main():
 
     try:
         PipelineOrchestrator.run(
-            prompt_file=args.prompt_file,
-            stitch_prompt_file=args.stitch_prompt,
-            jules_prompt_file=args.jules_prompt,
-            auto_approve=args.auto_approve,
-            skip_stitch=args.skip_stitch,
-            no_qa=args.no_qa,
-            resume_session=args.resume_session,
-            device_type=args.device_type,
-            edit_screen_id=args.edit_screen,
-            screen_id=args.screen_id,
-            sync_ds=args.sync_ds,
-            starting_branch=args.branch
+            prompt_file=args.prompt_file, stitch_prompt_file=args.stitch_prompt, jules_prompt_file=args.jules_prompt,
+            auto_approve=args.auto_approve, skip_stitch=args.skip_stitch, no_qa=args.no_qa,
+            resume_session=args.resume_session, device_type=args.device_type, edit_screen_id=args.edit_screen,
+            screen_id=args.screen_id, sync_ds=args.sync_ds, starting_branch=args.branch
         )
     except AmbError as e:
         log_error("PIPELINE", e.message, hint=e.hint)
@@ -470,7 +169,6 @@ def main():
     except Exception as e:
         log_error("PIPELINE", str(e))
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
