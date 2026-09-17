@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 📡 AMB_V2 - Apresentação CLI: Emissor de Alertas Visuais e Sonoros (SRP)
-Localização: amb_v2/cli_modules/alert_notifier.py
+Localização: amb_cli/cli_modules/alert_notifier.py
 Responsabilidade Única: Formatar e emitir alertas destacados no terminal com destaque de atenção e beeps.
 """
 
 import sys
-import os
+from typing import Optional
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
@@ -15,8 +15,8 @@ ensure_amb_env()
 from config import Colors
 
 
-def play_beep():
-    """Tenta emitir alerta sonoro no terminal."""
+def play_beep() -> None:
+    """Tenta emitir alerta sonoro no terminal de forma defensiva."""
     try:
         if sys.platform == "win32":
             import winsound
@@ -27,7 +27,7 @@ def play_beep():
         pass
 
 
-def notify_attention(source: str, title: str, details: str, action_command: str = None):
+def notify_attention(source: str, title: str, details: str, action_command: Optional[str] = None) -> None:
     """Exibe um banner de alerta urgente no terminal."""
     play_beep()
     
@@ -46,7 +46,7 @@ def notify_attention(source: str, title: str, details: str, action_command: str 
     print(f"{Colors.RED}{Colors.BOLD}{border}{Colors.RESET}\n", flush=True)
 
 
-def notify_info(message: str):
+def notify_info(message: str) -> None:
     """Mensagem de status normal."""
     print(f"{Colors.GREEN}✔ {message}{Colors.RESET}", flush=True)
 
