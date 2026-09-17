@@ -25,7 +25,7 @@ class RulesManager:
     _cached_rules_by_dir: Dict[str, str] = {}
     _cached_list_by_dir: Dict[str, List[Dict[str, Any]]] = {}
 
-    def __init__(self, custom_rules_dir: Optional[str] = None):
+    def __init__(self, custom_rules_dir: Optional[str] = None) -> None:
         self.custom_rules_dir = custom_rules_dir
 
     @classmethod
@@ -36,7 +36,7 @@ class RulesManager:
         return cls._instance
 
     @classmethod
-    def invalidate_cache(cls):
+    def invalidate_cache(cls) -> None:
         """Limpa o cache em memória para forçar releitura do disco."""
         cls._cached_rules_by_dir.clear()
         cls._cached_list_by_dir.clear()
