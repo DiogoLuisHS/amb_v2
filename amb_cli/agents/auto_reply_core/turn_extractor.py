@@ -68,7 +68,7 @@ class TurnHistoryExtractor:
 
         # Garante ordem decrescente (mais recente primeiro) baseada em createTime se presente
         ordered_acts = list(acts)
-        ordered_acts.sort(key=lambda a: a.get("createTime") or "", reverse=True)
+        ordered_acts.sort(key=lambda a: str(a.get("createTime") or ""), reverse=True)
 
         for a in ordered_acts:
             aid = a.get("id") or a.get("name")
@@ -82,18 +82,7 @@ class TurnHistoryExtractor:
                     turn_info["is_awaiting_user_action"] = False
                     break
 
-            # 2. Mensagem do Agente / Pergunta ou Feedback Requerido
-            # NOTA: Precede planos antigos para responder dúvidas recentes do agente no chat
-            agent_txt = cls.extract_activity_text(a, role="agent")
-            if agent_txt:
-                if not turn_info["last_speaker"]:
-                    turn_info["last_speaker"] = "AGENT"
-                    turn_info["last_agent_msg"] = agent_txt
-                    turn_info["last_agent_msg_id"] = aid
-                    turn_info["is_awaiting_user_action"] = True
-                    break
-
-            # 3. Plano com aprovação pendente
+            # 2. Verifica se a atividade é um Plano (sempre que for avaliado depois da Mensagem do Agente)
             plan = (
                 a.get("plan") or a.get("agentMessage", {}).get("plan")
                 if isinstance(a.get("agentMessage"), dict)
@@ -102,7 +91,37 @@ class TurnHistoryExtractor:
             if not plan and "planGenerated" in a:
                 plan = a["planGenerated"].get("plan")
 
-            if plan and (plan.get("state") == "PENDING_USER_APPROVAL" or "steps" in plan or plan.get("id")):
+            has_plan = plan and (plan.get("state") == "PENDING_USER_APPROVAL" or "steps" in plan or plan.get("id"))
+
+            # 3. Mensagem do Agente / Pergunta ou Feedback Requerido
+            # NOTA: Precede planos antigos na definição do speaker, priorizando dúvidas reais.
+            agent_txt = cls.extract_activity_text(a, role="agent")
+
+            if agent_txt and not has_plan:
+                # Se for apenas mensagem do agente (sem plano), é prioridade absoluta como Dúvida
+                if not turn_info["last_speaker"]:
+                    turn_info["last_speaker"] = "AGENT"
+                    turn_info["last_agent_msg"] = agent_txt
+                    turn_info["last_agent_msg_id"] = aid
+                    turn_info["is_awaiting_user_action"] = True
+                    break
+
+            elif agent_txt and has_plan:
+                # Se a atividade tem ambos, priorizamos a mensagem como AGENT para resolver dúvidas, mas anotamos o plano.
+                if not turn_info["last_speaker"]:
+                    turn_info["last_speaker"] = "AGENT"
+                    turn_info["last_agent_msg"] = agent_txt
+                    turn_info["last_agent_msg_id"] = aid
+                    turn_info["is_awaiting_user_action"] = True
+
+                    turn_info["has_unapproved_plan"] = True
+                    steps = plan.get("steps", [])
+                    p_title = plan.get("title") or (steps[0].get("title") if steps else "Plano de Implementação")
+                    turn_info["unapproved_plan_title"] = p_title
+                    break
+
+            elif has_plan and not agent_txt:
+                # Se for só plano e nenhuma mensagem de agente explícita na atividade
                 if not turn_info["last_speaker"]:
                     turn_info["last_speaker"] = "PLAN"
                     turn_info["has_unapproved_plan"] = True
@@ -131,7 +150,7 @@ class TurnHistoryExtractor:
 
         # Garante ordem cronológica estrita (mais antiga primeiro) para exibição linear da conversa
         chronological_acts = list(acts)
-        chronological_acts.sort(key=lambda a: a.get("createTime") or "")
+        chronological_acts.sort(key=lambda a: str(a.get("createTime") or ""))
 
         chat_lines = []
         current_question = turn_info.get("last_agent_msg", "")
