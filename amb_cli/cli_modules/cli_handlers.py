@@ -545,7 +545,7 @@ def cmd_schema(args):
 
 def cmd_context(args):
     """Gera o roteiro de arquivos ordenados por camadas de dependência para a IA."""
-    from ai_context_builder import generate_context
+    from architecture.ai_context_builder import generate_context
     generate_context(target=args.module, output_json=args.json)
 
 
