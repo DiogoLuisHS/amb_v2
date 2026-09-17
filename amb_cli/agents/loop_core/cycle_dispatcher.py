@@ -52,6 +52,8 @@ def build_ai_context(
                 f"Roteiro arquitetural '{_ctx_query}' ({total_ctx_files} arquivos) anexado ao prompt.",
                 Colors.GREEN,
             )
+    except ImportError as ie:
+        log("LOOP", f"Aviso: Dependências do ai_context_builder ausentes — {ie}", Colors.DIM)
     except Exception as ctx_err:
         log("LOOP", f"Aviso: ai_context_builder falhou — {ctx_err}", Colors.DIM)
 
@@ -75,9 +77,8 @@ def dispatch_jules_session(
         base_branch=branch,
     )
 
-    session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get(
-        "id", ""
-    )
+    name = session_resp.get("name")
+    session_id = name.split("/")[-1] if name else session_resp.get("id", "")
     if not session_id:
         raise AmbError(f"Falha ao obter ID da sessão: {session_resp}")
 
@@ -110,6 +111,6 @@ def handle_pr_merge(
                 Colors.GREEN,
             )
             # Garante que o git local puxa e valida origin
-            GitService(repo_root=repo_root).pull("origin", branch, cwd=repo_root)
+            GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
     except Exception as em:
         log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
