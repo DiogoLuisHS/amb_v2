@@ -68,6 +68,16 @@ def dispatch_jules_session(
     branch: str,
 ) -> str:
     """Cria a sessão no Jules e retorna o ID."""
+    pr_mandate = (
+        "\n\n---\n\n"
+        "## 🚀 Ação Final Obrigatória: Abertura do Pull Request\n"
+        "Ao concluir as alterações e validar os testes com sucesso (100% green):\n"
+        "1. Você DEVE submeter/abrir o Pull Request no GitHub imediatamente.\n"
+        "2. Não finalize a sessão apenas no estado 'Ready for submission'; confirme a criação do PR diretamente no GitHub.\n"
+    )
+    if "Abertura do Pull Request" not in full_prompt:
+        full_prompt = f"{full_prompt}{pr_mandate}"
+
     log("LOOP", "Criando sessão para persona no Google Jules...", Colors.CYAN)
 
     session_resp = client.create_session(

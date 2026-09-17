@@ -43,3 +43,10 @@ python -m py_compile amb_cli/agents/loop_core/cycle_dispatcher.py
 python -m pytest
 ```
 Todos os 92 testes unitários devem passar (100% green).
+
+---
+
+## 🚀 Ação Final Obrigatória: Abertura do Pull Request
+Ao concluir todas as alterações e validar os testes com sucesso (100% green):
+1. Você DEVE submeter/abrir o Pull Request no GitHub imediatamente.
+2. Não encerre a sessão apenas no estado "Ready for submission"; confirme a criação do PR diretamente no GitHub com título e descrição claros das alterações.
