@@ -1,59 +1,61 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🧠 AMB_V2 - Executor Dinâmico de Personas Baseado na Pasta .amb/ ou .jules/
-Localização: amb_v2/agents/local_agent_runner.py
-Responsabilidade Única: Descobrir dinamicamente arquivos markdown de personas na pasta `.amb/personas/` ou `.jules/` do repositório ativo
-(ou fallback em `personas/`), permitindo listar, executar uma persona específica ou rodar todas em lote.
+🤖 AMB_V2 - Local Agent (Antigravity & Jules) Runner
+Localização: amb_cli/agents/local_agent_runner.py
+Responsabilidade Única: Descobrir e executar personas de agentes estáticos definidos
+no projeto, despachando para a API do Jules na nuvem ou executando localmente via Antigravity CLI.
 """
 
 import os
 import sys
-import subprocess
 import argparse
+import subprocess
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, ApiExecutionError
+from config import Colors, log, log_error, find_repo_root
+
+
+class ApiExecutionError(Exception):
+    """Exceção levantada quando há falha na execução de um agente local ou na nuvem."""
+    def __init__(self, message: str, hint: Optional[str] = None):
+        super().__init__(message)
+        self.hint = hint
 
 
 def get_personas_directory(custom_dir: Optional[str] = None) -> str:
-    """Localiza o diretório oficial de personas (Prioridade: pasta .amb/personas do projeto ativo)."""
-    if custom_dir and os.path.exists(custom_dir):
-        return os.path.abspath(custom_dir)
-
+    """Resolve e retorna o diretório de personas com prioridade para o .amb do projeto."""
     root = find_repo_root()
-    
-    # 1. Prioridade Máxima: Pasta .amb/personas/ na raiz do projeto ativo
+    if custom_dir:
+        abs_custom = os.path.abspath(custom_dir)
+        if not os.path.exists(abs_custom):
+            os.makedirs(abs_custom, exist_ok=True)
+        return abs_custom
+
     amb_personas = os.path.join(root, ".amb", "personas")
     if os.path.exists(amb_personas) and os.path.isdir(amb_personas):
-        return os.path.abspath(amb_personas)
-
-    # 2. Pasta .amb/ direta
-    amb_dir = os.path.join(root, ".amb")
-    if os.path.exists(amb_dir) and os.path.isdir(amb_dir):
-        md_files = [f for f in os.listdir(amb_dir) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
+        md_files = [f for f in os.listdir(amb_personas) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
         if md_files:
-            return os.path.abspath(amb_dir)
+            return os.path.abspath(amb_personas)
 
-    # 3. Fallback retrocompatível: Pasta .jules/personas/ ou .jules/
     jules_personas = os.path.join(root, ".jules", "personas")
     if os.path.exists(jules_personas) and os.path.isdir(jules_personas):
         return os.path.abspath(jules_personas)
+
     jules_dir = os.path.join(root, ".jules")
     if os.path.exists(jules_dir) and os.path.isdir(jules_dir):
         md_files = [f for f in os.listdir(jules_dir) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
         if md_files:
             return os.path.abspath(jules_dir)
 
-    # 4. Fallbacks no ecossistema amb_v2
     candidates = [
-        os.path.join(root, "amb_v2", "agents", "personas"),
+        os.path.join(root, "amb_cli", "agents", "personas"),
         os.path.join(os.path.dirname(__file__), "personas"),
-        os.path.join(root, "amb_v2", "integrations", "antigravity", "personas"),
+        os.path.join(root, "amb_cli", "integrations", "antigravity", "personas"),
     ]
     for p in candidates:
         if os.path.exists(p):
@@ -65,10 +67,7 @@ def get_personas_directory(custom_dir: Optional[str] = None) -> str:
 
 
 def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
-    """
-    Varre dinamicamente a pasta de personas e extrai metadados dos arquivos markdown.
-    Ignora README.md ou arquivos iniciados por '_' (ex: _GUIA...).
-    """
+    """Varre dinamicamente a pasta de personas e extrai metadados dos arquivos markdown."""
     personas = {}
     if not os.path.exists(personas_dir):
         return personas
@@ -90,12 +89,10 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
             with open(fpath, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read().strip()
 
-            # Extrai título do primeiro h1 (# ...)
             m_title = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
             if m_title:
                 title = m_title.group(1).strip()
 
-            # Extrai resumo da primeira linha não vazia após o título
             lines = [l.strip() for l in content.split("\n") if l.strip() and not l.startswith("#")]
             if lines:
                 summary = lines[0][:120] + ("..." if len(lines[0]) > 120 else "")
@@ -114,7 +111,7 @@ def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
     return personas
 
 
-def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str):
+def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str) -> None:
     """Exibe no terminal a listagem dinâmica de todas as personas encontradas na pasta."""
     print("\n" + "=" * 75)
     print(f"{Colors.BOLD}{Colors.CYAN}🤖 PERSONAS DISPONÍVEIS NA PASTA ({len(personas)} encontradas){Colors.RESET}")
@@ -131,7 +128,7 @@ def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str):
         print(f"    Missão: {Colors.DIM}{p['summary']}{Colors.RESET}\n")
 
     print(f"{Colors.YELLOW}Como Executar:{Colors.RESET}")
-    print(f"  • Despachar Jules (Padrão): amb agent --role <nome>  (ou python amb_v2/agents/local_agent_runner.py --role <nome>)")
+    print(f"  • Despachar Jules (Padrão): amb agent --role <nome>  (ou python amb_cli/agents/local_agent_runner.py --role <nome>)")
     print(f"  • TODAS as Personas (Jules):  amb agent --all")
     print(f"  • Executar Local (agy CLI):   amb agent --role <nome> --agy (ou --local)\n")
 
@@ -140,7 +137,7 @@ def execute_single_persona(
     persona_data: Dict[str, str],
     task: Optional[str] = None,
     dispatch_jules: bool = True
-):
+) -> None:
     """Executa ou despacha uma persona específica."""
     title = persona_data["title"]
     base_content = persona_data["content"]
@@ -148,7 +145,6 @@ def execute_single_persona(
 
     full_prompt = base_content
 
-    # Anexa o histórico do diário de aprendizado se existir no projeto
     key = persona_data.get("key", "")
     diario_candidates = [
         os.path.join(root, ".amb", "diarios", f"{key}.md"),
@@ -176,9 +172,8 @@ def execute_single_persona(
     print(f"🎯 {Colors.BOLD}MODO:{Colors.RESET} {'Google Jules Cloud VM' if dispatch_jules else 'Antigravity Local (agy CLI)'}")
     print("=" * 75 + "\n")
 
-    # MODO 1: Despacho para Cloud do Google Jules
     if dispatch_jules:
-        from create_session import create_session
+        from integrations.jules.tools.create_session import create_session
         log("AGENT", f"Despachando '{title}' para o Google Jules...", Colors.CYAN)
         res = create_session(
             prompt=full_prompt,
@@ -190,7 +185,6 @@ def execute_single_persona(
         print(f"👉 Para monitorar: amb jules get {sid}\n")
         return
 
-    # MODO 2: Execução Local com agy CLI
     log("AGENT", f"Iniciando agente local no repositório...", Colors.CYAN)
     try:
         proc = subprocess.run(
@@ -210,7 +204,7 @@ def execute_single_persona(
         )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Executor dinâmico de personas do repositório ativo (lê dinamicamente da pasta .amb/ ou .jules/).")
     parser.add_argument("--role", "-r", help="Nome da persona a ser executada (ex: engineer, etc.).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa TODAS as personas encontradas na pasta sequencialmente.")
@@ -222,18 +216,15 @@ def main():
 
     args = parser.parse_args()
 
-    # Padrão: Despacha para o Google Jules. Só roda local com agy se --agy / --local for especificado.
     dispatch_jules = not args.agy
 
     personas_dir = get_personas_directory(args.personas_dir)
     personas = discover_personas(personas_dir)
 
-    # 1. Listagem
     if args.list or (not args.role and not args.all):
         list_personas(personas, personas_dir)
         return
 
-    # 2. Executar TODAS as personas da pasta
     if args.all:
         if not personas:
             log_error("AGENT", f"Nenhuma persona encontrada em {personas_dir}")
@@ -259,7 +250,6 @@ def main():
         print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Execução em lote de todas as personas concluída!{Colors.RESET}\n")
         return
 
-    # 3. Executar UMA persona específica
     clean_role = args.role.lower().replace(".md", "").strip()
     if clean_role not in personas:
         log_error(

@@ -6,6 +6,7 @@ Responsabilidade Única: Carregar variáveis, validar requisitos estritos e forn
 diagnósticos imediatos sem mascaramento de falhas.
 """
 
+from typing import Dict, Any, List, Optional
 import os
 import sys
 import json

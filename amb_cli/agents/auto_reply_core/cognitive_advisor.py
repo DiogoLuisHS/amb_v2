@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 🧠 AMB_V2 - Cognitive Advisor (SRP Core)
-Localização: amb_v2/agents/auto_reply_core/cognitive_advisor.py
+Localização: amb_cli/agents/auto_reply_core/cognitive_advisor.py
 Responsabilidade Única: Formulação e geração cognitiva de respostas técnicas contextuais
 utilizando o cliente Antigravity/Gemini e as regras centralizadas via RulesManager.
 """
 
-import os
 import functools
-from typing import Optional
+import os
+from typing import Optional, Tuple
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
@@ -54,7 +54,6 @@ class CognitiveAdvisor:
                 skip = False
             if not skip:
                 lines.append(line)
-            return_content = "\n".join(lines)
         return "\n".join(lines)
 
     @classmethod
@@ -95,7 +94,7 @@ class CognitiveAdvisor:
         initial_prompt: str,
         full_chat_history: str,
         current_question: str,
-    ) -> tuple[str, str]:
+    ) -> Tuple[str, str]:
         """Gera a instrução do sistema e o prompt estruturado para o modelo cognitivo."""
         rules_dir = self._resolve_rules_dir()
         rules_context = self.load_rules(rules_dir) if rules_dir and os.path.exists(rules_dir) else self.rules_manager.load_rules()

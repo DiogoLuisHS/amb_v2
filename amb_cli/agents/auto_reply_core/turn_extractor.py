@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 🤖 AMB_V2 - Extrator de Histórico e Turnos de Conversação (SRP)
-Localização: amb_v2/agents/auto_reply_core/turn_extractor.py
+Localização: amb_cli/agents/auto_reply_core/turn_extractor.py
 Responsabilidade Única: Analisar payloads de atividades da API do Jules,
 extrair mensagens textuais, filtrar ruídos e determinar o último turno e status da conversação.
 """
@@ -19,7 +19,7 @@ class TurnHistoryExtractor:
     """Extrai e estrutura o histórico de conversações e turnos de sessões do Jules."""
 
     @staticmethod
-    def extract_activity_text(activity: dict, role: str = "agent") -> str:
+    def extract_activity_text(activity: Dict[str, Any], role: str = "agent") -> str:
         """Extrai com precisão o texto de mensagens da API do Jules para qualquer formato retornado."""
         if not activity or not isinstance(activity, dict):
             return ""
@@ -94,7 +94,7 @@ class TurnHistoryExtractor:
         return ""
 
     @classmethod
-    def get_last_conversation_turn(cls, acts: list) -> Dict[str, Any]:
+    def get_last_conversation_turn(cls, acts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Analisa a lista de atividades (da mais recente para a mais antiga)
         e determina quem falou por último e qual foi a última pergunta/plano real.
