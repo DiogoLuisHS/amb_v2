@@ -84,12 +84,29 @@ def run_autonomous_loop(
     personas_dir = get_personas_directory()
     discovered = discover_personas(personas_dir)
 
-    if all_personas:
-        roles_to_run = list(discovered.keys()) if discovered else ["engineer"]
+    # Resolução de Prompts (arquivo único ou diretório) vs Personas
+    prompts_to_run: List[Path] = []
+    if prompt_file:
+        p_target = Path(prompt_file)
+        if p_target.is_dir():
+            prompts_to_run = sorted(
+                [
+                    p
+                    for p in p_target.glob("*.md")
+                    if p.name.lower() != "readme.md" and not p.name.startswith(("_", "."))
+                ]
+            )
+        elif p_target.is_file():
+            prompts_to_run = [p_target]
+
+    if prompts_to_run:
+        items_to_run = [{"type": "prompt", "path": p, "name": p.stem} for p in prompts_to_run]
+    elif all_personas:
+        items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
     elif role:
-        roles_to_run = [role]
+        items_to_run = [{"type": "persona", "name": role}]
     else:
-        roles_to_run = list(discovered.keys()) if discovered else ["engineer"]
+        items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
 
     modules_list = modules or [""]
 
@@ -98,9 +115,14 @@ def run_autonomous_loop(
         f"{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}"
     )
     print(f"📁 Repositório: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {branch})")
-    print(
-        f"🤖 Personas no Ciclo ({len(roles_to_run)}): {Colors.BOLD}{', '.join(roles_to_run)}{Colors.RESET}"
-    )
+    if prompts_to_run:
+        print(
+            f"📄 Prompts no Lote ({len(prompts_to_run)}): {Colors.BOLD}{', '.join([p.name for p in prompts_to_run])}{Colors.RESET}"
+        )
+    else:
+        print(
+            f"🤖 Personas no Ciclo ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}"
+        )
     if modules and modules != [""]:
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
     print(
@@ -119,49 +141,48 @@ def run_autonomous_loop(
         )
         print("#" * 75 + "\n")
 
-        for persona_idx, cur_role in enumerate(roles_to_run, 1):
+        for item_idx, item in enumerate(items_to_run, 1):
             current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
+            item_name = item["name"]
 
-            print(
-                f"\n📦 [{persona_idx}/{len(roles_to_run)}] Executando Persona: {Colors.BOLD}{cur_role.upper()}{Colors.RESET}"
-                + (f" - Módulo: [{current_module}]" if current_module else "")
-            )
-
-            # 1. Carrega o Prompt
-            if prompt_file and os.path.exists(prompt_file):
-                with open(prompt_file, "r", encoding="utf-8", errors="replace") as pf:
-                    base_prompt = pf.read()
-                title = f"Task: {Path(prompt_file).stem.replace('_', ' ').title()}"
-            else:
-                title, base_prompt = load_persona_content(cur_role)
-
-            if current_module:
-                full_prompt = (
-                    f"{base_prompt}\n\n---\n\n🎯 ESCOPO DESTA ITERAÇÃO:\n"
-                    f"Concentre a auditoria e alinhamento estritamente no módulo: `{current_module}`."
+            if item["type"] == "prompt":
+                p_path: Path = item["path"]
+                print(
+                    f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Prompt: {Colors.BOLD}{item_name}{Colors.RESET}"
                 )
-                session_title = (
-                    f"{title} [{current_module}] - Ciclo #{completed_cycles}"
-                )
-            else:
+                base_prompt = p_path.read_text(encoding="utf-8", errors="replace")
+                title = f"Task: {p_path.stem.replace('_', ' ').title()}"
                 session_title = f"{title} - Ciclo #{completed_cycles}"
-                full_prompt = base_prompt
+                full_prompt = build_ai_context(base_prompt, None, p_path.stem)
+            else:
+                print(
+                    f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Persona: {Colors.BOLD}{item_name.upper()}{Colors.RESET}"
+                    + (f" - Módulo: [{current_module}]" if current_module else "")
+                )
+                title, base_prompt = load_persona_content(item_name)
+                if current_module:
+                    full_prompt = (
+                        f"{base_prompt}\n\n---\n\n🎯 ESCOPO DESTA ITERAÇÃO:\n"
+                        f"Concentre a auditoria e alinhamento estritamente no módulo: `{current_module}`."
+                    )
+                    session_title = f"{title} [{current_module}] - Ciclo #{completed_cycles}"
+                else:
+                    session_title = f"{title} - Ciclo #{completed_cycles}"
+                    full_prompt = base_prompt
+                full_prompt = build_ai_context(full_prompt, current_module, item_name)
 
-            # Enriquecer o prompt com o roteiro arquitetural do amb context
-            full_prompt = build_ai_context(full_prompt, current_module, cur_role)
-
-            # 2. Despacho no Jules
+            # Despacho no Jules
             try:
                 session_id = dispatch_jules_session(
                     client, full_prompt, source_name, session_title, branch
                 )
 
-                # 3. Monitoramento + Auto-Resposta
+                # Monitoramento + Auto-Resposta
                 state = monitor_and_assist_session(
                     client=client, session_id=session_id, auto_reply_ai=True
                 )
 
-                # 4. Aprovação e Integração do PR no Git
+                # Aprovação e Integração do PR no Git
                 if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
                     handle_pr_merge(session_id, branch, repo_root, completed_cycles)
 
@@ -169,12 +190,12 @@ def run_autonomous_loop(
                 print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
                 return
             except Exception as e:
-                log_error("LOOP", f"Erro no processamento da persona '{cur_role}': {e}")
+                log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
 
-            if len(roles_to_run) > 1:
+            if len(items_to_run) > 1:
                 log(
                     "LOOP",
-                    f"Pausa de {delay_between_cycles}s antes da próxima persona...",
+                    f"Pausa de {delay_between_cycles}s antes do próximo item...",
                     Colors.DIM,
                 )
                 time.sleep(delay_between_cycles)
@@ -198,52 +219,15 @@ def run_autonomous_loop(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)"
-    )
-    parser.add_argument(
-        "--role",
-        "-r",
-        help="Persona a ser executada em loop (ex: engineer).",
-    )
-    parser.add_argument(
-        "--all",
-        "-a",
-        action="store_true",
-        help="Executa todas as personas disponíveis da pasta em cada ciclo.",
-    )
-    parser.add_argument(
-        "--prompt", "-p", help="Caminho de um arquivo .md com prompt customizado."
-    )
-    parser.add_argument(
-        "--modules",
-        "-m",
-        help="Lista de módulos separados por vírgula para alternar por ciclo (ex: kanban,agenda,projects).",
-    )
-    parser.add_argument(
-        "--max-cycles",
-        "-c",
-        type=int,
-        help="Número máximo de ciclos antes de parar (se omitido, roda continuamente).",
-    )
-    parser.add_argument(
-        "--delay",
-        "-d",
-        type=int,
-        default=8,
-        help="Intervalo em segundos entre ciclos (Padrão: 8s).",
-    )
-    parser.add_argument(
-        "--branch",
-        "-b",
-        default="develop",
-        help="Branch alvo no GitHub (Padrão: develop).",
-    )
-    parser.add_argument(
-        "--no-auto-merge",
-        action="store_true",
-        help="Não faz o merge automático do PR ao finalizar o ciclo.",
-    )
+    parser = argparse.ArgumentParser(description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)")
+    parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
+    parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
+    parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou diretório de prompts em lote.")
+    parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
+    parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
+    parser.add_argument("--delay", "-d", type=int, default=8, help="Intervalo em segundos entre ciclos (Padrão: 8s).")
+    parser.add_argument("--branch", "-b", default="develop", help="Branch alvo no GitHub (Padrão: develop).")
+    parser.add_argument("--no-auto-merge", action="store_true", help="Não faz o merge automático do PR.")
 
     args = parser.parse_args()
 

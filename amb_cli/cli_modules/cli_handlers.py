@@ -106,14 +106,17 @@ def cmd_config(args):
 # -------------------------------------------------------------
 def cmd_agent(args):
     """Executa personas dinâmicas localmente, em loop contínuo ou na nuvem."""
-    if getattr(args, "loop", False):
+    if getattr(args, "loop", False) or getattr(args, "prompt", None):
         from agents.autonomous_loop import run_autonomous_loop
         prompt_file = getattr(args, "prompt", None) or (args.task if (getattr(args, "task", None) and os.path.exists(args.task)) else None)
+        max_c = getattr(args, "max_cycles", None)
+        if max_c is None and getattr(args, "prompt", None) and not getattr(args, "loop", False):
+            max_c = 1
         run_autonomous_loop(
             role=args.role,
             all_personas=getattr(args, "all", False),
             prompt_file=prompt_file,
-            max_cycles=getattr(args, "max_cycles", None),
+            max_cycles=max_c,
             branch=getattr(args, "branch", None)
         )
         return
