@@ -24,6 +24,7 @@ for _candidate_path in [_pkg_candidate, _repo_candidate]:
 # Lista canônica de submódulos do AMB_V2 que devem estar disponíveis para importação
 CANONICAL_SUBMODULES: List[str] = [
     "config",
+    "config/config_core",
     "config/setup_modules",
     "agents",
     "agents/auto_reply_core",
