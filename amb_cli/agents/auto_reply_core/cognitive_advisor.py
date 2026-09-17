@@ -94,7 +94,7 @@ class CognitiveAdvisor:
         rules_context = (
             self.load_rules(rules_dir)
             if rules_dir and Path(rules_dir).exists()
-            else self.rules_manager.load_rules()
+            else self.filter_rules_for_jules(self.rules_manager.load_rules())
         )
 
         system_instruction = (
