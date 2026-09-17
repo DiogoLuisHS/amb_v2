@@ -539,7 +539,7 @@ def cmd_pipeline(args):
 
 def cmd_schema(args):
     """Exibe o catálogo de schemas e tabelas do banco de dados (Read-Only)."""
-    from db_schema_reader import show_schema
+    from architecture.db_schema_reader import show_schema
     show_schema(filter_term=args.target)
 
 

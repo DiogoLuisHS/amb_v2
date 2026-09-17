@@ -56,44 +56,47 @@ class DbSchemaReader:
             return []
 
         tables = []
-        pattern = re.compile(
-            r"export\s+const\s+(\w+)\s*=\s*(?:sqliteTable|pgTable|mysqlTable)\(\s*['\"]([^'\"]+)['\"]\s*,\s*\{([^}]+)\}",
-            re.MULTILINE | re.DOTALL
-        )
+        try:
+            pattern = re.compile(
+                r"export\s+const\s+(\w+)\s*=\s*(?:sqliteTable|pgTable|mysqlTable)\(\s*['\"]([^'\"]+)['\"]\s*,\s*\{([^}]+)\}",
+                re.MULTILINE | re.DOTALL
+            )
 
-        for match in pattern.finditer(content):
-            var_name = match.group(1)
-            table_name = match.group(2)
-            columns_block = match.group(3)
+            for match in pattern.finditer(content):
+                var_name = match.group(1)
+                table_name = match.group(2)
+                columns_block = match.group(3)
 
-            columns = []
-            for line in columns_block.splitlines():
-                line = line.strip()
-                if not line or line.startswith("//"):
-                    continue
-                col_match = re.match(r"^(\w+)\s*:\s*(\w+)\((.*)\)", line)
-                if col_match:
-                    col_name = col_match.group(1)
-                    col_type = col_match.group(2)
-                    col_opts = col_match.group(3)
-                    columns.append({
-                        "name": col_name,
-                        "type": col_type,
-                        "options": col_opts.strip().rstrip(",")
-                    })
+                columns = []
+                for line in columns_block.splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("//"):
+                        continue
+                    col_match = re.match(r"^(\w+)\s*:\s*(\w+)\((.*)\)", line)
+                    if col_match:
+                        col_name = col_match.group(1)
+                        col_type = col_match.group(2)
+                        col_opts = col_match.group(3)
+                        columns.append({
+                            "name": col_name,
+                            "type": col_type,
+                            "options": col_opts.strip().rstrip(",")
+                        })
 
-            tables.append({
-                "variable": var_name,
-                "table_name": table_name,
-                "file": filepath.name,
-                "path": str(filepath),
-                "columns": columns
-            })
+                tables.append({
+                    "variable": var_name,
+                    "table_name": table_name,
+                    "file": filepath.name,
+                    "path": str(filepath),
+                    "columns": columns
+                })
+        except Exception:
+            pass
 
         return tables
 
 
-def show_schema(filter_term: Optional[str] = None):
+def show_schema(filter_term: Optional[str] = None) -> None:
     """Exibe no terminal o catálogo de tabelas e colunas formatado."""
     root = find_repo_root()
     schema_files = DbSchemaReader.list_schema_files(root)
