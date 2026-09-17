@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🛡️ AMB_V2 - Quality Gatekeeper (SRP)
-Localização: amb_v2/pipeline/quality_gatekeeper.py
+Quality Gatekeeper (SRP).
 Responsabilidade Única: Executar verificações de integridade local (QA: typecheck, test, build, lint),
 resolvendo comandos declarados no .amb/amb_project.json ou inferidos automaticamente pela stack.
 """

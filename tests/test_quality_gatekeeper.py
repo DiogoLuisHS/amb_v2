@@ -63,3 +63,28 @@ def test_quality_gatekeeper_run_qa():
 
         success = QualityGatekeeper.run_qa(repo_root=tmpdir)
         assert success is True
+
+
+def test_quality_gatekeeper_run_qa_fail():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        amb_dir = os.path.join(tmpdir, ".amb")
+        os.makedirs(amb_dir, exist_ok=True)
+        project_json_path = os.path.join(amb_dir, "amb_project.json")
+
+        with open(project_json_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "qa": {
+                    "fail_syntax": "python -c \"import sys; sys.exit(1)\""
+                }
+            }, f)
+
+        success = QualityGatekeeper.run_qa(repo_root=tmpdir)
+        assert success is False
+
+
+def test_quality_gatekeeper_run_qa_empty():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Creating an empty project without .amb/amb_project.json and no requirements
+        # so QA detection returns empty
+        success = QualityGatekeeper.run_qa(repo_root=tmpdir)
+        assert success is True
