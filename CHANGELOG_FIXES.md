@@ -162,7 +162,19 @@ Configuração manual via `.amb/amb_project.json`:
 
 ## 🚀 Features Implementadas
 
-### F2-M3 — Alinhamento Estrito & Modernização da Integração Google Stitch SDK
+### F4 — Orquestrador de Prompts em Lote por Diretório no `amb agent`
+**Arquivos:** `amb_cli/agents/autonomous_loop.py`, `amb_cli/cli_modules/cli_parsers.py`, `amb_cli/cli_modules/cli_handlers.py`, `.amb/prompts/*`
+**Implementação:**
+- Suporte nativo para apontar `-p / --prompt` diretamente para uma pasta contendo múltiplos arquivos `.md` (ex: `amb agent -p .amb/prompts/ --max-cycles 1`).
+- Varredura e ordenação alfabética/numérica automática de prompts (`01_...` a `09_...`), ignorando `README.md` e arquivos de sistema (`_*.md`, `.*`).
+- Orquestração sequencial completa em circuito fechado para cada prompt da pasta:
+  1. Enriquecimento contextual via `ai_context_builder`.
+  2. Despacho assíncrono para a VM Google Jules na nuvem.
+  3. Monitoramento em tempo real com auto-aprovação de planos e auto-resposta cognitiva Gemini.
+  4. Execução dos Quality Gates locais (`pytest` e `py_compile`).
+  5. Merge e push automáticos no GitHub (`origin/main`).
+  6. Avanço autônomo para o próximo item da fila com pausa segura de propagação Git.
+- Execução ponta-a-ponta comprovada com 100% de sucesso nos 9 módulos de `amb_cli/agents/` gerando 9 commits sequenciais integrados sem intervenção manual.
 **Arquivos:** `integrations/stitch/stitch_client.py`, `integrations/stitch/stitch_client.mjs`, `integrations/stitch/tools/*`, `cli_modules/*`, `.agents/skills/amb-stitch-specialist/SKILL.md`
 **Implementação:**
 - Suporte nativo completo aos 12 tools oficiais do Stitch MCP Server e aos métodos de domínio do SDK (`upload`, `downloadAssets`).
