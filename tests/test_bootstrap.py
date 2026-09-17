@@ -34,6 +34,34 @@ def test_ensure_amb_env():
             assert str(sub_dir) in sys.path
 
 
+def test_canonical_submodules_list():
+    expected_submodules = [
+        "config",
+        "config/config_core",
+        "config/setup_modules",
+        "agents",
+        "agents/auto_reply_core",
+        "agents/loop_core",
+        "architecture",
+        "architecture/context_core",
+        "pipeline",
+        "gui",
+        "integrations",
+        "integrations/common",
+        "integrations/git",
+        "integrations/git/tools",
+        "integrations/jules",
+        "integrations/jules/tools",
+        "integrations/stitch",
+        "integrations/stitch/tools",
+        "integrations/antigravity",
+        "integrations/antigravity/tools",
+        "cli_modules",
+        "cli_modules/handlers_core",
+    ]
+    assert CANONICAL_SUBMODULES == expected_submodules
+
+
 def test_add_to_sys_path():
     pkg_dir = get_amb_package_dir()
     # Adicionar caminho existente

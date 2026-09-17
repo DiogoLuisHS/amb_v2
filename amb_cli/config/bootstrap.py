@@ -28,7 +28,9 @@ CANONICAL_SUBMODULES: List[str] = [
     "config/setup_modules",
     "agents",
     "agents/auto_reply_core",
+    "agents/loop_core",
     "architecture",
+    "architecture/context_core",
     "pipeline",
     "gui",
     "integrations",
@@ -42,6 +44,7 @@ CANONICAL_SUBMODULES: List[str] = [
     "integrations/antigravity",
     "integrations/antigravity/tools",
     "cli_modules",
+    "cli_modules/handlers_core",
 ]
 
 _ROOT_CACHE: Optional[Path] = None
