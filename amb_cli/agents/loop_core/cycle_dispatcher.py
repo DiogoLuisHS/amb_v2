@@ -26,9 +26,9 @@ def build_ai_context(
     """Invoca o AI Context Builder de forma programática."""
     full_prompt = base_prompt
     try:
-        from architecture.ai_context_builder import ProjectDependencyAnalyzer
+        from architecture.ai_context_builder import AIContextBuilder
         root_dir = Path(find_repo_root())
-        builder = ProjectDependencyAnalyzer(root_dir)
+        builder = AIContextBuilder(root_dir)
         builder.analyze()
         _ctx_query = current_module or role or ""
 
@@ -37,7 +37,7 @@ def build_ai_context(
         total_ctx_files = len(related_files)
 
         if total_ctx_files > 0:
-            layers = builder.classify_and_order_files(related_files)
+            layers = builder.classify_and_order_files(related_files, _ctx_query)
             _ctx_md = builder.generate_markdown(_ctx_query, layers)
             full_prompt = (
                 f"{full_prompt}\n\n"
