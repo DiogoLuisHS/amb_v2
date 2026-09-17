@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-⚡ AMB_V2 - Cliente Base Padronizado para APIs Google (F1-M2)
+Cliente Base Padronizado para APIs Google (F1-M2)
 Localização: amb_v2/integrations/common/base_google_client.py
 Responsabilidade Única: Prover fundação HTTP resiliente para integrações Google
 (Jules, Gemini/Antigravity, Stitch, etc.), com retry automático com backoff exponencial
@@ -26,7 +26,7 @@ def mask_sensitive_data(text: str) -> str:
         return text
 
     # Mascara chaves estilo AIzaSy... mantendo os primeiros 6 caracteres e últimos 4
-    def _mask_aiza(match):
+    def _mask_aiza(match: re.Match) -> str:
         val = match.group(0)
         if len(val) > 10:
             return f"{val[:6]}...{val[-4:]}"
@@ -53,11 +53,11 @@ class BaseGoogleClient:
         self,
         base_url: str = "",
         api_key: Optional[str] = None,
-        timeout: int = 45,
+        timeout: int = 40,
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 16.0,
-        service_name: str = "GOOGLE-API",
+        service_name: str = "GOOGLE",
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
