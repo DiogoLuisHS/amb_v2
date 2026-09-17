@@ -62,6 +62,7 @@ def create_parser():
     p_agent = subparsers.add_parser("agent", aliases=["persona"], help="Executor de personas autônomas de manutenção.")
     p_agent.add_argument("--role", "-r", help="Nome da persona (ex: engineer, etc.).")
     p_agent.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote.")
+    p_agent.add_argument("--prompt", "-p", help="Caminho de um arquivo markdown (.md) com prompt estruturado.")
     p_agent.add_argument("--task", "-t", help="Instruções ou escopo adicional.")
     p_agent.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis.")
     p_agent.add_argument("--agy", "--local", action="store_true", default=False, help="Executa o agente localmente via agy CLI (por padrão despacha para o Google Jules na nuvem).")
