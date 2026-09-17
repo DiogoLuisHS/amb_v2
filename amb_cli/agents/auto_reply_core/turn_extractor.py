@@ -7,7 +7,7 @@ Responsabilidade Única: Analisar payloads de atividades da API do Jules,
 extrair mensagens textuais, filtrar ruídos e determinar o último turno e status da conversação.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class TurnHistoryExtractor:
@@ -68,11 +68,7 @@ class TurnHistoryExtractor:
 
         # Garante ordem decrescente (mais recente primeiro) baseada em createTime se presente
         ordered_acts = list(acts)
-        if any(a.get("createTime") for a in ordered_acts):
-            first_time = next((a.get("createTime") for a in ordered_acts if a.get("createTime")), None)
-            last_time = next((a.get("createTime") for a in reversed(ordered_acts) if a.get("createTime")), None)
-            if first_time and last_time and first_time < last_time:
-                ordered_acts = list(reversed(ordered_acts))
+        ordered_acts.sort(key=lambda a: a.get("createTime") or "", reverse=True)
 
         for a in ordered_acts:
             aid = a.get("id") or a.get("name")
@@ -135,11 +131,7 @@ class TurnHistoryExtractor:
 
         # Garante ordem cronológica estrita (mais antiga primeiro) para exibição linear da conversa
         chronological_acts = list(acts)
-        if any(a.get("createTime") for a in chronological_acts):
-            first_time = next((a.get("createTime") for a in chronological_acts if a.get("createTime")), None)
-            last_time = next((a.get("createTime") for a in reversed(chronological_acts) if a.get("createTime")), None)
-            if first_time and last_time and first_time > last_time:
-                chronological_acts = list(reversed(chronological_acts))
+        chronological_acts.sort(key=lambda a: a.get("createTime") or "")
 
         chat_lines = []
         current_question = turn_info.get("last_agent_msg", "")
