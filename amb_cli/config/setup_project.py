@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🧙‍♂️ AMB_V2 - Assistente Inteligente de Setup de Projetos (SRP Orquestrador)
-Localização: amb_v2/config/setup_project.py
-Responsabilidade Única: Orquestrar a execução do setup invocando os submódulos
-especializados em config/setup_modules (ProjectAnalyzer, AmbProvisioner, CognitiveSynthesizer).
+AMB_V2 - Assistente Inteligente de Setup de Projetos (SRP Orquestrador).
+Responsabilidade: Orquestrar a execução do setup invocando os submódulos
+especializados (ProjectAnalyzer, AmbProvisioner, CognitiveSynthesizer).
 """
 
 import os
@@ -158,10 +157,10 @@ def run_setup(
                 existing_keys = set()
                 new_lines = []
                 for line in lines:
-                    k = line.split("=")[0].strip() if "=" in line else None
-                    if k in env_updates:
-                        new_lines.append(f"{k}={env_updates[k]}\n")
-                        existing_keys.add(k)
+                    env_key: Optional[str] = line.split("=")[0].strip() if "=" in line else None
+                    if env_key and env_key in env_updates:
+                        new_lines.append(f"{env_key}={env_updates[env_key]}\n")
+                        existing_keys.add(env_key)
                     else:
                         new_lines.append(line)
 
@@ -188,7 +187,7 @@ def run_setup(
     return project_data
 
 
-def print_setup_prompt():
+def print_setup_prompt() -> None:
     """Exibe o Prompt Mestre de Auto-Configuração de IA para novos projetos."""
     prompt_text = """# 🚀 PROMPT DE AUTO-CONFIGURAÇÃO DO AMB_V2
 
@@ -212,14 +211,11 @@ Você deve analisar este repositório e configurar o ecossistema de automação 
    - Execute a validação completa de saúde:
      amb check
 """
-    print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}{Colors.CYAN}📋 PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA:{Colors.RESET}")
-    print("=" * 75 + "\n")
+    print("PROMPT MESTRE DE AUTO-CONFIGURAÇÃO PARA IA:\n")
     print(prompt_text)
-    print("=" * 75 + "\n")
 
 
-def main():
+def main() -> None:
     import argparse
     parser = argparse.ArgumentParser(description="Assistente de Setup AMB_V2.")
     parser.add_argument("--auto", action="store_true", help="Executa o setup de forma automática/não-interativa.")

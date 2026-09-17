@@ -120,3 +120,48 @@ def test_config_check_json():
     assert "git" in diag
     assert "personas_count" in diag
     assert diag["personas_count"] == 1
+
+def test_setup_dry_run_dict_return(tmp_path):
+    import json
+    # Create a python project file
+    req_file = tmp_path / "requirements.txt"
+    req_file.write_text("fastapi\n")
+
+    config = run_setup(interactive=False, target_dir=str(tmp_path), dry_run=True)
+    assert isinstance(config, dict)
+    assert config.get("stack", {}).get("type") == "python"
+
+    # In dry run mode, .amb must NOT be created
+    assert not (tmp_path / ".amb").exists()
+
+    # Verify schema structure
+    assert "$schema" in config
+    assert "version" in config
+    assert "name" in config
+    assert "repository" in config
+    assert "default_branch" in config
+    assert "stitch_project_id" in config
+    assert "stack" in config
+    assert "qa" in config
+    assert "personas" in config
+
+def test_setup_force_provision(tmp_path):
+    import json
+    req_file = tmp_path / "requirements.txt"
+    req_file.write_text("fastapi\n")
+
+    config = run_setup(interactive=False, target_dir=str(tmp_path), force=True, dry_run=False)
+    assert isinstance(config, dict)
+
+    # In non-dry run mode, .amb must be created
+    amb_dir = tmp_path / ".amb"
+    assert amb_dir.exists()
+    assert (amb_dir / "amb_project.json").exists()
+
+    # Test if amb_project.json is valid JSON
+    with open(amb_dir / "amb_project.json", "r") as f:
+        project_data = json.load(f)
+
+    assert project_data["$schema"] == "https://amb-v2.dev/schemas/amb_project.v2.json"
+    assert project_data["stack"]["type"] == "python"
+    assert project_data["personas"]["active"] == ["engineer"]
