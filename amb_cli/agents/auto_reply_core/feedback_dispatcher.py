@@ -58,7 +58,6 @@ class JulesFeedbackDispatcher:
             if (
                 state in [
                     "AWAITING_USER_FEEDBACK",
-                    "Awaiting User Feedback",
                     "AWAITING_USER_ACTION",
                     "AWAITING_INPUT",
                     "AWAITING_PLAN_APPROVAL",
@@ -128,42 +127,13 @@ class JulesFeedbackDispatcher:
                 )
                 return None
             else:
-                print("\n" + "=" * 75)
-                print(f"🤖 {Colors.BOLD}SESSÃO:{Colors.RESET} {title} ({clean_sid})")
-                print(f"📊 {Colors.BOLD}ESTADO:{Colors.RESET} {session.get('state')}")
-                print("=" * 75)
-                print(
-                    f"\n⚠️  {Colors.YELLOW}{Colors.BOLD}AVISO: A última mensagem desta sessão já foi enviada pelo usuário!{Colors.RESET}"
-                )
-                print(f'   {Colors.DIM}"{last_u}"{Colors.RESET}')
-                print(
-                    f"{Colors.YELLOW}O agente Jules ainda está processando e não fez uma nova pergunta.{Colors.RESET}\n"
-                )
-
-                c_force = (
-                    input("👉 Deseja forçar o envio de outra mensagem mesmo assim? [s/N]: ")
-                    .strip()
-                    .lower()
-                )
+                print(f"\n⚠️  {Colors.YELLOW}{Colors.BOLD}AVISO: Última mensagem já enviada!{Colors.RESET} {Colors.DIM}'{preview}'{Colors.RESET}")
+                c_force = input("👉 Forçar envio? [s/N]: ").strip().lower()
                 if c_force not in ["s", "sim", "y", "yes"]:
-                    log(
-                        "JULES-ADVISOR",
-                        "Operação abortada para evitar mensagens duplicadas.",
-                        Colors.CYAN,
-                    )
                     return None
 
-        print("\n" + "=" * 75)
-        print(f"🤖 {Colors.BOLD}SESSÃO:{Colors.RESET} {title} ({clean_sid})")
-        print(f"📊 {Colors.BOLD}ESTADO:{Colors.RESET} {session.get('state')}")
-        print("=" * 75)
-
-        print(
-            f"\n🎯 {Colors.BOLD}ÚLTIMA MENSAGEM / DÚVIDA DETECTADA DO JULES:{Colors.RESET}"
-        )
-        print(
-            f"{Colors.YELLOW}{current_question.strip() if current_question.strip() else 'Aguardando decisão para prosseguir.'}{Colors.RESET}\n"
-        )
+        print(f"\n🤖 {Colors.BOLD}SESSÃO:{Colors.RESET} {title} ({clean_sid}) | 📊 {Colors.BOLD}ESTADO:{Colors.RESET} {session.get('state')}")
+        print(f"🎯 {Colors.BOLD}ÚLTIMA DÚVIDA:{Colors.RESET} {Colors.YELLOW}{current_question.strip() or 'Aguardando...'}{Colors.RESET}\n")
 
         log(
             "ANTIGRAVITY",
@@ -177,25 +147,14 @@ class JulesFeedbackDispatcher:
             current_question=current_question,
         )
 
-        print(
-            f"\n💡 {Colors.BOLD}{Colors.GREEN}SUGESTÃO GERADA PELO GEMINI (BASEADA NO HISTÓRICO + REGRAS):{Colors.RESET}"
-        )
-        print("-" * 75)
-        print(suggested_reply.strip())
-        print("-" * 75 + "\n")
+        print(f"\n💡 {Colors.BOLD}{Colors.GREEN}SUGESTÃO GERADA PELO GEMINI:{Colors.RESET}\n" + "-" * 75)
+        print(suggested_reply.strip() + "\n" + "-" * 75 + "\n")
 
         if auto_approve:
             final_reply = suggested_reply
         else:
-            print(f"{Colors.BOLD}🎯 O QUE DESEJA FAZER?{Colors.RESET}")
-            print("  [ENTER / S]  Aprovar e enviar a resposta sugerida para o Jules")
-            print("  [H]          Ver histórico detalhado do chat")
-            print("  [E]          Editar ou adicionar instruções à resposta sugerida")
-            print("  [D]          Digitar uma resposta completamente manual")
-            print("  [P]          Apenas aprovar o plano (:approvePlan)")
-            print("  [N]          Cancelar / Não enviar nada")
-
-            opt = input("\n👉 Escolha [ENTER/s/h/e/d/p/n]: ").strip().lower()
+            print(f"{Colors.BOLD}🎯 OPÇÕES:{Colors.RESET} [ENTER/s] Aprovar, [h] Histórico, [e] Editar, [d] Digitar, [p] Aprovar plano, [n] Cancelar")
+            opt = input("👉 Escolha: ").strip().lower()
 
             if opt in ["n", "cancelar", "sair"]:
                 log("JULES-ADVISOR", "Operação cancelada pelo usuário.", Colors.YELLOW)
