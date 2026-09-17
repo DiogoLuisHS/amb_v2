@@ -8,13 +8,13 @@ utilizando o cliente Antigravity/Gemini e as regras centralizadas via RulesManag
 """
 
 import functools
-import os
-from typing import Optional, Tuple
+from pathlib import Path
+from typing import Optional, Tuple, Union
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, find_repo_root, log_error, RulesManager, get_rules_manager
+from config import find_repo_root, log_error, RulesManager
 from integrations.antigravity.antigravity_client import AntigravityClient
 
 
@@ -24,11 +24,11 @@ class CognitiveAdvisor:
     def __init__(
         self,
         antigravity_client: Optional[AntigravityClient] = None,
-        rules_dir: Optional[str] = None,
+        rules_dir: Optional[Union[str, Path]] = None,
     ):
         self.client = antigravity_client or AntigravityClient()
-        self._custom_rules_dir = rules_dir
-        self.rules_manager = RulesManager.get_instance(custom_rules_dir=rules_dir)
+        self._custom_rules_dir = str(rules_dir) if rules_dir else None
+        self.rules_manager = RulesManager.get_instance(custom_rules_dir=self._custom_rules_dir)
 
     @staticmethod
     def filter_rules_for_jules(content: str) -> str:
@@ -61,20 +61,14 @@ class CognitiveAdvisor:
     def load_rules(cls, rules_dir: str) -> str:
         """Carrega e cacheia o conteúdo das regras filtradas para evitar I/O redundante."""
         rules_context = ""
-        if os.path.exists(rules_dir):
-            for f in sorted(os.listdir(rules_dir)):
-                if f.endswith(".md"):
-                    try:
-                        with open(
-                            os.path.join(rules_dir, f),
-                            "r",
-                            encoding="utf-8",
-                            errors="replace",
-                        ) as rf:
-                            filtered_rule = cls.filter_rules_for_jules(rf.read())
-                            rules_context += f"\n--- [REGRA: {f}] ---\n" + filtered_rule
-                    except Exception:
-                        pass
+        rules_path = Path(rules_dir)
+        if rules_path.is_dir():
+            for f in sorted(rules_path.glob("*.md")):
+                try:
+                    filtered_rule = cls.filter_rules_for_jules(f.read_text(encoding="utf-8", errors="replace"))
+                    rules_context += f"\n--- [REGRA: {f.name}] ---\n" + filtered_rule
+                except Exception as e:
+                    log_error("COGNITIVE-ADVISOR", f"Erro ao ler regra {f}: {e}")
         return rules_context
 
     def _resolve_rules_dir(self) -> str:
@@ -82,11 +76,11 @@ class CognitiveAdvisor:
         resolved = self.rules_manager.resolve_rules_dir(custom_dir=self._custom_rules_dir)
         if resolved:
             return resolved
-        root = find_repo_root()
-        rules_dir = os.path.join(root, ".antigravity", "rules")
-        if not os.path.exists(rules_dir):
-            rules_dir = os.path.join(root, ".gemini", "rules")
-        return rules_dir
+        root = Path(find_repo_root())
+        for candidate in [root / ".agents" / "rules", root / ".antigravity" / "rules", root / ".gemini" / "rules"]:
+            if candidate.is_dir():
+                return str(candidate)
+        return str(root / ".agents" / "rules")
 
     def build_prompt(
         self,
@@ -97,7 +91,11 @@ class CognitiveAdvisor:
     ) -> Tuple[str, str]:
         """Gera a instrução do sistema e o prompt estruturado para o modelo cognitivo."""
         rules_dir = self._resolve_rules_dir()
-        rules_context = self.load_rules(rules_dir) if rules_dir and os.path.exists(rules_dir) else self.rules_manager.load_rules()
+        rules_context = (
+            self.load_rules(rules_dir)
+            if rules_dir and Path(rules_dir).exists()
+            else self.rules_manager.load_rules()
+        )
 
         system_instruction = (
             "Você é o Antigravity Cognitive Advisor para o Google Jules. "

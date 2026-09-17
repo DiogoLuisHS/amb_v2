@@ -9,94 +9,48 @@ extrair mensagens textuais, filtrar ruídos e determinar o último turno e statu
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from config.bootstrap import ensure_amb_env
-ensure_amb_env()
-
-from integrations.jules.jules_client import JulesClient
-
 
 class TurnHistoryExtractor:
     """Extrai e estrutura o histórico de conversações e turnos de sessões do Jules."""
 
     @staticmethod
-    def extract_activity_text(activity: Dict[str, Any], role: str = "agent") -> str:
+    def _extract_text_from_node(node: Any, keys: List[str]) -> str:
+        """Extrai a primeira ocorrência textual válida de uma lista de chaves ou string direta."""
+        if isinstance(node, str) and node.strip():
+            return node.strip()
+        if isinstance(node, dict):
+            for k in keys:
+                val = node.get(k)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+        return ""
+
+    @classmethod
+    def extract_activity_text(cls, activity: Dict[str, Any], role: str = "agent") -> str:
         """Extrai com precisão o texto de mensagens da API do Jules para qualquer formato retornado."""
         if not activity or not isinstance(activity, dict):
             return ""
 
+        keys = ["agentMessage", "userMessage", "text", "message", "question"]
         if role == "agent":
-            if "agentMessaged" in activity:
-                val = activity["agentMessaged"]
-                if isinstance(val, dict):
-                    res = (
-                        val.get("agentMessage")
-                        or val.get("text")
-                        or val.get("message")
-                        or ""
-                    )
-                    if isinstance(res, str) and res.strip():
-                        return res.strip()
-                elif isinstance(val, str) and val.strip():
-                    return val.strip()
-
-            if "agentMessage" in activity:
-                val = activity["agentMessage"]
-                if isinstance(val, dict):
-                    res = (
-                        val.get("text")
-                        or val.get("agentMessage")
-                        or val.get("message")
-                        or ""
-                    )
-                    if isinstance(res, str) and res.strip():
-                        return res.strip()
-                elif isinstance(val, str) and val.strip():
-                    return val.strip()
-
-            if "userFeedbackRequired" in activity:
-                val = activity["userFeedbackRequired"]
-                if isinstance(val, dict):
-                    res = val.get("question") or val.get("text") or val.get("message") or ""
-                    if isinstance(res, str) and res.strip():
-                        return res.strip()
-                elif isinstance(val, str) and val.strip():
-                    return val.strip()
-
+            for field in ["agentMessaged", "agentMessage", "userFeedbackRequired"]:
+                if field in activity:
+                    txt = cls._extract_text_from_node(activity[field], keys)
+                    if txt:
+                        return txt
         elif role == "user":
-            if "userMessaged" in activity:
-                val = activity["userMessaged"]
-                if isinstance(val, dict):
-                    res = (
-                        val.get("userMessage")
-                        or val.get("text")
-                        or val.get("message")
-                        or ""
-                    )
-                    if isinstance(res, str) and res.strip():
-                        return res.strip()
-                elif isinstance(val, str) and val.strip():
-                    return val.strip()
-
-            if "userMessage" in activity:
-                val = activity["userMessage"]
-                if isinstance(val, dict):
-                    res = (
-                        val.get("text")
-                        or val.get("userMessage")
-                        or val.get("message")
-                        or ""
-                    )
-                    if isinstance(res, str) and res.strip():
-                        return res.strip()
-                elif isinstance(val, str) and val.strip():
-                    return val.strip()
+            for field in ["userMessaged", "userMessage"]:
+                if field in activity:
+                    txt = cls._extract_text_from_node(activity[field], keys)
+                    if txt:
+                        return txt
 
         return ""
 
     @classmethod
     def get_last_conversation_turn(cls, acts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Analisa a lista de atividades (da mais recente para a mais antiga)
+        Analisa a lista de atividades (garantindo ordem da mais recente para a mais antiga)
         e determina quem falou por último e qual foi a última pergunta/plano real.
         """
         turn_info = {
@@ -112,7 +66,15 @@ class TurnHistoryExtractor:
         if not acts:
             return turn_info
 
-        for a in acts:
+        # Garante ordem decrescente (mais recente primeiro) baseada em createTime se presente
+        ordered_acts = list(acts)
+        if any(a.get("createTime") for a in ordered_acts):
+            first_time = next((a.get("createTime") for a in ordered_acts if a.get("createTime")), None)
+            last_time = next((a.get("createTime") for a in reversed(ordered_acts) if a.get("createTime")), None)
+            if first_time and last_time and first_time < last_time:
+                ordered_acts = list(reversed(ordered_acts))
+
+        for a in ordered_acts:
             aid = a.get("id") or a.get("name")
 
             # 1. Mensagem ou Ação do Usuário
@@ -124,7 +86,18 @@ class TurnHistoryExtractor:
                     turn_info["is_awaiting_user_action"] = False
                     break
 
-            # 2. Plano com aprovação pendente
+            # 2. Mensagem do Agente / Pergunta ou Feedback Requerido
+            # NOTA: Precede planos antigos para responder dúvidas recentes do agente no chat
+            agent_txt = cls.extract_activity_text(a, role="agent")
+            if agent_txt:
+                if not turn_info["last_speaker"]:
+                    turn_info["last_speaker"] = "AGENT"
+                    turn_info["last_agent_msg"] = agent_txt
+                    turn_info["last_agent_msg_id"] = aid
+                    turn_info["is_awaiting_user_action"] = True
+                    break
+
+            # 3. Plano com aprovação pendente
             plan = (
                 a.get("plan") or a.get("agentMessage", {}).get("plan")
                 if isinstance(a.get("agentMessage"), dict)
@@ -145,21 +118,11 @@ class TurnHistoryExtractor:
                     turn_info["is_awaiting_user_action"] = True
                     break
 
-            # 3. Mensagem do Agente / Feedback Requerido
-            agent_txt = cls.extract_activity_text(a, role="agent")
-            if agent_txt:
-                if not turn_info["last_speaker"]:
-                    turn_info["last_speaker"] = "AGENT"
-                    turn_info["last_agent_msg"] = agent_txt
-                    turn_info["last_agent_msg_id"] = aid
-                    turn_info["is_awaiting_user_action"] = True
-                    break
-
         return turn_info
 
     @classmethod
     def get_full_session_history(
-        cls, client: JulesClient, session_id: str
+        cls, client: Any, session_id: str
     ) -> Tuple[Dict[str, Any], str, str, str, Dict[str, Any]]:
         """Obtém a sessão, o prompt inicial, a conversa cronológica formatada, a última dúvida e metadados do turno."""
         session = client.get_session(session_id)
@@ -170,8 +133,13 @@ class TurnHistoryExtractor:
 
         turn_info = cls.get_last_conversation_turn(acts)
 
-        # A API retorna em ordem decrescente (mais recente primeiro) -> invertemos para cronológico
-        chronological_acts = list(reversed(acts))
+        # Garante ordem cronológica estrita (mais antiga primeiro) para exibição linear da conversa
+        chronological_acts = list(acts)
+        if any(a.get("createTime") for a in chronological_acts):
+            first_time = next((a.get("createTime") for a in chronological_acts if a.get("createTime")), None)
+            last_time = next((a.get("createTime") for a in reversed(chronological_acts) if a.get("createTime")), None)
+            if first_time and last_time and first_time > last_time:
+                chronological_acts = list(reversed(chronological_acts))
 
         chat_lines = []
         current_question = turn_info.get("last_agent_msg", "")

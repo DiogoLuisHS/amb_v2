@@ -131,10 +131,32 @@ Configuração manual via `.amb/amb_project.json`:
 1. Em `list_sessions`: quando um `repo_filter` era especificado, sessões que não possuíam `sourceContext.source` eram incluídas indevidamente pelo bloco `else: filtered.append(s)`, vazando sessões de outros projetos.
 2. Em `create_session`: a verificação `if not base_branch or base_branch in ["develop", "main"]` sobrescrevia a branch explicitamente definida pelo usuário se a branch local atual do Git fosse diferente, impedindo criar sessões mirando branches específicas.
 3. Em `get_session`, `send_message`, `approve_plan`, `delete_session` e ferramentas de linha de comando: a passagem de URLs completas do navegador (`https://jules.google.com/session/<id>`) causava erros HTTP 404/400 ou requisições malformadas por falta de normalização de rotas REST.
+### Bug #18 — Inversão cronológica no `TurnHistoryExtractor` causava falsa aprovação de plano em vez de resposta no chat
+**Arquivos:** `amb_cli/agents/auto_reply_core/turn_extractor.py`, `amb_cli/agents/loop_core/session_assistant.py`, `amb_cli/agents/autonomous_loop.py`
+**Causa:**
+1. A API do Google Jules retorna a lista de atividades em ordem cronológica (da mais antiga para a mais recente). O `TurnHistoryExtractor.get_last_conversation_turn` iterava a lista a partir do índice 0 assumindo que vinha da mais recente para a mais antiga.
+2. Como resultado, um evento antigo `planGenerated` (do início da sessão) era avaliado primeiro e definia `has_unapproved_plan = True`.
+3. Quando o agente Jules fazia uma pergunta no chat (`agentMessaged`) em etapas subsequentes, o monitor interpretava erroneamente que havia um plano a ser aprovado e chamava `approvePlan` em vez de responder à pergunta no chat via `sendMessage`.
 **Fix aplicado:**
-1. `list_sessions` agora aplica filtro estrito: se `repo_filter` for informado, apenas sessões cujo `sourceContext.source` contenha ou termine com o repositório são retornadas.
-2. `create_session` respeita estritamente o parâmetro `base_branch` quando informado; apenas auto-detecta via Git local se `base_branch is None`.
-3. Implementado `JulesClient.normalize_session_id(session_id)` universal, aceitando ID puro, formato `sessions/<id>` ou URL completa do console do Jules em todos os métodos e ferramentas.
+1. `TurnHistoryExtractor.get_last_conversation_turn` agora ordena estritamente as atividades por `createTime` decrescente antes de analisar os turnos.
+2. Mensagens recentes do agente (`agentMessaged`) são priorizadas sobre planos históricos antigos, garantindo que `last_speaker = 'AGENT'` quando há dúvida no chat.
+3. No `session_assistant.py` e `autonomous_loop.py`, a aprovação de plano exige estritamente `has_unapproved_plan and last_speaker == 'PLAN'`. Se `last_speaker == 'AGENT'`, o fluxo despacha obrigatoriamente para o Auto-Reply cognitivo (`advise_and_reply`).
+4. Reconhecimento de todos os estados de espera do Jules: `AWAITING_USER_FEEDBACK`, `AWAITING_USER_ACTION`, `AWAITING_INPUT`, `AWAITING_PLAN_APPROVAL`.
+
+### Refatoração Arquitetural — Atomização do Pacote `amb_cli/agents` e Alinhamento com `.agents/rules/`
+**Arquivos:** `amb_cli/agents/autonomous_loop.py`, `amb_cli/agents/loop_core/*`, `amb_cli/agents/auto_reply_core/*`, `amb_cli/agents/monitor.py`, `amb_cli/agents/local_agent_runner.py`
+**Implementação:**
+1. **Decomposição do `autonomous_loop.py` (Regras 01 e 02):**
+   - Reduzido de 490 linhas para 276 linhas através da extração de responsabilidades para `amb_cli/agents/loop_core/`:
+     - `session_assistant.py` (121 linhas): monitoramento contínuo da sessão, aprovação de planos e auto-resposta cognitiva.
+     - `cycle_dispatcher.py` (115 linhas): síntese de contexto via `ai_context_builder`, despacho de sessões no Jules e auto-merge no Git.
+2. **Refatoração DRY e Eliminação de Dead Imports (Regras 03 e 04):**
+   - `turn_extractor.py`: criada a função auxiliar privada `_extract_text_from_node`, reduzindo duplicações de código no parsing de atividades e removendo imports não utilizados.
+   - `cognitive_advisor.py`: migração completa de manipulação de caminhos para `pathlib.Path`, resolução centralizada das regras ativas em `.agents/rules/` e logging estruturado com `log_error`.
+   - `feedback_dispatcher.py`: suporte completo a `AWAITING_USER_ACTION` e correspondência de estados insensível a maiúsculas/minúsculas.
+3. **Validação de Integridade:**
+   - 100% dos testes unitários verdes (92/92 aprovados em `tests/`).
+   - Todos os arquivos do pacote `amb_cli/agents/` atendem aos limites estritos de SRP e contagem de linhas (<=300 linhas).
 
 ---
 

@@ -41,15 +41,29 @@ def monitor_and_assist_session(
                 last_state = state
 
             if state in ["COMPLETED", "SUCCEEDED", "CLOSED"]:
-                log("LOOP-MONITOR", "Sessão concluída com sucesso no Jules!", Colors.GREEN)
+                log("LOOP-MONITOR", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso ({state})!", Colors.GREEN)
+                if state in ["COMPLETED", "SUCCEEDED"]:
+                    log("LOOP-MONITOR", "Aguardando registro do PR nos outputs (10s)...", Colors.DIM)
+                    time.sleep(10)
                 return state
 
             if state in ["FAILED", "ERROR", "ABORTED"]:
                 log_error("LOOP-MONITOR", f"Sessão encerrou com estado de falha: {state}")
                 return state
 
-            if state == "AWAITING_USER_ACTION":
-                log("LOOP-MONITOR", "Agente pausou aguardando decisão humana.", Colors.YELLOW)
+            is_feedback_state = (
+                state in [
+                    "AWAITING_USER_FEEDBACK",
+                    "Awaiting User Feedback",
+                    "AWAITING_USER_ACTION",
+                    "AWAITING_INPUT",
+                    "AWAITING_PLAN_APPROVAL",
+                ]
+                or "AWAITING" in (state or "").upper()
+            )
+
+            if is_feedback_state:
+                log("LOOP-MONITOR", f"Agente pausou aguardando decisão/feedback (Estado: {state}).", Colors.YELLOW)
 
                 acts_resp = client.list_activities(session_id=session_id)
                 acts = acts_resp if isinstance(acts_resp, list) else acts_resp.get("activities", [])
@@ -73,30 +87,30 @@ def monitor_and_assist_session(
                     time.sleep(15)
                     continue
 
-                if turn_info.get("has_unapproved_plan"):
+                if turn_info.get("has_unapproved_plan") and turn_info.get("last_speaker") == "PLAN":
                     log(
                         "LOOP-MONITOR",
-                        f"Detectado plano pendente: '{turn_info.get('unapproved_plan_title')}'. Aprovando...",
+                        f"Detectado plano pendente: '{turn_info.get('unapproved_plan_title')}'. Aprovando via API...",
                         Colors.CYAN,
                     )
                     try:
                         client.approve_plan(session_id)
-                        log("LOOP-MONITOR", "Plano aprovado via API.", Colors.GREEN)
+                        log("LOOP-MONITOR", "✔ Plano aprovado via API com sucesso.", Colors.GREEN)
                         last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
                     except Exception as e:
                         log_error("LOOP-MONITOR", f"Falha ao aprovar plano via client.approve_plan: {e}")
-                else:
-                    if auto_reply_ai:
-                        log(
-                            "LOOP-MONITOR",
-                            "Sessão aguarda resposta/dúvida. Acionando Auto-Reply Cognitivo (Gemini)...",
-                            Colors.HEADER,
-                        )
-                        try:
-                            advise_and_reply(session_id=session_id, auto_approve=True, force=True)
-                            last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
-                        except Exception as ar_err:
-                            log_error("LOOP-MONITOR", f"Falha no Auto-Reply: {ar_err}")
+                elif auto_reply_ai and turn_info.get("last_speaker") == "AGENT":
+                    log(
+                        "LOOP-MONITOR",
+                        "Sessão aguarda resposta/dúvida do agente. Acionando Auto-Reply Cognitivo (Gemini)...",
+                        Colors.HEADER,
+                    )
+                    try:
+                        advise_and_reply(session_id=session_id, auto_approve=True, force=True)
+                        log("LOOP-MONITOR", "✔ Resposta enviada com sucesso para destravar o agente.", Colors.GREEN)
+                        last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
+                    except Exception as ar_err:
+                        log_error("LOOP-MONITOR", f"Falha no Auto-Reply: {ar_err}")
 
             time.sleep(15)
 

@@ -55,12 +55,16 @@ class JulesFeedbackDispatcher:
             state = s.get("state", "UNKNOWN")
             title = s.get("title") or "Sem título"
 
-            if state in [
-                "AWAITING_USER_FEEDBACK",
-                "Awaiting User Feedback",
-                "AWAITING_INPUT",
-                "AWAITING_PLAN_APPROVAL",
-            ]:
+            if (
+                state in [
+                    "AWAITING_USER_FEEDBACK",
+                    "Awaiting User Feedback",
+                    "AWAITING_USER_ACTION",
+                    "AWAITING_INPUT",
+                    "AWAITING_PLAN_APPROVAL",
+                ]
+                or "AWAITING" in (state or "").upper()
+            ):
                 try:
                     _, _, _, context_txt, turn_info = self.extractor.get_full_session_history(
                         self.jules_client, sid
