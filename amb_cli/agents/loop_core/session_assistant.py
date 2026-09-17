@@ -78,7 +78,7 @@ def monitor_and_assist_session(
                     time.sleep(15)
                     continue
 
-                if turn_info.get("last_agent_msg_id") == last_answered_agent_msg_id:
+                if last_answered_agent_msg_id and turn_info.get("last_agent_msg_id") == last_answered_agent_msg_id:
                     log(
                         "LOOP-MONITOR",
                         "A última mensagem do agente já foi respondida recentemente. Aguardando atualização de estado...",
