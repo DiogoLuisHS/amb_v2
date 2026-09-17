@@ -158,15 +158,32 @@ def run_autonomous_loop(
 
                 # Aprovação e Integração do PR no Git
                 if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
-                    handle_pr_merge(session_id, branch, repo_root, completed_cycles)
+                    merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
+                    if not merged:
+                        log_error(
+                            "LOOP",
+                            f"Integração obrigatória do item '{item_name}' na branch '{branch}' falhou. "
+                            f"Interrompendo a esteira para garantir a integridade da branch principal.",
+                        )
+                        return
+                elif state not in ["COMPLETED", "SUCCEEDED"]:
+                    log_error(
+                        "LOOP",
+                        f"A sessão Jules ({session_id}) do item '{item_name}' encerrou sem sucesso (Estado: {state}). "
+                        f"Interrompendo a esteira para evitar regressões.",
+                    )
+                    return
 
             except KeyboardInterrupt:
                 print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
                 return
             except Exception as e:
                 log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
+                return
 
             if len(items_to_run) > 1:
+                # Sincroniza branch local com origin antes do próximo item
+                GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
                 log(
                     "LOOP",
                     f"Pausa de {delay_between_cycles}s antes do próximo item...",

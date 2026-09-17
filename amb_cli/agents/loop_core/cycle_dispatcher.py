@@ -105,7 +105,7 @@ def dispatch_jules_session(
 
 def handle_pr_merge(
     session_id: str, branch: str, repo_root: str, completed_cycles: int
-) -> None:
+) -> bool:
     """Aprova e integra o Pull Request no Git local."""
     log(
         "GIT-MERGE",
@@ -122,5 +122,9 @@ def handle_pr_merge(
             )
             # Garante que o git local puxa e valida origin
             GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
+            return True
+        log_error("GIT-MERGE", f"PR da sessão {session_id} não foi integrado na branch '{branch}'.")
+        return False
     except Exception as em:
         log_error("GIT-MERGE", f"Aviso na integração do PR: {em}")
+        return False
