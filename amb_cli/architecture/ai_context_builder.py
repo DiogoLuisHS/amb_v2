@@ -1,149 +1,47 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🧭 AMB_V2 - Construtor de Contexto e Roteiro de Arquivos para IA (Agnóstico)
-Localização: amb_v2/architecture/ai_context_builder.py
-Responsabilidade Única: Rastrear dependências de um módulo/arquivo e gerar a ordem
-exata de leitura por camadas arquiteturais (DB -> Repos -> Services -> Controllers -> UI).
+Construtor de Contexto e Roteiro de Arquivos para IA.
+Rastreia dependências e gera a ordem de leitura por camadas.
 """
 
 import os
 import sys
-import re
 import json
+import copy
 from pathlib import Path
 from collections import defaultdict
-from typing import Set, Dict, List, Any, Optional
+from typing import Set, Dict, List, Any, Optional, Tuple
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import find_repo_root  # noqa: E402
+from config import find_repo_root
 
-CODE_EXTENSIONS = {
-    ".ts",
-    ".tsx",
-    ".js",
-    ".jsx",
-    ".mjs",
-    ".cjs",
-    ".py",
-    ".css",
-    ".scss",
-    ".json",
-    ".sql",
-}
-IGNORE_DIRS = {
-    "node_modules",
-    "dist",
-    "build",
-    ".git",
-    ".antigravity",
-    ".jules",
-    ".amb",
-    ".husky",
-    ".vscode",
-    "__pycache__",
-    ".next",
-    ".cache",
-    "coverage",
-}
-
-JS_TS_IMPORT_PATTERNS = [
-    re.compile(
-        r"""(?:import|export)\s+(?:[\w\*\$_\s{},]*\s+from\s+)?['"]([^'"]+)['"]"""
-    ),
-    re.compile(r"""require\s*\(\s*['"]([^'"]+)['"]\s*\)"""),
-    re.compile(r"""import\s*\(\s*['"]([^'"]+)['"]\s*\)"""),
-]
+from amb_cli.architecture.context_core.constants import (
+    CODE_EXTENSIONS,
+    IGNORE_DIRS,
+    JS_TS_IMPORT_PATTERNS,
+    LAYERS_CONFIG,
+)
+from amb_cli.architecture.context_core.utils import determine_file_layer
 
 
 class AIContextBuilder:
-    LAYERS_CONFIG = {
-        "1_database_schemas": {
-            "title": "1. Banco de Dados & Schemas (Drizzle / DB Tables)",
-            "icon": "🗄️",
-            "files": [],
-        },
-        "2_repositories": {
-            "title": "2. Repositórios de Acesso a Dados (SQL / Queries)",
-            "icon": "💾",
-            "files": [],
-        },
-        "3_services": {
-            "title": "3. Regras de Negócio & Serviços (Business Logic)",
-            "icon": "⚙️",
-            "files": [],
-        },
-        "4_controllers": {
-            "title": "4. Controladores & Validações de Entrada (Zod / Schemas)",
-            "icon": "🎮",
-            "files": [],
-        },
-        "5_routers_api": {
-            "title": "5. Rotas & Endpoints da API (HTTP / Hono / Express)",
-            "icon": "🌐",
-            "files": [],
-        },
-        "6_frontend_hooks_api": {
-            "title": "6. Frontend Services, Hooks & Chamadas de API",
-            "icon": "🪝",
-            "files": [],
-        },
-        "7_frontend_components": {
-            "title": "7. Componentes de UI & Modais",
-            "icon": "🧩",
-            "files": [],
-        },
-        "8_frontend_pages": {
-            "title": "8. Páginas Web & Views Principais",
-            "icon": "🖥️",
-            "files": [],
-        },
-        "9_entrypoints_config": {
-            "title": "9. Pontos de Entrada & Configurações Globais",
-            "icon": "🚀",
-            "files": [],
-        },
-    }
+    LAYERS_CONFIG: Dict[str, Any] = LAYERS_CONFIG
 
     def _determine_file_layer(self, file: str) -> str:
-        if "db/schema" in file or (
-            "schema" in file and ("apps/api/src/db" in file or "src/db" in file)
-        ):
-            return "1_database_schemas"
-        elif "repositories" in file or "repository" in file:
-            return "2_repositories"
-        elif "services" in file or "service" in file:
-            return "3_services"
-        elif "controllers" in file or "controller" in file:
-            return "4_controllers"
-        elif "routers" in file or "router" in file or "routes" in file:
-            return "5_routers_api"
-        elif ("apps/web" in file or "web" in file or "frontend" in file) and (
-            "hooks" in file or "services" in file or "api" in file
-        ):
-            return "6_frontend_hooks_api"
-        elif (
-            "apps/web" in file or "web" in file or "frontend" in file
-        ) and "components" in file:
-            return "7_frontend_components"
-        elif ("apps/web" in file or "web" in file or "frontend" in file) and (
-            "pages" in file or "views" in file
-        ):
-            return "8_frontend_pages"
-        else:
-            return "9_entrypoints_config"
+        return determine_file_layer(file)
 
-    def __init__(self, root_dir: Path):
-        self.root_dir = root_dir.resolve()
-        self.file_map = set()
-        self.edges = []
-        self.nodes = set()
-        self.adj_down = defaultdict(list)
-        self.adj_up = defaultdict(list)
+    def __init__(self, root_dir: Path) -> None:
+        self.root_dir: Path = root_dir.resolve()
+        self.file_map: Set[str] = set()
+        self.edges: List[Dict[str, str]] = []
+        self.nodes: Set[str] = set()
+        self.adj_down: Dict[str, List[str]] = defaultdict(list)
+        self.adj_up: Dict[str, List[str]] = defaultdict(list)
 
-    def scan_files(self):
+    def scan_files(self) -> None:
         for root, dirs, files in os.walk(self.root_dir):
             dirs[:] = [
                 d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")
@@ -157,7 +55,7 @@ class AIContextBuilder:
 
     def resolve_import_path(
         self, current_file: str, import_str: str
-    ) -> tuple[str, bool]:
+    ) -> Tuple[str, bool]:
         import_str = import_str.strip()
         current_dir = Path(current_file).parent
 
@@ -185,7 +83,7 @@ class AIContextBuilder:
 
         return import_str, True
 
-    def _find_matching_file(self, base_path) -> Optional[str]:
+    def _find_matching_file(self, base_path: Any) -> Optional[str]:
         norm = os.path.normpath(str(base_path)).replace("\\", "/")
         if norm.startswith("./"):
             norm = norm[2:]
@@ -214,7 +112,7 @@ class AIContextBuilder:
 
         return None
 
-    def extract_dependencies(self, rel_path: str):
+    def extract_dependencies(self, rel_path: str) -> None:
         full_path = self.root_dir / rel_path
         try:
             with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -239,7 +137,7 @@ class AIContextBuilder:
                 if rel_path not in self.adj_up[target]:
                     self.adj_up[target].append(rel_path)
 
-    def analyze(self):
+    def analyze(self) -> None:
         self.scan_files()
         for file in sorted(self.file_map):
             self.extract_dependencies(file)
@@ -263,7 +161,7 @@ class AIContextBuilder:
 
         result = set(core_files)
 
-        exists_cache: dict[str, bool] = {}
+        exists_cache: Dict[str, bool] = {}
 
         def path_exists(p: str) -> bool:
             if p not in exists_cache:
@@ -283,8 +181,6 @@ class AIContextBuilder:
     def classify_and_order_files(
         self, file_set: Set[str], query: str = ""
     ) -> Dict[str, Any]:
-        import copy
-
         layers = copy.deepcopy(self.LAYERS_CONFIG)
 
         clean_q = query.lower()
@@ -355,7 +251,7 @@ class AIContextBuilder:
         return "\n".join(md)
 
 
-def generate_context(target: str, output_json: bool = False):
+def generate_context(target: str, output_json: bool = False) -> None:
     """Gera o contexto arquitetural do módulo no terminal."""
     root = find_repo_root()
     builder = AIContextBuilder(Path(root))
