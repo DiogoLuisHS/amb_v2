@@ -3,634 +3,240 @@
 """
 ⚡ AMB_V2 - Serviço Central de Abstração Git e GitHub CLI (F1-M4 - SRP)
 Localização: amb_v2/integrations/git/git_service.py
-Responsabilidade Única: Prover interface única, testável e robusta para operações do Git
-e da GitHub CLI (gh), isolando chamadas a subprocess e oferecendo validação fail-fast.
+Responsabilidade Única: Prover interface única, testável e robusta para operações do Git.
 """
-
-import json
 import os
 import re
-import shutil
 import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
-
-from config import ApiExecutionError, Colors, find_repo_root, get_repo_name, log, log_error
-
+from config import find_repo_root
+from integrations.git.git_core.gh_cli import (
+    is_gh_installed, check_gh_auth, list_open_prs, get_latest_open_pr,
+    get_pr_legacy, create_pr_legacy, mark_pr_ready, approve_pr,
+    merge_pr_legacy, close_pr
+)
 
 class GitService:
-    """Abstração unificada para comandos Git locais e GitHub CLI."""
-
     def __init__(self, repo_root: Optional[str] = None):
+        """  init   method."""
         self.repo_root = repo_root or find_repo_root()
 
     def _resolve_cwd(self, cwd: Optional[str] = None) -> str:
+        """ resolve cwd method."""
         return cwd or self.repo_root
 
-    # ---------------------------------------------------------------------------
-    # Operações Locais do Git
-    # ---------------------------------------------------------------------------
+    def _run_git(self, cmd: List[str], cwd: Optional[str] = None, check: bool = False) -> subprocess.CompletedProcess:
+        """ run git method."""
+        return subprocess.run(cmd, cwd=self._resolve_cwd(cwd), capture_output=True, text=True, check=check, encoding="utf-8", errors="replace")
 
     def get_current_branch(self, cwd: Optional[str] = None) -> str:
-        """Obtém o nome da branch ativa do Git."""
-        try:
-            res = subprocess.run(
-                ["git", "branch", "--show-current"],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                return res.stdout.strip()
-        except Exception:
-            pass
-        return "main"
+        """Get current branch method."""
+        res = self._run_git(["git", "branch", "--show-current"], cwd)
+        return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else "main"
 
     def get_remote_url(self, remote: str = "origin", cwd: Optional[str] = None) -> Optional[str]:
-        """Obtém a URL configurada para o remote especificado."""
-        try:
-            res = subprocess.run(
-                ["git", "remote", "get-url", remote],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                return res.stdout.strip()
-        except Exception:
-            pass
-        return None
+        """Get remote url method."""
+        res = self._run_git(["git", "remote", "get-url", remote], cwd)
+        return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else None
 
     def detect_github_repo(self, cwd: Optional[str] = None) -> Optional[str]:
-        """Identifica o owner/repo do repositório no GitHub via remote origin ou .git/config."""
+        """Detect github repo method."""
         target_root = self._resolve_cwd(cwd)
-        url = self.get_remote_url("origin", cwd=target_root)
+        url = self.get_remote_url("origin", target_root)
         if url:
-            match = re.search(r"github\.com[:/]([^/]+)/([^/.]+)", url)
-            if match:
-                return f"{match.group(1)}/{match.group(2)}"
-
-        git_config = os.path.join(target_root, ".git", "config")
-        if os.path.exists(git_config):
-            try:
-                with open(git_config, "r", encoding="utf-8", errors="replace") as f:
-                    match = re.search(r"url\s*=\s*.*github\.com[:/]([^/]+)/([^/.]+)", f.read())
-                    if match:
-                        return f"{match.group(1)}/{match.group(2)}"
-            except Exception:
-                pass
+            m = re.search(r"github\.com[:/]([^/]+)/([^/.]+)", url)
+            if m: return f"{m.group(1)}/{m.group(2)}"
+        try:
+            with open(os.path.join(target_root, ".git", "config"), "r", encoding="utf-8", errors="replace") as f:
+                m = re.search(r"url\s*=\s*.*github\.com[:/]([^/]+)/([^/.]+)", f.read())
+                if m: return f"{m.group(1)}/{m.group(2)}"
+        except: pass
         return None
 
     def get_log_oneline(self, count: int = 300, cwd: Optional[str] = None) -> str:
-        """Obtém o histórico de commits compactado em uma linha por commit."""
-        try:
-            res = subprocess.run(
-                ["git", "log", "--oneline", "-n", str(count)],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            return res.stdout if res.returncode == 0 else ""
-        except Exception:
-            return ""
+        """Get log oneline method."""
+        return self._run_git(["git", "log", "--oneline", "-n", str(count)], cwd).stdout
 
     def get_status(self, cwd: Optional[str] = None) -> str:
-        """Retorna o output de git status --porcelain."""
-        try:
-            res = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            return res.stdout.rstrip() if res.returncode == 0 else ""
-        except Exception:
-            return ""
+        """Get status method."""
+        res = self._run_git(["git", "status", "--porcelain"], cwd)
+        return res.stdout.rstrip() if res.returncode == 0 else ""
+
+    def get_status_porcelain(self, cwd: Optional[str] = None) -> str:
+        """Get status porcelain method."""
+        return self.get_status(cwd)
 
     def is_clean(self, cwd: Optional[str] = None) -> bool:
-        """Verifica se a working tree está limpa sem alterações não commitadas."""
-        return len(self.get_status(cwd=cwd).strip()) == 0
+        """Is clean method."""
+        return len(self.get_status(cwd).strip()) == 0
+
+    def get_untracked_files(self, cwd: Optional[str] = None) -> List[str]:
+        """Get untracked files method."""
+        res = self._run_git(["git", "ls-files", "--others", "--exclude-standard"], cwd)
+        return res.stdout.splitlines() if res.returncode == 0 else []
 
     def get_upstream_branch(self, cwd: Optional[str] = None) -> Optional[str]:
-        """Identifica a branch remota correspondente (upstream) da branch ativa."""
-        try:
-            res = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                return res.stdout.strip()
-        except Exception:
-            pass
-        return None
+        """Get upstream branch method."""
+        res = self._run_git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd)
+        return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else None
 
     def get_ahead_behind(self, cwd: Optional[str] = None) -> Tuple[int, int]:
-        """Calcula o número de commits à frente (ahead) e atrás (behind) em relação ao upstream."""
-        try:
-            res = subprocess.run(
-                ["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"],
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                parts = res.stdout.strip().split()
-                if len(parts) == 2:
-                    return int(parts[0]), int(parts[1])
-        except Exception:
-            pass
+        """Get ahead behind method."""
+        res = self._run_git(["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"], cwd)
+        if res.returncode == 0 and res.stdout.strip():
+            p = res.stdout.strip().split()
+            if len(p) == 2: return int(p[0]), int(p[1])
         return 0, 0
 
     def get_detailed_status(self, cwd: Optional[str] = None) -> Dict[str, Any]:
-        """Retorna o estado detalhado do repositório Git local e conexão com o remote."""
+        """Get detailed status method."""
         target_cwd = self._resolve_cwd(cwd)
-        branch = self.get_current_branch(cwd=target_cwd)
-        upstream = self.get_upstream_branch(cwd=target_cwd)
-        ahead, behind = self.get_ahead_behind(cwd=target_cwd)
-        raw_status = self.get_status(cwd=target_cwd)
-
-        staged: List[str] = []
-        unstaged: List[str] = []
-        untracked: List[str] = []
-
-        for line in raw_status.splitlines():
-            if len(line) < 3:
-                continue
-            x = line[0]
-            y = line[1]
-            fname = line[3:].strip()
-            if x == "?":
-                untracked.append(fname)
+        raw = self.get_status(target_cwd)
+        staged, unstaged, untracked = [], [], []
+        for line in raw.splitlines():
+            if len(line) < 3: continue
+            x, y, fname = line[0], line[1], line[3:].strip()
+            if x == "?": untracked.append(fname)
             else:
-                if x != " ":
-                    staged.append(f"{x} {fname}")
-                if y != " ":
-                    unstaged.append(f"{y} {fname}")
-
+                if x != " ": staged.append(f"{x} {fname}")
+                if y != " ": unstaged.append(f"{y} {fname}")
         return {
-            "branch": branch,
-            "upstream": upstream,
-            "ahead": ahead,
-            "behind": behind,
-            "is_clean": len(raw_status) == 0,
-            "staged": staged,
-            "unstaged": unstaged,
-            "untracked": untracked,
+            "branch": self.get_current_branch(target_cwd),
+            "upstream": self.get_upstream_branch(target_cwd),
+            "ahead": self.get_ahead_behind(target_cwd)[0],
+            "behind": self.get_ahead_behind(target_cwd)[1],
+            "is_clean": len(raw) == 0,
+            "staged": staged, "unstaged": unstaged, "untracked": untracked,
             "repo_root": target_cwd,
-            "github_repo": self.detect_github_repo(cwd=target_cwd),
+            "github_repo": self.detect_github_repo(target_cwd)
         }
 
     def checkout(self, branch: str, create: bool = False, cwd: Optional[str] = None) -> bool:
-        """Executa git checkout para alternar ou criar branches."""
-        cmd = ["git", "checkout"]
-        if create:
-            cmd.append("-b")
-        cmd.append(branch)
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        """Checkout method."""
+        cmd = ["git", "checkout", "-b", branch] if create else ["git", "checkout", branch]
+        return self._run_git(cmd, cwd).returncode == 0
+
+    def checkout_branch(self, branch: str, cwd: Optional[str] = None) -> bool:
+        """Checkout branch method."""
+        return self.checkout(branch, create=False, cwd=cwd)
+
+    def create_and_checkout_branch(self, branch: str, cwd: Optional[str] = None) -> bool:
+        """Create and checkout branch method."""
+        return self.checkout(branch, create=True, cwd=cwd)
 
     def pull(self, remote: str = "origin", branch: Optional[str] = None, cwd: Optional[str] = None) -> bool:
-        """Executa git pull do remote e branch especificados."""
+        """Pull method."""
         cmd = ["git", "pull", remote]
-        if branch:
-            cmd.append(branch)
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        if branch: cmd.append(branch)
+        return self._run_git(cmd, cwd).returncode == 0
 
     def fetch(self, remote: str = "origin", prune: bool = True, cwd: Optional[str] = None) -> bool:
-        """Executa git fetch para atualizar referências remotas."""
+        """Fetch method."""
         cmd = ["git", "fetch", remote]
-        if prune:
-            cmd.append("--prune")
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        if prune: cmd.append("--prune")
+        return self._run_git(cmd, cwd).returncode == 0
+
+    def sync_with_remote(self, remote: str = "origin", branch: Optional[str] = None, cwd: Optional[str] = None) -> bool:
+        """Sync with remote method."""
+        return self.fetch(remote, True, cwd) and self.pull(remote, branch, cwd)
 
     def stash(self, action: str = "push", message: Optional[str] = None, cwd: Optional[str] = None) -> bool:
-        """Executa comandos de git stash (push, pop, list, drop)."""
+        """Stash method."""
         cmd = ["git", "stash", action]
-        if action == "push" and message:
-            cmd.extend(["-m", message])
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        if action == "push" and message: cmd.extend(["-m", message])
+        return self._run_git(cmd, cwd).returncode == 0
 
-    def get_diff(
-        self,
-        file_path: Optional[str] = None,
-        base_branch: Optional[str] = None,
-        cached: bool = False,
-        cwd: Optional[str] = None
-    ) -> str:
-        """Gera o diff unificado de arquivos alterados ou contra a branch base."""
+    def get_diff(self, file_path: Optional[str] = None, base_branch: Optional[str] = None, cached: bool = False, cwd: Optional[str] = None) -> str:
+        """Get diff method."""
         cmd = ["git", "diff"]
-        if cached:
-            cmd.append("--cached")
-        if base_branch:
-            cmd.append(base_branch)
-        if file_path:
-            cmd.extend(["--", file_path])
+        if cached: cmd.append("--cached")
+        if base_branch: cmd.append(base_branch)
+        if file_path: cmd.extend(["--", file_path])
+        res = self._run_git(cmd, cwd)
+        return res.stdout if res.returncode == 0 else ""
 
-        try:
-            res = subprocess.run(
-                cmd,
-                cwd=self._resolve_cwd(cwd),
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            return res.stdout if res.returncode == 0 else ""
-        except Exception:
-            return ""
+    def get_diff_summary(self, cwd: Optional[str] = None) -> str:
+        """Get diff summary method."""
+        res = self._run_git(["git", "diff", "--stat"], cwd)
+        return res.stdout if res.returncode == 0 else ""
 
-    def create_branch(
-        self,
-        branch_name: str,
-        from_branch: Optional[str] = None,
-        checkout: bool = True,
-        cwd: Optional[str] = None
-    ) -> bool:
-        """Cria uma nova branch e opcionalmente faz checkout para ela."""
-        target_cwd = self._resolve_cwd(cwd)
-        if checkout:
-            cmd = ["git", "checkout", "-b", branch_name]
-            if from_branch:
-                cmd.append(from_branch)
-            res = subprocess.run(cmd, cwd=target_cwd, capture_output=True, text=True, check=False)
-            return res.returncode == 0
-        else:
-            cmd = ["git", "branch", branch_name]
-            if from_branch:
-                cmd.append(from_branch)
-            res = subprocess.run(cmd, cwd=target_cwd, capture_output=True, text=True, check=False)
-            return res.returncode == 0
+    def create_branch(self, branch_name: str, from_branch: Optional[str] = None, checkout: bool = True, cwd: Optional[str] = None) -> bool:
+        """Create branch method."""
+        cmd = ["git", "checkout", "-b", branch_name] if checkout else ["git", "branch", branch_name]
+        if from_branch: cmd.append(from_branch)
+        return self._run_git(cmd, cwd).returncode == 0
 
     def apply_patch(self, patch_path: str, cwd: Optional[str] = None, whitespace_fix: bool = True) -> bool:
-        """Aplica um arquivo de patch unificado via git apply."""
+        """Apply patch method."""
         cmd = ["git", "apply"]
-        if whitespace_fix:
-            cmd.extend(["--whitespace=fix", "--ignore-space-change", "--ignore-whitespace"])
+        if whitespace_fix: cmd.extend(["--whitespace=fix", "--ignore-space-change", "--ignore-whitespace"])
         cmd.append(patch_path)
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        return self._run_git(cmd, cwd).returncode == 0
 
     def add_all_and_commit(self, message: str, cwd: Optional[str] = None) -> bool:
-        """Adiciona todos os arquivos modificados e realiza o commit."""
-        target_cwd = self._resolve_cwd(cwd)
-        subprocess.run(["git", "add", "."], cwd=target_cwd, capture_output=True, check=False)
-        res = subprocess.run(
-            ["git", "commit", "-m", message],
-            cwd=target_cwd,
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        """Add all and commit method."""
+        self._run_git(["git", "add", "."], cwd)
+        return self._run_git(["git", "commit", "-m", message], cwd).returncode == 0
+
+    def add_and_commit(self, message: str, cwd: Optional[str] = None) -> bool:
+        """Add and commit method."""
+        return self.add_all_and_commit(message, cwd)
 
     def push(self, remote: str = "origin", branch: Optional[str] = None, cwd: Optional[str] = None) -> bool:
-        """Envia alterações locais para o repositório remoto."""
+        """Push method."""
         cmd = ["git", "push", remote]
-        if branch:
-            cmd.append(branch)
-        res = subprocess.run(
-            cmd,
-            cwd=self._resolve_cwd(cwd),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        if branch: cmd.append(branch)
+        return self._run_git(cmd, cwd).returncode == 0
 
-    # ---------------------------------------------------------------------------
-    # Operações do GitHub CLI (gh)
-    # ---------------------------------------------------------------------------
+    def create_tag(self, tag: str, message: Optional[str] = None, cwd: Optional[str] = None) -> bool:
+        """Create tag method."""
+        cmd = ["git", "tag", tag]
+        if message: cmd.extend(["-m", message])
+        return self._run_git(cmd, cwd).returncode == 0
+
+    def reset_hard(self, ref: str = "HEAD", cwd: Optional[str] = None) -> bool:
+        """Reset hard method."""
+        return self._run_git(["git", "reset", "--hard", ref], cwd).returncode == 0
 
     @staticmethod
     def is_gh_installed() -> bool:
-        """Verifica se o binário gh está presente no PATH do sistema."""
-        return shutil.which("gh") is not None
+        return is_gh_installed()
 
     def check_gh_auth(self, cwd: Optional[str] = None, fail_silently: bool = False) -> bool:
-        """Verifica se a CLI gh está instalada e autenticada com sucesso."""
-        target_cwd = self._resolve_cwd(cwd)
-        if not self.is_gh_installed():
-            if fail_silently:
-                return False
-            raise ApiExecutionError(
-                "GitHub CLI (gh) não encontrada no PATH.",
-                hint="Instale a GitHub CLI (winget install GitHub.cli / brew install gh) para habilitar automações de PR.",
-            )
+        """Check gh auth method."""
+        return check_gh_auth(cwd=self._resolve_cwd(cwd), fail_silently=fail_silently)
 
-        res = subprocess.run(
-            ["gh", "auth", "status"],
-            cwd=target_cwd,
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        if res.returncode != 0:
-            if fail_silently:
-                return False
-            raise ApiExecutionError(
-                "GitHub CLI não autenticada.",
-                hint="Execute 'gh auth login' no terminal para autenticar sua conta do GitHub.",
-            )
-        return True
-
-    def list_open_prs(
-        self, repo_name: Optional[str] = None, include_drafts: bool = True
-    ) -> List[Dict[str, Any]]:
-        """Lista Pull Requests abertos no repositório, incluindo drafts se solicitado."""
-        target_repo = repo_name or get_repo_name()
-        all_prs = []
-        seen_numbers = set()
-
-        draft_modes = [["--draft"], []] if include_drafts else [[]]
-
-        for draft_args in draft_modes:
-            cmd = [
-                "gh",
-                "pr",
-                "list",
-                "--repo",
-                target_repo,
-                "--state",
-                "open",
-                "--json",
-                "number,title,url,headRefName,isDraft,createdAt",
-            ] + draft_args
-
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                try:
-                    prs = json.loads(res.stdout)
-                    for pr in prs:
-                        num = pr.get("number")
-                        if num and num not in seen_numbers:
-                            seen_numbers.add(num)
-                            all_prs.append(pr)
-                except Exception:
-                    pass
-
-        return sorted(all_prs, key=lambda p: p.get("createdAt", ""), reverse=True)
+    def list_open_prs(self, repo_name: Optional[str] = None, include_drafts: bool = True) -> List[Dict[str, Any]]:
+        """List open prs method."""
+        return list_open_prs(repo_name, include_drafts)
 
     def get_latest_open_pr(self, repo_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Retorna o Pull Request aberto mais recente do repositório."""
-        prs = self.list_open_prs(repo_name=repo_name, include_drafts=True)
-        return prs[0] if prs else None
+        """Get latest open pr method."""
+        return get_latest_open_pr(repo_name)
 
     def get_pr(self, pr_number: int, repo_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Obtém detalhes completos de um Pull Request específico via GitHub CLI."""
-        target_repo = repo_name or get_repo_name()
-        cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            target_repo,
-            "--json",
-            "number,title,body,state,url,headRefName,baseRefName,isDraft,mergeable,author,createdAt,updatedAt",
-        ]
-        try:
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                return json.loads(res.stdout)
-        except Exception:
-            pass
-        return None
+        """Get pr method."""
+        return get_pr_legacy(pr_number, repo_name)
 
-    def create_pr(
-        self,
-        title: str,
-        body: str,
-        base: Optional[str] = None,
-        head: Optional[str] = None,
-        draft: bool = False,
-        repo_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Cria um novo Pull Request no GitHub via GitHub CLI."""
-        target_repo = repo_name or get_repo_name()
-        cmd = [
-            "gh",
-            "pr",
-            "create",
-            "--repo",
-            target_repo,
-            "--title",
-            title,
-            "--body",
-            body,
-        ]
-        if base:
-            cmd.extend(["--base", base])
-        if head:
-            cmd.extend(["--head", head])
-        if draft:
-            cmd.append("--draft")
-
-        res = subprocess.run(
-            cmd,
-            cwd=self.repo_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        if res.returncode != 0:
-            raise ApiExecutionError(f"Falha ao criar Pull Request: {res.stderr.strip() or res.stdout.strip()}")
-
-        pr_url = res.stdout.strip()
-        pr_number = None
-        match = re.search(r"/pull/(\d+)", pr_url)
-        if match:
-            pr_number = int(match.group(1))
-
-        return {
-            "success": True,
-            "url": pr_url,
-            "number": pr_number,
-            "title": title,
-            "draft": draft,
-        }
+    def create_pr(self, title: str, body: str, base: Optional[str] = None, head: Optional[str] = None, draft: bool = False, repo_name: Optional[str] = None) -> Dict[str, Any]:
+        """Create pr method."""
+        return create_pr_legacy(title, body, base, head, draft, repo_name, cwd=self.repo_root)
 
     def mark_pr_ready(self, pr_number: int, repo_name: Optional[str] = None) -> bool:
-        """Remove o estado de Draft do PR transformando-o em Ready for Review."""
-        target_repo = repo_name or get_repo_name()
-        res = subprocess.run(
-            ["gh", "pr", "ready", str(pr_number), "--repo", target_repo],
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+        """Mark pr ready method."""
+        return mark_pr_ready(pr_number, repo_name)
 
-    def approve_pr(
-        self,
-        pr_number: int,
-        repo_name: Optional[str] = None,
-        body: str = "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade.",
-    ) -> bool:
-        """Aprova formalmente o Pull Request via gh pr review."""
-        target_repo = repo_name or get_repo_name()
-        res = subprocess.run(
-            ["gh", "pr", "review", str(pr_number), "--repo", target_repo, "--approve", "--body", body],
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+    def approve_pr(self, pr_number: int, repo_name: Optional[str] = None, body: str = "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade.") -> bool:
+        """Approve pr method."""
+        return approve_pr(pr_number, repo_name, body)
 
-    def merge_pr(
-        self,
-        pr_number: int,
-        repo_name: Optional[str] = None,
-        squash: bool = True,
-        delete_branch: bool = True,
-        admin: bool = True,
-    ) -> bool:
-        """Realiza o merge do Pull Request com squash e deleção de branch."""
-        target_repo = repo_name or get_repo_name()
-        base_cmd = ["gh", "pr", "merge", str(pr_number), "--repo", target_repo]
-        if squash:
-            base_cmd.append("--squash")
-        if delete_branch:
-            base_cmd.append("--delete-branch")
+    def merge_pr(self, pr_number: int, repo_name: Optional[str] = None, squash: bool = True, delete_branch: bool = True, admin: bool = True) -> bool:
+        """Merge pr method."""
+        return merge_pr_legacy(pr_number, repo_name, squash, delete_branch, admin)
 
-        # Tenta com --admin primeiro se solicitado
-        if admin:
-            admin_cmd = base_cmd + ["--admin"]
-            res = subprocess.run(
-                admin_cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding="utf-8",
-                errors="replace",
-            )
-            if res.returncode == 0:
-                return True
-
-        # Fallback para merge normal sem --admin
-        res = subprocess.run(
-            base_cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
-
-    def close_pr(
-        self,
-        pr_number: int,
-        comment: Optional[str] = None,
-        delete_branch: bool = False,
-        repo_name: Optional[str] = None,
-    ) -> bool:
-        """Fecha um Pull Request no GitHub."""
-        target_repo = repo_name or get_repo_name()
-        cmd = ["gh", "pr", "close", str(pr_number), "--repo", target_repo]
-        if comment:
-            cmd.extend(["--comment", comment])
-        if delete_branch:
-            cmd.append("--delete-branch")
-
-        res = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return res.returncode == 0
+    def close_pr(self, pr_number: int, comment: Optional[str] = None, delete_branch: bool = False, repo_name: Optional[str] = None) -> bool:
+        """Close pr method."""
+        return close_pr(pr_number, comment, delete_branch, repo_name)
