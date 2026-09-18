@@ -33,6 +33,7 @@ CANONICAL_SUBMODULES: List[str] = [
     "architecture/context_core",
     "pipeline",
     "gui",
+    "gui/wizard_core",
     "integrations",
     "integrations/common",
     "integrations/git",
