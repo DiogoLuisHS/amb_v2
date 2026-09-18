@@ -19,34 +19,12 @@ from amb_cli.core import (
     get_env,
     require_env
 )
-from amb_cli.core.env import find_repo_root, load_project_json
-
-def get_device_type(default: Optional[str] = None) -> Optional[str]:
-    """Obtém o tipo de dispositivo alvo configurado pelo usuário para o Stitch."""
-    dev = get_env("STITCH_DEVICE_TYPE") or get_env("DEVICE_TYPE")
-    if dev and dev.strip():
-        return dev.strip().upper()
-    p_meta = load_project_json()
-    stitch_cfg = p_meta.get("stitch", {})
-    if isinstance(stitch_cfg, dict) and stitch_cfg.get("device"):
-        return str(stitch_cfg["device"]).strip().upper()
-    if "device_type" in p_meta and p_meta["device_type"]:
-        return str(p_meta["device_type"]).strip().upper()
-    return default
-
-
-def get_repo_name() -> str:
-    """Obtém o nome do repositório configurado no .env (GITHUB_REPOSITORY)."""
-    repo = get_env("GITHUB_REPOSITORY")
-    if repo:
-        return repo
-    p_meta = load_project_json()
-    if "repository" in p_meta and p_meta["repository"]:
-        return p_meta["repository"]
-    raise ConfigurationError(
-        "Variável GITHUB_REPOSITORY não configurada.",
-        hint="Defina GITHUB_REPOSITORY=usuario/repo no seu arquivo .env"
-    )
+from amb_cli.workspace.project_context import (
+    find_repo_root,
+    load_project_json,
+    get_repo_name,
+    get_device_type
+)
 
 def parse_design_tokens_from_text(text: str) -> Dict[str, Any]:
     """Extrai tokens e diretrizes de design básicos de um texto Markdown (ex: design.md)."""

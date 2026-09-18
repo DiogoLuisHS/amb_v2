@@ -41,6 +41,8 @@ def test_canonical_submodules_list():
         "core/logger",
         "core/env",
         "core/bootstrap",
+        "workspace",
+        "workspace/project_context",
         "config",
         "config/config_core",
         "config/setup_modules",
