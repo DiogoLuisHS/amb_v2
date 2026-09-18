@@ -40,3 +40,10 @@ Crie um novo teste unitário que valida explicitamente:
    ```
 2. **Tipagem e Sintaxe Estrita**: Zero erros de compilação em `python -m py_compile cli.py amb_cli/cli.py`.
 
+---
+
+## 🚀 Ação Final Obrigatória: Commit e Abertura do Pull Request
+Ao concluir as alterações e validar os testes locais com 100% de sucesso:
+1. Você DEVE commitar todos os novos arquivos e os arquivos modificados.
+2. Você DEVE submeter formalmente o Pull Request no GitHub para que o pipeline do AMB realize a validação de QA e o auto-merge na branch `main`.
+
