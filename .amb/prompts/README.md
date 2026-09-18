@@ -1,42 +1,33 @@
-# 📚 Catálogo de Prompts Atômicos do Pacote `amb_cli/agents/`
+# 📚 Catálogo de Prompts Atômicos: Desacoplamento de `amb_cli/config`
 
-Este diretório contém os prompts modulares específicos para orientar o **Google Jules** no alinhamento, refatoração e auditoria contínua de cada um dos módulos do pacote `amb_cli/agents/`.
+Este diretório contém os prompts modulares específicos para orientar o **Google Jules** no refatoramento, desacoplamento e auditoria contínua da separação entre **AMB Framework Core** e **Workspace do Consumidor**.
 
-Cada prompt é 100% focado em um único arquivo, garantindo economia de tokens, precisão cirúrgica de contexto e ausência de alucinações cognitivas.
-
----
-
-## 📑 Prompts por Arquivo
-
-| # | Arquivo Prompt | Módulo Alvo | Linhas Alvo | Responsabilidade Principal |
-|---|---|---|:---:|---|
-| **01** | [`01_agent_auto_reply.md`](./01_agent_auto_reply.md) | `amb_cli/agents/auto_reply.py` | ~140 | Fachada pública e despachante CLI do Auto-Reply |
-| **02** | [`02_agent_autonomous_loop.md`](./02_agent_autonomous_loop.md) | `amb_cli/agents/autonomous_loop.py` | ~270 | Orquestrador de alto nível do loop autônomo de ciclos |
-| **03** | [`03_agent_local_runner.md`](./03_agent_local_runner.md) | `amb_cli/agents/local_agent_runner.py` | ~270 | Descoberta e execução de personas (Local AGY ou Jules) |
-| **04** | [`04_agent_monitor.md`](./04_agent_monitor.md) | `amb_cli/agents/monitor.py` | ~100 | Monitor e sentinela em tempo real com auto-piloto |
-| **05** | [`05_agent_cognitive_advisor.md`](./05_agent_cognitive_advisor.md) | `amb_cli/agents/auto_reply_core/cognitive_advisor.py` | ~170 | Síntese de prompts cognitivos, regras e LLM |
-| **06** | [`06_agent_feedback_dispatcher.md`](./06_agent_feedback_dispatcher.md) | `amb_cli/agents/auto_reply_core/feedback_dispatcher.py` | ~300 | Despacho de mensagens e aprovações REST para o Jules |
-| **07** | [`07_agent_turn_extractor.md`](./07_agent_turn_extractor.md) | `amb_cli/agents/auto_reply_core/turn_extractor.py` | ~190 | Parsing polimórfico e determinação de turnos |
-| **08** | [`08_agent_cycle_dispatcher.md`](./08_agent_cycle_dispatcher.md) | `amb_cli/agents/loop_core/cycle_dispatcher.py` | ~115 | Context builder, despacho no Jules e auto-merge Git |
-| **09** | [`09_agent_session_assistant.md`](./09_agent_session_assistant.md) | `amb_cli/agents/loop_core/session_assistant.py` | ~120 | Monitoramento da sessão e desbloqueio autônomo |
+Cada prompt é 100% focado em um único domínio, garantindo economia de tokens, precisão de contexto cirúrgica e ausência de alucinações cognitivas.
 
 ---
 
-## 🚀 Como Executar com o Google Jules
+## 📑 Sequência de Prompts do Ciclo
 
-### 1. Criar Sessão no Jules com um Prompt Específico
+| # | Arquivo Prompt | Módulo Alvo | Responsabilidade Principal |
+|---|---|---|---|
+| **01** | [`01_extract_core_primitives.md`](./01_extract_core_primitives.md) | `amb_cli/core/` | Isola logging (`Colors`, `log`), exceções (`AmbError`), env do AMB e `bootstrap.py`. |
+| **02** | [`02_extract_workspace_context.md`](./02_extract_workspace_context.md) | `amb_cli/workspace/` | Isola raiz de repo (`find_repo_root`), metadados `amb_project.json`, `repo_name` e `device_type`. |
+| **03** | [`03_relocate_scaffolding_and_setup.md`](./03_relocate_scaffolding_and_setup.md) | `amb_cli/workspace/setup/` | Realoca `project_analyzer`, `amb_provisioner`, `cognitive_synthesizer` e `setup_project`. |
+| **04** | [`04_relocate_rules_and_design_tokens.md`](./04_relocate_rules_and_design_tokens.md) | `amb_cli/workspace/` | Realoca `rules_manager.py` e `design_tokens.py` mantendo pontes na camada legada. |
+| **05** | [`05_consolidate_config_facade_and_diagnostics.md`](./05_consolidate_config_facade_and_diagnostics.md) | `amb_cli/config/` | Transforma `config.py` em Facade limpa e atualiza diagnósticos visuais do `amb check`. |
+
+---
+
+## 🚀 Como Executar com o AMB Agent Loop
+
+### Execução Autônoma Sequencial Completa
 ```bash
-# Exemplo para o turn_extractor:
-amb jules create -p .amb/prompts/07_agent_turn_extractor.md -t "Refactor turn_extractor.py"
+python amb_cli/cli.py agent --prompt .amb/prompts --loop --max-cycles 1
 ```
 
-### 2. Executar em Loop Autônomo com o Prompt
-```bash
-# Executar o loop mirando um prompt específico:
-amb agent -p .amb/prompts/02_agent_autonomous_loop.md --loop --max-cycles 1
-```
-
-### 3. Acompanhar em Tempo Real com o Watcher
-```bash
-amb monitor --auto-approve
-```
+O orquestrador executará os 5 prompts em ordem numérica estrita:
+1. Cria VM isolada no Google Jules para cada prompt.
+2. Monitora os logs e responde dúvidas via Consultor Cognitivo Gemini (Auto-Advisor).
+3. Executa a suíte de testes de QA localmente (`pytest`).
+4. Realiza auto-merge do Pull Request e sincroniza a branch (`git pull origin main`).
+5. Transiciona suavemente para o próximo prompt até concluir o ciclo.
