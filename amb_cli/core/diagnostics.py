@@ -206,3 +206,4 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
 
     print(f"\n{Colors.DIM}Para reconfigurar ou atualizar a stack do projeto: amb setup --force{Colors.RESET}\n")
     return report
+
