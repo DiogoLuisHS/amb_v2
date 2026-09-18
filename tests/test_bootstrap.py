@@ -36,6 +36,11 @@ def test_ensure_amb_env():
 
 def test_canonical_submodules_list():
     expected_submodules = [
+        "core",
+        "core/exceptions",
+        "core/logger",
+        "core/env",
+        "core/bootstrap",
         "config",
         "config/config_core",
         "config/setup_modules",

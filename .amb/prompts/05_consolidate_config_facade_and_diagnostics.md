@@ -39,3 +39,4 @@ Crie um novo teste unitário que valida explicitamente:
    python amb_cli/cli.py check
    ```
 2. **Tipagem e Sintaxe Estrita**: Zero erros de compilação em `python -m py_compile cli.py amb_cli/cli.py`.
+

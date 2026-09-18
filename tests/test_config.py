@@ -53,13 +53,13 @@ def test_find_repo_root(tmp_path):
 
     assert find_repo_root(str(sub_dir)) == str(repo_dir)
 
-@patch("amb_cli.config.config.os.environ", {"MY_VAR": "my_val"})
+@patch("amb_cli.core.env.os.environ", {"MY_VAR": "my_val"})
 def test_get_env():
     assert get_env("MY_VAR") == "my_val"
     assert get_env("MISSING_VAR", "default_val") == "default_val"
     assert get_env("MISSING_VAR") is None
 
-@patch("amb_cli.config.config.os.environ", {"REQ_VAR": "req_val"})
+@patch("amb_cli.core.env.os.environ", {"REQ_VAR": "req_val"})
 def test_require_env():
     assert require_env("REQ_VAR") == "req_val"
     with pytest.raises(ConfigurationError) as exc:

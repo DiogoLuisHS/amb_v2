@@ -54,3 +54,4 @@ Para garantir que chamadas legadas e testes existentes não quebrem:
    pytest tests/test_setup_and_analyzer.py
    python -m py_compile amb_cli/workspace/setup/*.py
    ```
+

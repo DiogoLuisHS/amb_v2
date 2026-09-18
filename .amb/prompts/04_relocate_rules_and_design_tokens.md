@@ -40,3 +40,4 @@ Sua missão é migrar esses componentes para `amb_cli/workspace/`, mantendo pont
    pytest tests/test_rules_manager.py tests/test_config.py
    python -m py_compile amb_cli/workspace/*.py
    ```
+

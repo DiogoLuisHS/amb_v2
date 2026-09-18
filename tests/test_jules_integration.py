@@ -218,7 +218,7 @@ def test_jules_facade_tools():
     assert created["name"] == "sessions/s2"
 
 
-@patch("config.config.get_env", return_value="dummy_key")
+@patch("integrations.jules.jules_client.require_env", return_value="dummy_key")
 def test_jules_cli_handlers(mock_get_env):
     with patch("integrations.jules.jules_client.JulesClient.get_status") as mock_status:
         mock_status.return_value = {
