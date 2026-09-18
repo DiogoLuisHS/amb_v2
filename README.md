@@ -431,7 +431,7 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 | Arquivo | Descrição |
 | :--- | :--- |
 | [`_docs/SUGGESTIONS.md`](./_docs/SUGGESTIONS.md) | Roadmap estratégico e priorização MoSCoW (MUST/SHOULD/COULD/WON'T) das próximas sprints. |
-| [`_docs/CHANGELOG_FIXES.md`](./_docs/CHANGELOG_FIXES.md) | Fonte única da verdade para histórico de melhorias arquiteturais, features e bugs corrigidos. |
+| [`_docs/CHANGELOG.md`](./_docs/CHANGELOG.md) | Histórico de versões, melhorias arquiteturais, novas funcionalidades e correções de bugs. |
 | [`amb_cli/config/README.md`](./amb_cli/config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
 | [`amb_cli/gui/README.md`](./amb_cli/gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
 | [`amb_cli/pipeline/README.md`](./amb_cli/pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |

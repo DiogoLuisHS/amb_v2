@@ -1,45 +1,81 @@
-# 📚 AMB_V2 - Arquitetura de Pastas e Documentação
+# 📚 AMB_V2 — Documentação e Arquitetura do Projeto
 
-Este diretório centraliza a documentação técnica, especificações de subsistemas e guias de integração do ecossistema AMB_V2.
+Este diretório centraliza a documentação técnica, especificações de subsistemas, histórico de lançamentos e o backlog de melhorias futuras do ecossistema AMB_V2.
 
-## 🏗️ Topologia de Diretórios do Projeto
+---
 
-Após a refatoração modular v2.3.0, o repositório AMB_V2 está estruturado de forma desacoplada:
+## 📑 Documentos Disponíveis
 
-```
+- **[`CHANGELOG.md`](./CHANGELOG.md):** Histórico completo de versões, novas funcionalidades, refatorações atômicas e correções de bugs.
+- **[`SUGGESTIONS.md`](./SUGGESTIONS.md):** Backlog de sugestões técnicas, melhorias de DX e novas capacidades ainda não implementadas.
+- **[`../amb_cli/config/README.md`](../amb_cli/config/README.md):** Guia de configuração do arquivo `.env` e bootstrap de ambiente.
+- **[`../amb_cli/gui/README.md`](../amb_cli/gui/README.md):** Documentação do Assistente Gráfico Nativo (Tkinter UI Wizard).
+- **[`../amb_cli/pipeline/README.md`](../amb_cli/pipeline/README.md):** Especificação do orquestrador Design-to-Deploy (Stitch + Jules).
+
+---
+
+## 🏗️ Topologia Atual do Repositório
+
+```text
 amb_v2/
-├── amb_cli/                    # 🚀 PACOTE PRINCIPAL DE CÓDIGO FONTE
+├── amb_cli/                    # 🚀 PACOTE PRINCIPAL DE CÓDIGO FONTE (92 arquivos, 0 > 300 linhas)
 │   ├── agents/                 # Orquestração de Agentes (Jules, Gemini, Local)
-│   ├── architecture/           # Construtores de Contexto e Mapeamento de Arquitetura
+│   │   ├── auto_reply_core/    # Núcleo turn-by-turn e aconselhamento cognitivo
+│   │   └── loop_core/          # Despachante de ciclos e assistente de sessão
+│   ├── architecture/           # Construtor de Contexto e Mapeamento de Schemas DB
+│   │   └── context_core/       # Constantes e configurações de camadas
 │   ├── cli_modules/            # Handlers, Parsers e Notificadores do CLI
+│   │   └── handlers_core/      # Handlers desacoplados por domínio
 │   ├── config/                 # Bootstrap, Gerenciador de Regras e Provisionamento
-│   ├── gui/                    # Interface Visual e Wizard Interativo
-│   ├── integrations/           # Integrações Cloud (Jules, Stitch, Antigravity, Git)
-│   ├── pipeline/               # Quality Gatekeeper e Pipeline de Entrega
-│   ├── cli.py                  # Ponto de entrada do CLI
-│   ├── amb_bootstrap.py        # Bootstrap canônico do pacote
-│   ├── __init__.py             # Metadados do pacote amb_cli
-│   └── __main__.py             # Suporte a `python -m amb_cli`
+│   │   ├── config_core/        # Diagnósticos e design tokens
+│   │   └── setup_modules/      # Analisador de projetos e provisionador .amb/
+│   ├── gui/                    # Assistente Gráfico Nativo (Tkinter UI Wizard)
+│   │   └── wizard_core/        # Runner dinâmico e gestor de .env
+│   ├── integrations/           # Clientes Cloud (Jules, Stitch, Antigravity, Git)
+│   │   ├── antigravity/        # Motor cognitivo Gemini e regras ativas
+│   │   ├── jules/              # Cliente REST e sentinela do Google Jules
+│   │   ├── stitch/             # Cliente oficial para Google Stitch SDK
+│   │   └── git/                # GitService local e automação da GitHub CLI (gh)
+│   └── pipeline/               # Orquestrador Design-to-Deploy
+│       └── pipeline_core/      # Estágio de design Stitch e construtor de prompts
 │
-├── docs/                       # 📖 DOCUMENTAÇÃO TÉCNICA E GUIAS
+├── _docs/                      # 📖 DOCUMENTAÇÃO TÉCNICA E HISTÓRICO
+│   ├── CHANGELOG.md            # Histórico consolidado de alterações
+│   ├── SUGGESTIONS.md          # Backlog de propostas não implementadas
 │   └── README.md               # Este índice
 │
-├── tests/                      # 🧪 SUÍTE DE TESTES UNITÁRIOS E DE INTEGRAÇÃO
-│   ├── test_amb_cli.py
+├── tests/                      # 🧪 SUÍTE DE TESTES UNITÁRIOS (158 testes, 100% green)
+│   ├── test_ai_context_builder.py
+│   ├── test_alert_notifier.py
+│   ├── test_antigravity_integration.py
+│   ├── test_auto_reply.py
+│   ├── test_auto_reply_srp.py
+│   ├── test_base_google_client.py
 │   ├── test_bootstrap.py
+│   ├── test_cli_commands.py
+│   ├── test_config.py
+│   ├── test_db_schema_reader.py
 │   ├── test_git_service.py
-│   ├── test_jules_client.py
+│   ├── test_gui_wizard.py
+│   ├── test_jules_integration.py
+│   ├── test_merge_session_pr.py
+│   ├── test_pipeline.py
+│   ├── test_quality_gatekeeper.py
 │   ├── test_rules_manager.py
-│   └── test_stitch_client.py
+│   ├── test_setup_and_analyzer.py
+│   └── test_stitch_integration.py
 │
-├── .agents/                    # 🤖 Antigravity Skills e Instruções
-├── .amb/                       # ⚙️ Configurações de Projeto, Diário e Personas
-├── cli.py                      # 🔄 Shim de Compatibilidade Raiz (`python cli.py`)
-├── amb_bootstrap.py            # 🔄 Shim de Compatibilidade Raiz (`import amb_bootstrap`)
+├── .agents/rules/              # 🤖 Regras de Governança Arquitetural do Ecossistema
+├── .amb/                       # ⚙️ Configurações Locais, Diário de Aprendizado e Personas
+├── cli.py                      # 🔄 Shim Raiz de Compatibilidade (`python cli.py`)
+├── amb_bootstrap.py            # 🔄 Shim Raiz de Compatibilidade (`import amb_bootstrap`)
+├── test_check.py               # 🧪 Smoke Test Rápido de Bootstrap e Imports
 ├── pyproject.toml              # 📦 Especificação de Pacote PEP 517/621
 ├── setup.py                    # 📦 Script de Instalação e Entrypoints
-└── README.md                   # 📄 Visão Geral e Guia Rápido
+└── README.md                   # 📄 Documentação Principal e Guia de Uso
 ```
+
+---
 
 ## 🚀 Modos de Execução Suportados
 
@@ -55,7 +91,7 @@ amb_v2/
    python -m amb_cli check
    ```
 
-3. **Via Script Raiz (Legado/Compatibilidade):**
+3. **Via Script Raiz (Compatibilidade):**
    ```bash
    python cli.py --help
    python cli.py check
