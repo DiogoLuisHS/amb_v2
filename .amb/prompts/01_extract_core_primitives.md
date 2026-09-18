@@ -51,3 +51,11 @@ Crie o diretório `amb_cli/core/` contendo:
    pytest tests/test_bootstrap.py tests/test_config.py
    python -m py_compile amb_cli/core/*.py
    ```
+
+---
+
+## 🚀 Ação Final Obrigatória: Commit e Abertura do Pull Request
+Ao concluir as alterações e validar os testes locais com 100% de sucesso:
+1. Você DEVE commitar todos os novos arquivos em `amb_cli/core/` e os arquivos modificados em `amb_cli/config/`.
+2. Você DEVE submeter formalmente o Pull Request no GitHub para que o pipeline do AMB realize a validação de QA e o auto-merge na branch `main`.
+
