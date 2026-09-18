@@ -164,7 +164,8 @@ def test_parser_git_subcommands(parser):
 # -------------------------------------------------------------
 
 def test_cmd_advisor_delegation():
-    with patch("cli_modules.handlers_core.jules_handler.handle_cmd_jules") as mock_jules:
+    with patch("cli_modules.handlers_core.jules_handler.handle_cmd_jules") as mock_jules, \
+         patch("amb_cli.cli_modules.handlers_core.jules_handler.handle_cmd_jules", mock_jules):
         args = argparse.Namespace(session_id="12345", auto_approve=True)
         cmd_advisor(args)
         assert args.jules_cmd == "reply"
@@ -172,7 +173,8 @@ def test_cmd_advisor_delegation():
 
 
 def test_cmd_validate_delegation():
-    with patch("cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity") as mock_agy:
+    with patch("cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity") as mock_agy, \
+         patch("amb_cli.cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity", mock_agy):
         args = argparse.Namespace(file="test.py", json=True)
         cmd_validate(args)
         assert args.agy_cmd == "validate"
@@ -180,7 +182,8 @@ def test_cmd_validate_delegation():
 
 
 def test_cmd_prompt_synthesize_delegation():
-    with patch("cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity") as mock_agy:
+    with patch("cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity") as mock_agy, \
+         patch("amb_cli.cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity", mock_agy):
         args = argparse.Namespace(synthesize="ideia teste", role="dev")
         cmd_prompt(args)
         assert args.agy_cmd == "prompt"
@@ -189,7 +192,8 @@ def test_cmd_prompt_synthesize_delegation():
 
 
 def test_cmd_agent_loop_parameters():
-    with patch("agents.autonomous_loop.run_autonomous_loop") as mock_loop:
+    with patch("agents.autonomous_loop.run_autonomous_loop") as mock_loop, \
+         patch("amb_cli.agents.autonomous_loop.run_autonomous_loop", mock_loop):
         args = argparse.Namespace(
             loop=True,
             role="engineer",
