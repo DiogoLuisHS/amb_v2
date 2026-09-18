@@ -85,16 +85,16 @@ def test_parse_design_tokens_from_text():
 def test_parse_design_tokens_from_text_empty():
     assert parse_design_tokens_from_text("") == {}
 
-@patch("amb_cli.config.config.find_repo_root")
-@patch("amb_cli.config.config.load_project_json")
-@patch("amb_cli.config.config_core.design_tokens.os.path.exists")
-def test_get_design_system_config(mock_exists, mock_load, mock_find):
-    mock_find.return_value = "/fake/repo"
-    mock_load.return_value = {"design_system": {"displayName": "My System"}}
-    mock_exists.return_value = False # no design.md
+@patch("amb_cli.workspace.design_tokens.os.path.exists")
+def test_get_design_system_config(mock_exists):
+    with patch("amb_cli.workspace.project_context.find_repo_root") as mock_find:
+        with patch("amb_cli.workspace.project_context.load_project_json") as mock_load:
+            mock_find.return_value = "/fake/repo"
+            mock_load.return_value = {"design_system": {"displayName": "My System"}}
+            mock_exists.return_value = False # no design.md
 
-    cfg = get_design_system_config()
-    assert cfg.get("displayName") == "My System"
+            cfg = get_design_system_config()
+            assert cfg.get("displayName") == "My System"
 
 @patch("amb_cli.config.config.find_repo_root")
 @patch("amb_cli.config.config.load_project_json")

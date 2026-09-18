@@ -28,12 +28,12 @@ from amb_cli.workspace.project_context import (
 
 def parse_design_tokens_from_text(text: str) -> Dict[str, Any]:
     """Extrai tokens e diretrizes de design básicos de um texto Markdown (ex: design.md)."""
-    from amb_cli.config.config_core.design_tokens import parse_design_tokens_from_text as _parse
+    from amb_cli.workspace.design_tokens import parse_design_tokens_from_text as _parse
     return _parse(text)
 
 def get_design_system_config(default_file: Optional[str] = None) -> Dict[str, Any]:
     """Resolve as configurações de Design System estritamente a partir das orientações do projeto."""
-    from amb_cli.config.config_core.design_tokens import get_design_system_config as _get
+    from amb_cli.workspace.design_tokens import get_design_system_config as _get
     return _get(default_file)
 
 def main(as_json: bool = False):
