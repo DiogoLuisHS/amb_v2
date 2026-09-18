@@ -88,7 +88,7 @@ def test_create_session_respects_explicit_branch():
     mock_client.create_session = JulesClient.create_session.__get__(mock_client)
     mock_client._request = MagicMock(return_value={"id": "999"})
 
-    with patch("config.get_repo_name", return_value="org/repo"):
+    with patch("workspace.get_repo_name", return_value="org/repo"):
         # Explicit branch provided: must NOT call GitService
         with patch("integrations.git.git_service.GitService.get_current_branch") as mock_git:
             mock_client.create_session("Meu prompt", base_branch="custom-branch")
@@ -105,7 +105,7 @@ def test_create_session_auto_detects_branch():
     mock_client.create_session = JulesClient.create_session.__get__(mock_client)
     mock_client._request = MagicMock(return_value={"id": "999"})
 
-    with patch("config.get_repo_name", return_value="org/repo"):
+    with patch("workspace.get_repo_name", return_value="org/repo"):
         with patch("integrations.git.git_service.GitService.get_current_branch", return_value="feature-x"):
             mock_client.create_session("Meu prompt", base_branch=None)
 
@@ -148,7 +148,7 @@ def test_get_status_and_sources():
         {"id": "1", "state": "AWAITING_USER_FEEDBACK"}
     ])
 
-    with patch("config.get_env", return_value="test-key"):
+    with patch("core.get_env", return_value="test-key"):
         status = mock_client.get_status(repo_filter="org/repo")
         assert status["api_key_configured"] is True
         assert status["api_reachable"] is True

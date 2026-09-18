@@ -10,9 +10,9 @@ import re
 import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
-from config import find_repo_root
+from workspace import find_repo_root
 from integrations.git.git_core.gh_cli import (
     is_gh_installed, check_gh_auth, list_open_prs, get_latest_open_pr,
     get_pr_legacy, create_pr_legacy, mark_pr_ready, approve_pr,

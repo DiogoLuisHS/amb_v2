@@ -2,17 +2,19 @@ import os
 import pytest
 from unittest.mock import patch, mock_open
 
-from amb_cli.config.config import (
+from amb_cli.core import (
     Colors,
     AmbError,
     ConfigurationError,
     ApiExecutionError,
-    find_repo_root,
     get_env,
     require_env,
+)
+from amb_cli.core.diagnostics import run_environment_diagnostics as main
+from amb_cli.workspace import (
+    find_repo_root,
     parse_design_tokens_from_text,
     get_design_system_config,
-    main
 )
 
 def test_colors_ansi():
@@ -96,8 +98,8 @@ def test_get_design_system_config(mock_exists):
             cfg = get_design_system_config()
             assert cfg.get("displayName") == "My System"
 
-@patch("amb_cli.config.config.find_repo_root")
-@patch("amb_cli.config.config.load_project_json")
+@patch("amb_cli.core.diagnostics.find_repo_root")
+@patch("amb_cli.core.diagnostics.load_project_json")
 def test_main_as_json(mock_load, mock_find):
     mock_find.return_value = "/fake/repo"
     mock_load.return_value = {}

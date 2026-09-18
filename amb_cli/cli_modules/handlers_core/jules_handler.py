@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 
 ensure_amb_env()
 
@@ -8,7 +8,7 @@ def handle_cmd_jules(args: Any) -> None:
     """Roteia comandos específicos da integração com o Google Jules."""
     sub = args.jules_cmd
 
-    from config import Colors, log, log_error
+    from core import Colors, log, log_error
 
     if sub in ["status", "check"]:
         from integrations.jules.jules_client import JulesClient

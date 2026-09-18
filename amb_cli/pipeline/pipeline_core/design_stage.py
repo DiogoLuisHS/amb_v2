@@ -1,6 +1,7 @@
 import json
 from typing import Optional, Dict, Any
-from config import Colors, log, get_device_type
+from core import Colors, log
+from workspace import get_device_type
 from integrations.stitch.stitch_client import generate_screen, get_screen, edit_screen, generate_variants, sync_design_system
 
 def process_design_stage(
@@ -17,7 +18,7 @@ def process_design_stage(
         try:
             sync_design_system()
         except Exception as e:
-            from config import log_error
+            from core import log_error
             log_error("SYNC-DS", f"Aviso na sincronização de tokens: {e}")
 
     log("ETAPA 2/6", "🎨 Processando Layout Visual no Stitch SDK...", Colors.HEADER)

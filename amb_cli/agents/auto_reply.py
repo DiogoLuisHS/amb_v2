@@ -9,10 +9,10 @@ import argparse
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import log_error
+from core import log_error
 from integrations.jules.jules_client import JulesClient
 from agents.auto_reply_core import (
     TurnHistoryExtractor,

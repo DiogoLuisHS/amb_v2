@@ -19,7 +19,7 @@ for _p in [str(_amb_cli_dir), str(_amb_root_dir)]:
         sys.path.insert(0, _p)
 
 # Garante a inicialização automática do ambiente AMB_V2
-from config.bootstrap import ensure_amb_env, get_amb_root, get_amb_package_dir
+from core.bootstrap import ensure_amb_env, get_amb_root, get_amb_package_dir
 
 ensure_amb_env()
 

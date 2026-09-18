@@ -13,11 +13,12 @@ import shutil
 import subprocess
 from typing import Optional, Dict, Any
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, load_project_json
-from config.setup_modules.project_analyzer import ProjectAnalyzer
+from core import Colors, log, log_error
+from workspace import find_repo_root, load_project_json
+from workspace.setup.project_analyzer import ProjectAnalyzer
 
 
 class QualityGatekeeper:

@@ -10,10 +10,11 @@ despachar sessões para o Google Jules e cuidar da aprovação e merge de PRs.
 import time
 from typing import Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, AmbError, find_repo_root
+from core import Colors, log, log_error, AmbError
+from workspace import find_repo_root
 from integrations.jules.jules_client import JulesClient
 from integrations.jules.tools.merge_session_pr import approve_and_merge_pr
 from integrations.git.git_service import GitService

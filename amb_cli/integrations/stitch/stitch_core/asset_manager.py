@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Any, Optional
 
-from config import Colors, log, require_env, ApiExecutionError
+from core import Colors, log, require_env, ApiExecutionError
 
 def download_assets_core(client: Any, output_dir: str, project_id: Optional[str] = None) -> Dict[str, Any]:
     """Baixa todas as telas e assets do projeto Stitch para um diretório local."""

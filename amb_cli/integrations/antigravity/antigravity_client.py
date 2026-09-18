@@ -12,20 +12,22 @@ import shutil
 import subprocess
 from typing import Dict, Any, Optional, List
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import (
+from core import (
     Colors,
     log,
     log_error,
     get_env,
     require_env,
     ApiExecutionError,
+)
+from workspace import (
     find_repo_root,
     load_project_json,
     RulesManager,
-    get_rules_manager
+    get_rules_manager,
 )
 from integrations.common.base_google_client import BaseGoogleClient
 from integrations.antigravity.antigravity_core.gemini_backend import GeminiBackend

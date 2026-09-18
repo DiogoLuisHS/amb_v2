@@ -12,10 +12,10 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, get_env
+from core import Colors, log, log_error, get_env
 from integrations.git.git_service import GitService
 from .project_analyzer import ProjectAnalyzer
 from .amb_provisioner import AmbProvisioner

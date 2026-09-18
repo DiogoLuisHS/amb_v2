@@ -12,10 +12,10 @@ import os
 import argparse
 from typing import Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, ApiExecutionError
+from core import Colors, log, log_error, ApiExecutionError
 from integrations.git.git_service import GitService
 
 

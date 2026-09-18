@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 
 ensure_amb_env()
 
@@ -8,7 +8,7 @@ def handle_cmd_git(args: Any) -> None:
     """Gerencia comandos locais do Git e ciclo de vida de Pull Requests."""
     sub = getattr(args, "git_cmd", None)
     from integrations.git.git_service import GitService
-    from config import Colors, log
+    from core import Colors, log
 
     if sub in ["status", None]:
         from integrations.git.tools.git_status import run_git_status

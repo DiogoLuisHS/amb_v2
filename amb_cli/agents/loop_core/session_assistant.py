@@ -9,10 +9,10 @@ durante o ciclo de vida autônomo de uma sessão no Jules.
 import time
 from typing import Optional, Dict, Any
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error
+from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
 from agents.auto_reply import advise_and_reply, get_last_conversation_turn
 

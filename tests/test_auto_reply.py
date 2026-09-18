@@ -8,7 +8,7 @@ from pathlib import Path
 _root = Path(__file__).resolve().parent.parent
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
 from auto_reply import extract_activity_text, get_last_conversation_turn

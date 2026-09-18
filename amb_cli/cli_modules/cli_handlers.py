@@ -2,8 +2,8 @@ import os
 import sys
 import json
 from typing import Any
-from config.bootstrap import ensure_amb_env
-from config import Colors, log, log_error
+from core.bootstrap import ensure_amb_env
+from core import Colors, log, log_error
 
 ensure_amb_env()
 
@@ -12,7 +12,7 @@ ensure_amb_env()
 # -------------------------------------------------------------
 def cmd_setup(args: Any) -> None:
     """Executa o assistente de setup no repositório atual."""
-    from config.setup_project import run_setup, print_setup_prompt
+    from workspace.setup.setup_project import run_setup, print_setup_prompt
     if getattr(args, "prompt", False):
         print_setup_prompt()
     else:
@@ -32,14 +32,14 @@ def cmd_prompt(args: Any) -> None:
         args.idea = args.synthesize
         handle_cmd_antigravity(args)
     else:
-        from config.setup_project import print_setup_prompt
+        from workspace.setup.setup_project import print_setup_prompt
         print_setup_prompt()
 
 
 def cmd_check(args: Any) -> None:
     """Verifica e valida as chaves de API e configurações do projeto ativo."""
-    import config as cfg
-    cfg.main(as_json=getattr(args, "json", False))
+    from core.diagnostics import run_environment_diagnostics
+    run_environment_diagnostics(as_json=getattr(args, "json", False))
 
 
 # -------------------------------------------------------------
@@ -72,7 +72,7 @@ def cmd_gui(args: Any) -> None:
 
 def cmd_config(args: Any) -> None:
     """Gerencia preferências e controles do AMB_V2."""
-    from config import set_gemini_confirmation, is_gemini_confirmation_required, Colors
+    from core import set_gemini_confirmation, is_gemini_confirmation_required, Colors
     if getattr(args, "gemini_confirm", None) is not None:
         enable = args.gemini_confirm.lower() in ["on", "true", "1", "yes", "sim", "ativar"]
         set_gemini_confirmation(enable)

@@ -13,10 +13,11 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, find_repo_root, log_error
+from core import Colors, log_error
+from workspace import find_repo_root
 
 
 class DbSchemaReader:

@@ -4,7 +4,7 @@
 import sys
 import argparse
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
 from stitch_client import edit_screen, Colors, log, log_error

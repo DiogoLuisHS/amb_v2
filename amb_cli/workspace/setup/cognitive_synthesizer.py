@@ -1,6 +1,6 @@
 import subprocess
 from typing import Dict, Any
-from config import get_env
+from core import get_env
 
 
 class CognitiveSynthesizer:

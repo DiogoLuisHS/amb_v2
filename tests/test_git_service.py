@@ -9,11 +9,11 @@ from unittest.mock import MagicMock, patch
 _root = Path(__file__).resolve().parent.parent
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
 import pytest
-from config import ApiExecutionError
+from core import ApiExecutionError
 from integrations.git.git_service import GitService
 from integrations.git.tools.git_status import run_git_status
 from integrations.git.tools.pr_manager import run_pr_manager

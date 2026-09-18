@@ -17,10 +17,12 @@ for _p in [str(_pkg), str(_root)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log_error, find_repo_root, load_env_file, get_repo_name, AmbError  # noqa: E402
+from core import Colors, log_error, load_env_file
+from workspace import find_repo_root, get_repo_name
+from core import AmbError  # noqa: E402
 from cli_modules.cli_parsers import create_parser  # noqa: E402
 
 

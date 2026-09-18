@@ -10,14 +10,15 @@ import sys
 import argparse
 from typing import Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name, AmbError
+from core import Colors, log, log_error, AmbError
+from workspace import find_repo_root, get_repo_name
 from integrations.jules.jules_client import JulesClient
 from integrations.git.git_service import GitService
 from integrations.antigravity.antigravity_client import AntigravityClient
-from config import get_rules_manager
+from workspace import get_rules_manager
 
 from pipeline.quality_gatekeeper import QualityGatekeeper
 from amb_cli.pipeline.pipeline_core.prompt_builder import parse_single_prompt, clean_html_for_summary, synthesize_stitch_ui, build_executive_prompt

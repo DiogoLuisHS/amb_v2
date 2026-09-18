@@ -11,10 +11,10 @@ from unittest.mock import MagicMock, patch
 _root = Path(__file__).resolve().parent.parent
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import ApiExecutionError
+from core import ApiExecutionError
 from integrations.common.base_google_client import BaseGoogleClient, mask_sensitive_data
 
 

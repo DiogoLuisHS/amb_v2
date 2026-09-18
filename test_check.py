@@ -3,7 +3,7 @@
 """Script utilitário de validação rápida (smoke check) do ambiente e bootstrap."""
 import amb_bootstrap
 from ai_context_builder import generate_context
-from config import get_repo_name, find_repo_root
+from workspace import get_repo_name, find_repo_root
 
 if __name__ == "__main__":
     print(f"✅ Bootstrap inicializado com sucesso.")

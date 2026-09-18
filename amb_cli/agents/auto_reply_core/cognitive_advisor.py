@@ -11,10 +11,11 @@ import functools
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import find_repo_root, log_error, RulesManager
+from core import log_error
+from workspace import find_repo_root, RulesManager
 from integrations.antigravity.antigravity_client import AntigravityClient
 
 

@@ -5,7 +5,8 @@ import re
 import shutil
 import subprocess
 from typing import Any, Dict, List, Optional, Tuple
-from config import ApiExecutionError, get_repo_name, find_repo_root
+from core import ApiExecutionError
+from workspace import get_repo_name, find_repo_root
 
 def _run_gh(cmd: List[str], cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(

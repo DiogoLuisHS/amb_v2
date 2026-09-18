@@ -13,7 +13,7 @@ for p in [str(PKG_DIR), str(ROOT_DIR)]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from amb_cli.config.bootstrap import (
+from amb_cli.core.bootstrap import (
     ensure_amb_env,
     get_amb_root,
     get_amb_package_dir,

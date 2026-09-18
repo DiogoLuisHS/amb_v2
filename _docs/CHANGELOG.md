@@ -6,6 +6,27 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [2.4.0] — 2026-09-18
+
+### 🏗️ Arquitetura & Refatoração (Segregação Core vs Workspace)
+- **Desacoplamento Total de Configurações:** Separação estrita entre a infraestrutura interna do Framework AMB (`amb_cli/core/`) e as configurações do projeto consumidor (`amb_cli/workspace/`).
+- **Eliminação de Módulos Facade Obsoletos:** Remoção completa da pasta legada `amb_cli/config/` e de todos os arquivos temporários de retrocompatibilidade ("Facade Module").
+- **Novo Pacote `amb_cli/core/` (Infraestrutura AMB):**
+  - `bootstrap.py`: Gestão de `sys.path` e canônicos subdiretórios.
+  - `logger.py`: Logging padronizado e cores ANSI (`Colors`).
+  - `exceptions.py`: Hierarquia de exceções (`AmbError`, `ConfigurationError`, `ApiExecutionError`).
+  - `env.py`: Resolução segura e tipada de variáveis de ambiente.
+  - `diagnostics.py`: Diagnóstico de saúde e credenciais do ambiente (`amb check`).
+- **Novo Pacote `amb_cli/workspace/` (Projeto Consumidor Alvo):**
+  - `project_context.py`: Identificação da raiz do repositório, metadados (`amb_project.json`) e dispositivo.
+  - `rules_manager.py`: Governança e injeção de regras arquiteturais (`.agents/rules/`).
+  - `design_tokens.py`: Extração e parser de tokens visuais.
+  - `setup/`: Subpacote contendo analisador de stack (`project_analyzer.py`), provisionador de ambiente (`amb_provisioner.py`), sintetizador cognitivo (`cognitive_synthesizer.py`) e orquestrador (`setup_project.py`).
+- **Migração Global de Imports:** 100% dos arquivos do pacote `amb_cli/` e da suíte `tests/` atualizados para referenciar diretamente `core` e `workspace`.
+- **158 Testes Unitários Verificados:** Todos os testes passando com 100% de sucesso.
+
+---
+
 ## [2.3.0] — 2026-09-18
 
 ### ✨ Adicionado

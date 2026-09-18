@@ -12,10 +12,10 @@ import json
 import argparse
 from typing import List, Dict, Any, Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error
+from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
 
 

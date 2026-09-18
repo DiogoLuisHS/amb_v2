@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Any
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 
 ensure_amb_env()
 
@@ -9,7 +9,7 @@ def handle_cmd_stitch(args: Any) -> None:
     """Implementação isolada do comando stitch."""
     sub = args.stitch_cmd
     from integrations.stitch.stitch_client import StitchClient
-    from config import Colors, log
+    from core import Colors, log
 
     client = StitchClient()
 

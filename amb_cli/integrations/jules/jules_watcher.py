@@ -11,10 +11,11 @@ import sys
 import os
 from typing import List, Dict, Any, Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import get_env, log_error, get_repo_name  # noqa: E402
+from core import get_env, log_error
+from workspace import get_repo_name  # noqa: E402
 from integrations.jules.jules_client import JulesClient  # noqa: E402
 from cli_modules.alert_notifier import notify_attention  # noqa: E402
 
@@ -177,7 +178,7 @@ class JulesWatcher:
 def stream_session_activities(session_id: str, poll_interval: int = 4, client: Optional[JulesClient] = None) -> None:
     """Faz streaming ao vivo das atividades e saídas da sessão do Jules no terminal."""
     import time
-    from config import Colors, log
+    from core import Colors, log
     from auto_reply_core.turn_extractor import TurnHistoryExtractor
 
     c = client or JulesClient()

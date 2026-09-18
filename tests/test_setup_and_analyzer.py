@@ -2,10 +2,10 @@ import os
 import json
 import pytest
 import tempfile
-from config.setup_modules.project_analyzer import ProjectAnalyzer
-from config.setup_modules.amb_provisioner import AmbProvisioner
-from config.setup_project import run_setup
-from config.config import main as run_check
+from workspace.setup.project_analyzer import ProjectAnalyzer
+from workspace.setup.amb_provisioner import AmbProvisioner
+from workspace.setup.setup_project import run_setup
+from core import run_environment_diagnostics as run_check
 
 
 def test_project_analyzer_detect_python():

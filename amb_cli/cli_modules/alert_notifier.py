@@ -9,10 +9,10 @@ Responsabilidade Única: Formatar e emitir alertas destacados no terminal com de
 import sys
 from typing import Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors
+from core import Colors
 
 
 def play_beep() -> None:

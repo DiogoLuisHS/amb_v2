@@ -356,13 +356,17 @@ amb git pr merge 42
 │   │   ├── cli_handlers.py          # Despacho enxuto de subcomandos
 │   │   ├── cli_parsers.py           # Definição modular de argumentos e subcomandos
 │   │   └── handlers_core/           # Handlers desacoplados por domínio (antigravity, git, jules, stitch)
-│   ├── config/                      # Governança de ambiente, bootstrap e setup
-│   │   ├── config.py                # Diagnóstico de saúde e variáveis (.env)
+│   ├── core/                        # Núcleo de infraestrutura da CLI (Framework AMB)
 │   │   ├── bootstrap.py             # Bootstrap centralizado de ambiente e sys.path
-│   │   ├── rules_manager.py         # Governança e cache das regras arquiteturais
-│   │   ├── setup_project.py         # Orquestrador do fluxo amb setup
-│   │   ├── config_core/             # Núcleo de diagnósticos e tokens de design
-│   │   └── setup_modules/           # Analisador de projetos, provisionador .amb/ e sintetizador
+│   │   ├── diagnostics.py           # Diagnóstico de saúde e credenciais (amb check)
+│   │   ├── env.py                   # Gerenciamento seguro de variáveis (.env)
+│   │   ├── exceptions.py            # Hierarquia canônica de exceções (AmbError)
+│   │   └── logger.py                # Logging formatado e cores ANSI
+│   ├── workspace/                   # Contexto e governança do projeto consumidor alvo
+│   │   ├── project_context.py       # Identificação de raiz, repo e metadados
+│   │   ├── rules_manager.py         # Governança e cache de regras (.agents/rules)
+│   │   ├── design_tokens.py         # Extração e injeção de tokens de design
+│   │   └── setup/                   # Analisador de stack, provisionador .amb/ e wizard
 │   ├── gui/                         # Assistente Gráfico Nativo (UI Wizard)
 │   │   ├── wizard_app.py            # Janela mestre e launcher do Wizard (Tkinter)
 │   │   └── wizard_core/             # Runner dinâmico, gestor de .env e parser extractor
@@ -431,8 +435,7 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 | Arquivo | Descrição |
 | :--- | :--- |
 | [`_docs/SUGGESTIONS.md`](./_docs/SUGGESTIONS.md) | Roadmap estratégico e priorização MoSCoW (MUST/SHOULD/COULD/WON'T) das próximas sprints. |
-| [`_docs/CHANGELOG.md`](./_docs/CHANGELOG.md) | Histórico de versões, melhorias arquiteturais, novas funcionalidades e correções de bugs. |
-| [`amb_cli/config/README.md`](./amb_cli/config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
+| [`_docs/README.md`](./_docs/README.md) | Índice geral da arquitetura, subsistemas e topologia do repositório. |
 | [`amb_cli/gui/README.md`](./amb_cli/gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
 | [`amb_cli/pipeline/README.md`](./amb_cli/pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
 

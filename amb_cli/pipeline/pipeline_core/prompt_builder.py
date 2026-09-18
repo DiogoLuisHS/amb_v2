@@ -1,6 +1,6 @@
 import re
 from typing import Optional, Any
-from config import Colors, log
+from core import Colors, log
 
 def parse_single_prompt(markdown_text: str) -> tuple[str, str]:
     """Extrai seção visual e seção de engenharia de um único arquivo markdown se presentes."""

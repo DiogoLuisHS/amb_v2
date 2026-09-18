@@ -11,10 +11,11 @@ import argparse
 from pathlib import Path
 from typing import List, Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, find_repo_root, get_repo_name, AmbError
+from core import Colors, log, log_error, AmbError
+from workspace import find_repo_root, get_repo_name
 from integrations.git.git_service import GitService
 from integrations.jules.jules_client import JulesClient
 from agents.local_agent_runner import get_personas_directory, discover_personas

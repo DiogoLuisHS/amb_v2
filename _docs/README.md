@@ -8,7 +8,6 @@ Este diretório centraliza a documentação técnica, especificações de subsis
 
 - **[`CHANGELOG.md`](./CHANGELOG.md):** Histórico completo de versões, novas funcionalidades, refatorações atômicas e correções de bugs.
 - **[`SUGGESTIONS.md`](./SUGGESTIONS.md):** Backlog de sugestões técnicas, melhorias de DX e novas capacidades ainda não implementadas.
-- **[`../amb_cli/config/README.md`](../amb_cli/config/README.md):** Guia de configuração do arquivo `.env` e bootstrap de ambiente.
 - **[`../amb_cli/gui/README.md`](../amb_cli/gui/README.md):** Documentação do Assistente Gráfico Nativo (Tkinter UI Wizard).
 - **[`../amb_cli/pipeline/README.md`](../amb_cli/pipeline/README.md):** Especificação do orquestrador Design-to-Deploy (Stitch + Jules).
 
@@ -26,9 +25,9 @@ amb_v2/
 │   │   └── context_core/       # Constantes e configurações de camadas
 │   ├── cli_modules/            # Handlers, Parsers e Notificadores do CLI
 │   │   └── handlers_core/      # Handlers desacoplados por domínio
-│   ├── config/                 # Bootstrap, Gerenciador de Regras e Provisionamento
-│   │   ├── config_core/        # Diagnósticos e design tokens
-│   │   └── setup_modules/      # Analisador de projetos e provisionador .amb/
+│   ├── core/                   # Núcleo de Infraestrutura do Framework AMB (bootstrap, logger, env, diagnostics)
+│   ├── workspace/              # Contexto e Governança do Projeto Consumidor
+│   │   └── setup/              # Analisador de projetos, provisionador .amb/ e wizard
 │   ├── gui/                    # Assistente Gráfico Nativo (Tkinter UI Wizard)
 │   │   └── wizard_core/        # Runner dinâmico e gestor de .env
 │   ├── integrations/           # Clientes Cloud (Jules, Stitch, Antigravity, Git)

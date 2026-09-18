@@ -1,14 +1,16 @@
 import os
 from typing import Dict, Any, List, Optional
 
-from config import (
+from core import (
     Colors,
     log,
     require_env,
     ApiExecutionError,
+)
+from workspace import (
     find_repo_root,
     get_design_system_config,
-    load_project_json
+    load_project_json,
 )
 
 def create_design_system_core(client: Any, design_system: Dict[str, Any], project_id: Optional[str] = None) -> Dict[str, Any]:

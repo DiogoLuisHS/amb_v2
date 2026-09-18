@@ -9,7 +9,7 @@ _root = Path(__file__).resolve().parent.parent
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
 
-from config.bootstrap import get_amb_root, get_amb_package_dir, ensure_amb_env, add_to_sys_path, CANONICAL_SUBMODULES
+from core.bootstrap import get_amb_root, get_amb_package_dir, ensure_amb_env, add_to_sys_path, CANONICAL_SUBMODULES
 
 
 def test_get_amb_root():
@@ -44,9 +44,6 @@ def test_canonical_submodules_list():
         "workspace",
         "workspace/project_context",
         "workspace/setup",
-        "config",
-        "config/config_core",
-        "config/setup_modules",
         "agents",
         "agents/auto_reply_core",
         "agents/loop_core",
@@ -75,12 +72,12 @@ def test_canonical_submodules_list():
 def test_add_to_sys_path():
     pkg_dir = get_amb_package_dir()
     # Adicionar caminho existente
-    config_dir = pkg_dir / "config"
-    result = add_to_sys_path(config_dir)
-    assert str(config_dir) in sys.path
+    core_dir = pkg_dir / "core"
+    result = add_to_sys_path(core_dir)
+    assert str(core_dir) in sys.path
     
     # Adicionar novamente deve retornar False (idempotente)
-    assert add_to_sys_path(config_dir) is False
+    assert add_to_sys_path(core_dir) is False
 
 
 

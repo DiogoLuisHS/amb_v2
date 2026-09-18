@@ -8,9 +8,9 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cli_modules.cli_parsers import create_parser
 try:
-    from config import find_repo_root
+    from workspace import find_repo_root
 except ImportError:
-    from config.config import find_repo_root
+    from core import find_repo_root
 
 from gui.wizard_core.parser_extractor import extract_commands, clean_command_map, detect_repo_name
 from gui.wizard_core.runner_tab import RunnerTab

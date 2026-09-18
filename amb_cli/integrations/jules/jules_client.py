@@ -9,10 +9,10 @@ Responsabilidade Única: Executar chamadas HTTP autenticadas para o endpoint ofi
 import os
 from typing import Dict, Any, Optional, List
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log_error, require_env
+from core import Colors, log_error, require_env
 from integrations.common.base_google_client import BaseGoogleClient
 from integrations.jules.jules_core.session_helpers import normalize_session_id, extract_pull_request, compute_status
 
@@ -75,7 +75,7 @@ class JulesClient(BaseGoogleClient):
                     prompt = f.read()
             except Exception:
                 pass
-        from config import get_repo_name
+        from workspace import get_repo_name
         resolved_source = source_name or f"sources/github/{get_repo_name()}"
 
         if not base_branch:
@@ -150,7 +150,8 @@ class JulesClient(BaseGoogleClient):
 
     def get_status(self, repo_filter: Optional[str] = None) -> Dict[str, Any]:
         """Retorna diagnóstico completo de conectividade, chave, fontes e sessões ativas."""
-        from config import get_repo_name, get_env
+        from core import get_env
+        from workspace import get_repo_name
         target_repo = repo_filter or get_repo_name()
         key = get_env("JULES_API_KEY")
 
@@ -220,7 +221,7 @@ class JulesClient(BaseGoogleClient):
                 act_res = self.list_activities(session_id=sid, page_size=page_size)
                 return sid, (act_res if isinstance(act_res, list) else act_res.get("activities", []))
             except Exception as e:
-                from config import log_error
+                from core import log_error
                 log_error("JULES-CLIENT", f"Falha ao buscar atividades da sessão {sid}: {e}")
                 return sid, []
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -231,7 +232,7 @@ class JulesClient(BaseGoogleClient):
                     sid, acts = future.result()
                     results[sid] = acts
                 except Exception as e:
-                    from config import log_error
+                    from core import log_error
                     log_error("JULES-CLIENT", f"Erro fatal ao processar atividades da sessão {sid}: {e}")
                     results[sid] = []
         return results

@@ -3,9 +3,9 @@ import os
 from typing import Dict, Any
 
 try:
-    from config import get_repo_name
+    from workspace import get_repo_name
 except ImportError:
-    from config.config import get_repo_name
+    from core import get_repo_name
 
 
 def extract_commands(parser: argparse.ArgumentParser, prefix: str = "") -> Dict[str, Any]:

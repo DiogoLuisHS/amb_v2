@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Set
 
-from config import ApiExecutionError, Colors, log, log_error
+from core import ApiExecutionError, Colors, log, log_error
 
 
 def mask_sensitive_data(text: str) -> str:

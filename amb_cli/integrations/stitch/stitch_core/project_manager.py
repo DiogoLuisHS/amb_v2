@@ -4,7 +4,7 @@ Gerenciamento de projetos no Stitch SDK.
 """
 
 from typing import Dict, Any, List, Optional
-from config import Colors, log, require_env
+from core import Colors, log, require_env
 
 
 def get_project_core(client: Any, project_id: Optional[str] = None) -> Dict[str, Any]:

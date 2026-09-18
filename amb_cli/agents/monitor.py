@@ -10,10 +10,10 @@ Stitch, Antigravity) e notificar instantaneamente o desenvolvedor ou auto-respon
 import time
 from datetime import datetime
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, get_env
+from core import Colors, log, log_error, get_env
 # Regra 03: Imports Limpos e organizados (Sem imports mortos ou tardios)
 from agents.auto_reply import advise_and_reply
 from integrations.jules.jules_watcher import JulesWatcher

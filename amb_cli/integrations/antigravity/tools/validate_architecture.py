@@ -13,10 +13,10 @@ import json
 import argparse
 from typing import Optional, Dict, Any
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, log, log_error, ApiExecutionError
+from core import Colors, log, log_error, ApiExecutionError
 from integrations.antigravity.antigravity_client import validate_code
 
 

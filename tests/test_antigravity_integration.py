@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from config.rules_manager import RulesManager, get_rules_manager
+from workspace.rules_manager import RulesManager, get_rules_manager
 from integrations.antigravity.antigravity_client import (
     AntigravityClient,
     synthesize_prompt,

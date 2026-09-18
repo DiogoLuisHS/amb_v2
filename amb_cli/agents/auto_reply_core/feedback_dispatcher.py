@@ -10,10 +10,11 @@ aprovar planos, listar sessões aguardando feedback e coordenar fluxos interativ
 import sys
 from typing import Any, Dict, List, Optional
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import Colors, get_repo_name, log, log_error
+from core import Colors, log, log_error
+from workspace import get_repo_name
 from integrations.jules.jules_client import JulesClient
 from .turn_extractor import TurnHistoryExtractor
 from .cognitive_advisor import CognitiveAdvisor

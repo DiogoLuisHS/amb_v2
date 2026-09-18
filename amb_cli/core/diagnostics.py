@@ -1,13 +1,25 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+🔍 AMB_V2 - Diagnóstico Central de Ambiente e Saúde do Projeto (SRP)
+Localização: amb_cli/core/diagnostics.py
+Responsabilidade Única: Validar e exibir o checklist visual das credenciais do AMB
+e o contexto do workspace do projeto consumidor.
+"""
+
 import os
 import json
 import shutil
 from typing import Dict, Any
 
+from amb_cli.core.logger import Colors
+from amb_cli.core.env import get_env
+from amb_cli.workspace.project_context import find_repo_root, load_project_json
+from amb_cli.workspace.setup.project_analyzer import ProjectAnalyzer
+
+
 def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
     """Valida e exibe o checklist visual de configurações e saúde do repositório ativo."""
-    from amb_cli.config.config import find_repo_root, load_project_json, get_env, Colors
-    from amb_cli.workspace.setup.project_analyzer import ProjectAnalyzer
-
     root = find_repo_root()
     p_meta = load_project_json()
     p_json_exists = bool(p_meta)

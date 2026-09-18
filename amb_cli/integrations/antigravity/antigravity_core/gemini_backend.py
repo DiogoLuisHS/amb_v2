@@ -1,5 +1,5 @@
 from typing import Optional
-from config import require_env, log, Colors, ApiExecutionError
+from core import require_env, log, Colors, ApiExecutionError
 from integrations.common.base_google_client import BaseGoogleClient
 
 class GeminiBackend:

@@ -14,16 +14,16 @@ import shutil
 import subprocess
 from typing import Dict, Any, List, Optional
 
-from config import (
+from core import (
     Colors,
     log,
     log_error,
     require_env,
     get_env,
-    get_device_type,
     ApiExecutionError,
     ConfigurationError,
 )
+from workspace import get_device_type
 from amb_cli.integrations.stitch.stitch_core.asset_manager import (
     download_assets_core,
     upload_asset_core,

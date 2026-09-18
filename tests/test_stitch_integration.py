@@ -10,10 +10,10 @@ import tempfile
 from unittest.mock import patch, MagicMock
 import pytest
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import ConfigurationError, ApiExecutionError
+from core import ConfigurationError, ApiExecutionError
 from integrations.stitch.stitch_client import (
     StitchClient,
     generate_screen,
@@ -274,7 +274,7 @@ def test_stitch_client_sync_design_system_with_official_tools(monkeypatch):
 
 
 def test_parse_design_tokens_and_config():
-    from config import parse_design_tokens_from_text, get_design_system_config
+    from workspace import parse_design_tokens_from_text, get_design_system_config
     tokens = parse_design_tokens_from_text("--primary: #FF5722;\nmode: DARK\nfont: Geist\nraio: 12")
     assert tokens["customColor"] == "#FF5722"
     assert tokens["colorMode"] == "DARK"

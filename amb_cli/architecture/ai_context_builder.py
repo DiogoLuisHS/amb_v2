@@ -13,10 +13,10 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Set, Dict, List, Any, Optional, Tuple
 
-from config.bootstrap import ensure_amb_env
+from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
-from config import find_repo_root
+from workspace import find_repo_root
 
 from amb_cli.architecture.context_core.constants import (
     CODE_EXTENSIONS,

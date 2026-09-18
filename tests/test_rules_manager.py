@@ -3,7 +3,7 @@ import os
 import pytest
 from pathlib import Path
 
-from amb_cli.config.rules_manager import RulesManager, get_rules_manager, load_project_rules
+from amb_cli.workspace.rules_manager import RulesManager, get_rules_manager, load_project_rules
 
 @pytest.fixture(autouse=True)
 def clear_rules_manager_cache():
