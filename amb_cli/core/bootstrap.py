@@ -29,6 +29,7 @@ CANONICAL_SUBMODULES: List[str] = [
     "core/bootstrap",
     "workspace",
     "workspace/project_context",
+    "workspace/setup",
     "config",
     "config/config_core",
     "config/setup_modules",
