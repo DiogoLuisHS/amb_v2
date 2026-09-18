@@ -40,6 +40,7 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("prompt", "Exibe ou sintetiza com IA o Prompt de Desenvolvimento.", cmd_prompt)
     p.add_argument("--synthesize", "-s", help="Ideia informal a ser sintetizada em prompt estruturado com IA.")
     p.add_argument("--role", "-r", default="general", help="Especialidade para sintetização do prompt.")
+    p.add_argument("--output", "-o", help="Caminho do arquivo para salvar o prompt sintetizado.")
     p = _c("check", "Valida chaves e configurações do projeto ativo.", cmd_check, ["status"])
     p.add_argument("--json", action="store_true", help="Exibe o diagnóstico em formato JSON estruturado.")
     p = _c("config", "Configura preferências de IA, quotas e autorizações do AMB_V2.", cmd_config, ["settings", "pref"])
@@ -65,6 +66,8 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--loop", "-c", "--continuous", action="store_true", help="Executa o ciclo contínuo e autônomo de personas.")
     p.add_argument("--max-cycles", type=int, help="Limite de ciclos no modo loop (se omitido, roda continuamente).")
     p.add_argument("--branch", "-b", help="Branch de início para o Jules (se omitido, auto-detecta a branch ativa do Git).")
+    p.add_argument("--modules", "-m", help="Lista de módulos para rotacionar no loop (separados por vírgula).")
+    p.add_argument("--no-auto-merge", action="store_true", help="Desabilita o merge automático de PR no modo loop.")
     p.add_argument("--personas-dir", help="Pasta customizada de personas.")
 
     p = _c("jules", "Comandos de integração com o Google Jules.", cmd_jules)
@@ -174,6 +177,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     p = _c("validate", "Audita um arquivo contra as regras arquiteturais do repositório.", cmd_validate, ["lint", "audit"])
     p.add_argument("file", help="Caminho do arquivo de código a ser auditado.")
+    p.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
 
     p = _c("pipeline", "Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub) com prompts separados para Design e Engenharia.", cmd_pipeline, ["run", "deploy"])
     p.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch.")

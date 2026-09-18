@@ -27,16 +27,10 @@ def cmd_setup(args: Any) -> None:
 def cmd_prompt(args: Any) -> None:
     """Exibe o Prompt Mestre ou sintetiza um prompt com IA a partir de uma ideia informal."""
     if getattr(args, "synthesize", None):
-        from integrations.antigravity.tools.synthesize_prompt import run_synthesize_prompt
-        prompt_res = run_synthesize_prompt(
-            raw_idea=args.synthesize,
-            role=getattr(args, "role", "general") or "general"
-        )
-        print("\n" + "=" * 75)
-        print(f"{Colors.BOLD}🧠 PROMPT ESTRUTURADO GERADO COM IA:{Colors.RESET}")
-        print("=" * 75)
-        print(prompt_res)
-        print("=" * 75 + "\n")
+        from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
+        args.agy_cmd = "prompt"
+        args.idea = args.synthesize
+        handle_cmd_antigravity(args)
     else:
         from config.setup_project import print_setup_prompt
         print_setup_prompt()
@@ -64,23 +58,10 @@ def cmd_monitor(args: Any) -> None:
 
 
 def cmd_advisor(args: Any) -> None:
-    """Menu cognitivo para tirar dúvidas pendentes do Jules com IA."""
-    sid = getattr(args, "session_id_flag", None) or getattr(args, "session_id", None)
-    if sid:
-        sid = str(sid).strip().rstrip("/").split("/")[-1]
-        msg = getattr(args, "message", None)
-        if msg:
-            from integrations.jules.jules_client import JulesClient
-            client = JulesClient()
-            client.send_message(session_id=sid, message=msg)
-            from config import Colors, log
-            log("JULES", f"✅ Mensagem direta enviada para a sessão {sid}!", Colors.GREEN)
-        else:
-            from agents.auto_reply import advise_and_reply
-            advise_and_reply(session_id=sid, auto_approve=args.auto_approve)
-    else:
-        from agents.auto_reply import run_auto_advisor
-        run_auto_advisor(auto_approve=args.auto_approve)
+    """Menu cognitivo para tirar dúvidas pendentes do Jules com IA (atalho para amb jules reply)."""
+    from cli_modules.handlers_core.jules_handler import handle_cmd_jules
+    args.jules_cmd = "reply"
+    handle_cmd_jules(args)
 
 
 def cmd_gui(args: Any) -> None:
@@ -115,12 +96,16 @@ def cmd_agent(args: Any) -> None:
         max_c = getattr(args, "max_cycles", None)
         if max_c is None and getattr(args, "prompt", None) and not getattr(args, "loop", False):
             max_c = 1
+        raw_modules = getattr(args, "modules", None)
+        mod_list = [m.strip() for m in raw_modules.split(",")] if raw_modules else None
         run_autonomous_loop(
             role=args.role,
             all_personas=getattr(args, "all", False),
             prompt_file=prompt_file,
+            modules=mod_list,
             max_cycles=max_c,
-            branch=getattr(args, "branch", None)
+            branch=getattr(args, "branch", None),
+            no_auto_merge=getattr(args, "no_auto_merge", False)
         )
         return
 
@@ -177,15 +162,10 @@ def cmd_antigravity(args: Any) -> None:
 
 
 def cmd_validate(args: Any) -> None:
-    """Audita um arquivo de código contra as regras arquiteturais do repositório."""
-    from integrations.antigravity.tools.validate_architecture import run_validate_architecture
-    log("VALIDATE", f"Auditando arquivo {args.file}...", Colors.CYAN)
-    res = run_validate_architecture(args.file)
-    print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}RELATÓRIO DE AUDITORIA ARQUITETURAL:{Colors.RESET}")
-    print("=" * 75)
-    print(res)
-    print("=" * 75 + "\n")
+    """Audita um arquivo de código contra as regras arquiteturais do repositório (atalho para amb agy validate)."""
+    from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
+    args.agy_cmd = "validate"
+    handle_cmd_antigravity(args)
 
 
 def cmd_pipeline(args: Any) -> None:

@@ -39,8 +39,10 @@ Gerencia o provisionamento, checklist de credenciais e geração de prompts para
 | `amb setup --path <dir>` | — | Executa o setup apontando para um diretório de projeto específico em vez do atual. |
 | `amb setup --dry-run` | — | Simula a detecção de stack e comandos de QA sem gravar arquivos em disco. |
 | `amb prompt` | `amb setup -p` | Imprime o Prompt Mestre de Auto-Configuração para colar em novas IAs. |
-| `amb prompt --synthesize "<ideia>"` | `-s` | Converte uma ideia informal em prompt arquitetural estruturado com Gemini. |
+| `amb prompt --synthesize "<ideia>"` | `-s` | Converte uma ideia informal em prompt arquitetural estruturado com Gemini (`-o` para salvar). |
 | `amb prompt --role <especialidade>` | `-r` | Define a especialidade da IA para a síntese do prompt (ex: `frontend`, `security`). |
+| `amb config` | `settings`, `pref` | Exibe o status da autorização prévia para chamadas ao Gemini. |
+| `amb config --gemini-confirm <on/off>` | — | Ativa (`on`) ou desativa (`off`) a exigência de confirmação interativa antes de requisições ao Gemini. |
 
 ```bash
 # Exemplos:
@@ -48,7 +50,8 @@ amb check
 amb check --json
 amb setup --auto
 amb setup --path ../meu-outro-projeto --auto
-amb prompt --synthesize "Criar painel de métricas financeiras com gráficos e filtros por data" --role frontend
+amb prompt --synthesize "Criar painel de métricas financeiras" --role frontend -o prompt.md
+amb config --gemini-confirm off                 # Habilitar chamadas autônomas ao Gemini sem interrupção
 ```
 
 ---
@@ -93,7 +96,8 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 | `amb agent --all --loop` | — | Loop autônomo iterando por **todas as personas** a cada ciclo. |
 | `amb agent --loop --max-cycles <N>` | — | Limita a execução do loop a N ciclos completos antes de parar. |
 | `amb agent --loop --branch <branch>` | `-b` | Define o branch-alvo para criação da sessão Jules (padrão: `develop`). |
-| `amb agent --loop --modules <m1,m2>` | — | Rotaciona o foco entre módulos do repositório a cada ciclo. |
+| `amb agent --loop --modules <m1,m2>` | `-m` | Rotaciona o foco entre módulos do repositório a cada ciclo. |
+| `amb agent --loop --no-auto-merge` | — | Desabilita o merge automático do Pull Request ao concluir o ciclo com sucesso. |
 | `amb agent --personas-dir <pasta>` | — | Define um diretório customizado de personas. |
 
 > **💡 `amb context` automático no loop:** ao despachar cada sessão, o `autonomous_loop` roda automaticamente `amb context <modulo>` e **anexa o roteiro arquitetural completo** (DB → Services → UI) ao prompt enviado ao Jules, reduzindo em 20-30min o tempo de exploração inicial por sessão.
@@ -201,7 +205,7 @@ Ferramentas avançadas para governança de código, orquestração Design-to-Dep
 | `amb pipeline --screen-id <id>` | — | Utiliza uma tela já existente no Stitch como ponto de partida (não recria). |
 | `amb pipeline --resume-session <id>` | `-r` | Retoma o monitoramento ao vivo e QA de uma sessão Jules já iniciada. |
 | `amb pipeline --no-qa` | — | Desabilita o teste QA local automático no final da execução. |
-| `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.antigravity/rules/`. |
+| `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.agents/rules/` (`--json`). |
 | `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
 | `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
 | `amb context <modulo> --json` | — | Retorna o grafo de dependências e arquivos em formato JSON estruturado. |
@@ -219,61 +223,124 @@ amb schema kanban                                  # Inspecionar tabelas relacio
 amb context agenda                                 # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
 ```
 
+---
+
+### 🧠 2.7. Google Antigravity & Inferência Cognitiva (`agy`, `antigravity`)
+
+Integração nativa com o motor cognitivo do Google Antigravity e Gemini, governança de regras de arquitetura e validação estática de conformidade.
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb agy status` | `check` | Diagnóstico de saúde do runtime agy, chaves e regras arquiteturais ativas (`--json`). |
+| `amb agy rules` | — | Lista e inspeciona as regras arquiteturais do repositório (`--content`, `-c`, `--json`). |
+| `amb agy prompt -i "<ideia>"` | `synthesize`, `synth` | Sintetiza ideia informal em prompt formal com regras ativas (`-r <role>`, `-o <saida>`). |
+| `amb agy validate <arquivo>` | `lint`, `audit` | Audita conformidade arquitetural do arquivo contra as regras do repositório (`--json`). |
+| `amb agy run "<prompt>"` | `eval` | Inferência cognitiva direta via modelo Gemini (`-m <model>`, `-t <temp>`, `-s <system>`, `-o <saida>`). |
+
+```bash
+# Exemplos:
+amb agy status                                  # Status do runtime e chaves
+amb agy rules --content                         # Exibir conteúdo integral consolidado das regras
+amb agy prompt -i "Refatorar modal de login" -r frontend -o prompt.md
+amb agy validate amb_cli/gui/wizard_app.py      # Auditar arquivo contra regras arquiteturais
+amb agy run "Explique a arquitetura em camadas" -m gemini-2.5-flash
+```
+
+---
+
+### 🐙 2.8. Controle de Versão e Pull Requests via Git (`git`)
+
+Controle de versão local, sincronização de branches e automação completa de Pull Requests no GitHub via GitHub CLI (`gh`).
+
+| Comando / Opção | Alias | Descrição |
+| :--- | :--- | :--- |
+| `amb git status` | — | Exibe status detalhado do Git local, branches, upstream e integridade da CLI `gh` (`--json`). |
+| `amb git sync` | — | Sincroniza branch ativa com o remote (`fetch` + `pull` com auto-stash; `-r <remote>`, `-b <branch>`). |
+| `amb git diff [arquivo]` | — | Exibe diff unificado de arquivos alterados ou preparados (`--base <branch>`, `--cached`). |
+| `amb git pr list` | — | Lista Pull Requests abertos no GitHub (`--no-drafts`, `--repo <dono/repo>`, `--json`). |
+| `amb git pr get <id>` | — | Exibe detalhes estruturados, status de checks e comentários do PR (`--json`). |
+| `amb git pr create -t "<titulo>"` | — | Cria novo Pull Request no GitHub (`-b "<body>"`, `--base <b>`, `--head <h>`, `--draft`). |
+| `amb git pr ready <id>` | — | Marca um Pull Request em rascunho (Draft) como pronto para revisão (`gh pr ready`). |
+| `amb git pr approve <id>` | — | Aprova formalmente o Pull Request no GitHub (`--body "<comentario>"`). |
+| `amb git pr merge <id>` | — | Faz merge do Pull Request com squash e deleção de branch (`--no-squash`, `--keep-branch`). |
+| `amb git pr close <id>` | — | Fecha o Pull Request no GitHub sem realizar merge (`--comment "<motivo>"`, `--delete-branch`). |
+
+```bash
+# Exemplos:
+amb git status
+amb git sync -r origin -b main
+amb git diff --cached
+amb git pr list
+amb git pr create -t "feat: autenticação JWT" -b "Implementa tokens e refresh rotativo"
+amb git pr ready 42
+amb git pr approve 42 --body "Aprovado via QA AMB"
+amb git pr merge 42
+```
 
 ---
 
 ## 📋 3. Tabela de Referência Rápida de Todos os Comandos
 
-| Categoria | Comando CLI | Equivalente Script `python` |
+| Categoria | Comando CLI Principal | Atalho / Equivalente Direto |
 | :--- | :--- | :--- |
-| **Setup & Env** | `amb check` | `python config/config.py` |
-| **Setup & Env** | `amb setup` | `python config/setup_project.py` |
-| **Setup & Env** | `amb prompt` | `python config/setup_project.py --prompt` |
-| **Setup & Env** | `amb prompt --synthesize "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
-| **Vigilância** | `amb monitor` | `python agents/monitor.py` |
-| **Vigilância** | `amb monitor -1` | `python agents/monitor.py --check-once` |
-| **Vigilância** | `amb monitor -y` | `python agents/monitor.py --auto-approve` |
-| **Vigilância** | `amb advisor` | `python agents/auto_reply.py` |
-| **Interface** | `amb gui` (ou `amb ui`) | `python gui/wizard_app.py` |
-| **Personas** | `amb agent --list` | `python agents/local_agent_runner.py --list` |
-| **Personas** | `amb agent --role <nome>` | `python agents/local_agent_runner.py --role <nome>` |
-| **Personas** | `amb agent --role <nome> -j` | `python agents/local_agent_runner.py --role <nome> -j` |
-| **Personas** | `amb agent --loop` | `python agents/autonomous_loop.py` |
-| **Personas** | `amb agent --all --loop` | `python agents/autonomous_loop.py --all` |
-| **Personas** | `amb agent --loop --max-cycles <N>` | `python agents/autonomous_loop.py --max-cycles <N>` |
-| **Personas** | `amb agent --loop --branch <b>` | `python agents/autonomous_loop.py --branch <b>` |
-| **Jules Cloud** | `amb jules list` | `python integrations/jules/tools/list_sessions.py` |
-| **Jules Cloud** | `amb jules get <id>` | `python integrations/jules/tools/get_session.py <id>` |
-| **Jules Cloud** | `amb jules get <id> --watch` | `python integrations/jules/tools/monitor_activities.py <id>` |
-| **Jules Cloud** | `amb jules create -p "..."` | `python integrations/jules/tools/create_session.py` |
-| **Jules Cloud** | `amb jules reply -s <id>` | `python agents/auto_reply.py -s <id>` |
-| **Jules Cloud** | `amb jules reply -s <id> -m "..."` | `python integrations/jules/tools/send_message.py` |
-| **Jules Cloud** | `amb jules approve -s <id>` | `python integrations/jules/tools/approve_plan.py` |
-| **Jules Cloud** | `amb jules merge -s <id>` | `python integrations/jules/tools/merge_session_pr.py` |
-| **Jules Cloud** | `amb jules merge --auto-latest` | `python integrations/jules/tools/merge_session_pr.py --auto-latest` |
-| **Jules Cloud** | `amb jules clean` | `python integrations/jules/tools/cleanup_sessions.py` |
-| **Stitch SDK** | `amb stitch list` | `python integrations/stitch/tools/list_screens.py` |
-| **Stitch SDK** | `amb stitch generate -p "..."` | `python integrations/stitch/tools/generate_screen.py` |
-| **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | `python integrations/stitch/tools/edit_screen.py` |
-| **Stitch SDK** | `amb stitch variants -s <id>` | `python integrations/stitch/tools/generate_variants.py` |
-| **Stitch SDK** | `amb stitch sync` | `python integrations/stitch/tools/sync_design_system.py` |
-| **Stitch SDK** | `amb stitch get -s <id> [-o tela.html]` | `python integrations/stitch/tools/get_screen.py` |
-| **Antigravity** | `amb agy status` | `python cli.py agy status` |
-| **Antigravity** | `amb agy rules` | `python cli.py agy rules` |
-| **Antigravity** | `amb agy prompt -i "..."` | `python integrations/antigravity/tools/synthesize_prompt.py` |
-| **Antigravity** | `amb agy validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
-| **Antigravity** | `amb agy run "..."` | `python cli.py agy run "..."` |
-| **Git & PRs** | `amb git status` | `python integrations/git/tools/git_status.py` |
-| **Git & PRs** | `amb git sync` | `python integrations/git/tools/sync_branch.py` |
-| **Git & PRs** | `amb git diff [--cached]` | `python cli.py git diff` |
-| **Git & PRs** | `amb git pr list` | `python integrations/git/tools/pr_manager.py list` |
-| **Git & PRs** | `amb git pr get <id>` | `python integrations/git/tools/pr_manager.py get <id>` |
-| **Git & PRs** | `amb git pr create -t "..."` | `python integrations/git/tools/pr_manager.py create` |
-| **Git & PRs** | `amb git pr merge <id>` | `python integrations/git/tools/pr_manager.py merge <id>` |
-| **Qualidade** | `amb validate <arquivo>` | `python integrations/antigravity/tools/validate_architecture.py` |
-| **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | `python pipeline/pipeline.py -s <s.md> -j <j.md>` |
-| **Arquitetura** | `amb schema [filtro]` | `python architecture/db_schema_reader.py` |
-| **Arquitetura** | `amb context <modulo>` | `python architecture/ai_context_builder.py` |
+| **Setup & Env** | `amb check` | `amb check --json` |
+| **Setup & Env** | `amb setup` | `amb setup --auto [--path <dir>]` |
+| **Setup & Env** | `amb prompt` | `amb setup -p` |
+| **Setup & Env** | `amb prompt -s "<ideia>"` | `amb agy prompt -i "<ideia>"` |
+| **Setup & Env** | `amb config` | `amb config --gemini-confirm <on/off>` |
+| **Vigilância** | `amb monitor` | `amb monitor -y` (Sentinela Autônomo) |
+| **Vigilância** | `amb monitor -1` | `amb monitor --check-once` |
+| **Vigilância** | `amb advisor` | `amb jules reply` (Menu cognitivo) |
+| **Interface** | `amb gui` | `amb ui` (Assistente Gráfico Tkinter) |
+| **Personas** | `amb agent --list` | `amb agent -l` |
+| **Personas** | `amb agent --role <nome>` | `amb agent -r <nome>` (Jules Cloud) |
+| **Personas** | `amb agent --role <nome> --agy`| `amb agent -r <nome> --local` (Local CLI) |
+| **Personas** | `amb agent --loop` | `amb agent -c` (Loop contínuo autônomo) |
+| **Personas** | `amb agent --all --loop` | Executa todas as personas em ciclo infinito |
+| **Personas** | `amb agent --loop --max-cycles <N>` | Loop contínuo com limite de ciclos |
+| **Personas** | `amb agent --loop --modules <m1,m2>` | Loop rotacionando módulos de foco |
+| **Personas** | `amb agent --loop --no-auto-merge` | Desabilita merge automático pós-ciclo |
+| **Jules Cloud** | `amb jules status` | Diagnóstico de API e fontes conectadas |
+| **Jules Cloud** | `amb jules sources` | Lista fontes conectadas na conta Jules |
+| **Jules Cloud** | `amb jules list` | Lista sessões (`--limit <N>`, `--all`) |
+| **Jules Cloud** | `amb jules get <id>` | Detalhes e status da sessão |
+| **Jules Cloud** | `amb jules get <id> --watch` | Streaming de logs e atividades ao vivo |
+| **Jules Cloud** | `amb jules create -p "..."` | Cria sessão (`-t "<titulo>"`, `-b <branch>`) |
+| **Jules Cloud** | `amb jules reply -s <id>` | Auto-resposta turn-by-turn com Gemini |
+| **Jules Cloud** | `amb jules reply -s <id> -m "..."` | Mensagem direta manual para a sessão |
+| **Jules Cloud** | `amb jules approve -s <id>` | Aprova o plano de ação formulado |
+| **Jules Cloud** | `amb jules merge -s <id>` | Merge do PR no GitHub + QA local |
+| **Jules Cloud** | `amb jules merge --auto-latest` | Merge automático do PR mais recente |
+| **Jules Cloud** | `amb jules clean` | Limpeza de sessões concluídas/mescladas |
+| **Stitch SDK** | `amb stitch list` | Lista todas as telas do projeto |
+| **Stitch SDK** | `amb stitch generate -p "..."` | Gera tela (`-d <device>`, `-o <html_file>`) |
+| **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | Refina tela existente com novos tokens |
+| **Stitch SDK** | `amb stitch get -s <id>` | Obtém código HTML, CSS e screenshot |
+| **Stitch SDK** | `amb stitch variants -s <id>` | Gera variantes visuais (`-c <count>`) |
+| **Stitch SDK** | `amb stitch download -o <dir>` | Baixa assets e telas do projeto |
+| **Stitch SDK** | `amb stitch project` | Consulta metadados do projeto Stitch |
+| **Stitch SDK** | `amb stitch sync` | Sincroniza design tokens (`design.md`) |
+| **Stitch SDK** | `amb stitch call <tool> '<json>'` | Invoca JSON-RPC tool no Stitch SDK |
+| **Antigravity** | `amb agy status` | Status do runtime cognitivo e regras |
+| **Antigravity** | `amb agy rules` | Lista regras ativas (`--content`, `-c`) |
+| **Antigravity** | `amb agy prompt -i "..."` | Sintetiza prompt executivo com regras |
+| **Antigravity** | `amb agy validate <arquivo>` | `amb validate <arquivo>` (Auditoria de código) |
+| **Antigravity** | `amb agy run "..."` | Inferência cognitiva direta via Gemini |
+| **Git & PRs** | `amb git status` | Status local Git, upstream e GitHub CLI |
+| **Git & PRs** | `amb git sync` | Fetch + Pull com auto-stash |
+| **Git & PRs** | `amb git diff [--cached]` | Exibe diff unificado |
+| **Git & PRs** | `amb git pr list` | Lista Pull Requests abertos |
+| **Git & PRs** | `amb git pr get <id>` | Detalhes estruturados do PR |
+| **Git & PRs** | `amb git pr create -t "..."` | Cria Pull Request no GitHub |
+| **Git & PRs** | `amb git pr ready <id>` | Converte Draft PR em Ready for Review |
+| **Git & PRs** | `amb git pr approve <id>` | Aprova Pull Request no GitHub |
+| **Git & PRs** | `amb git pr merge <id>` | Realiza o merge do PR |
+| **Git & PRs** | `amb git pr close <id>` | Fecha Pull Request sem merge |
+| **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | Orquestrador Design-to-Deploy ponta a ponta |
+| **Pipeline** | `amb pipeline -j <j.md> --skip-stitch` | Tarefa de engenharia pura (sem tela) |
+| **Pipeline** | `amb pipeline --resume-session <id>` | Retoma monitoramento de sessão remota |
+| **Arquitetura** | `amb schema [filtro]` | Consulta catálogo Drizzle DB (Read-Only) |
+| **Arquitetura** | `amb context <modulo>` | Roteiro de arquivos em camadas para IA |
 
 ---
 
@@ -282,45 +349,46 @@ amb context agenda                                 # Roteiro de arquivos (DB ➔
 ```text
 📁 amb_v2/
 ├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
-├── cli.py                           # CLI global unificada (Single Source of Truth)
-├── cli_modules/                     # Handlers e parsers modulares da CLI (SRP)
-│   ├── alert_notifier.py            # Emissor de alertas visuais e sonoros
-│   ├── cli_handlers.py              # Despacho de subcomandos
-│   └── cli_parsers.py               # Definição de argumentos e subcomandos
-├── config/
-│   ├── config.py                    # Diagnóstico completo de ambiente, saúde e chaves de API
-│   ├── bootstrap.py                 # Bootstrap centralizado de ambiente e sys.path
-│   ├── setup_project.py             # Orquestrador do fluxo amb setup
-│   └── setup_modules/               # Módulos especializados de provisionamento
-│       ├── project_analyzer.py      # Auto-detecção de stack, monorepos e inferência de QA
-│       └── amb_provisioner.py       # Provisionamento .amb/, persona engineer.md e .gitignore
-├── gui/
-│   ├── README.md                    # Documentação do Assistente Gráfico
-│   └── wizard_app.py                # Assistente Gráfico Nativo (Tkinter) dinâmico e gestor de .env
-├── architecture/
-│   ├── db_schema_reader.py          # Leitor de schemas e banco de dados (Read-Only)
-│   └── ai_context_builder.py        # Construtor de contexto por camadas para IA
-├── agents/
-│   ├── auto_reply.py                # Resposta cognitiva com Gemini e histórico turn-by-turn
-│   ├── auto_reply_core/             # Núcleo SRP (TurnHistoryExtractor, CognitiveAdvisor, JulesFeedbackDispatcher)
-│   ├── autonomous_loop.py           # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
-│   ├── local_agent_runner.py        # Executor dinâmico de personas
-│   └── monitor.py                   # Sentinela contínuo e loop de vigilância em tempo real
-├── integrations/
-│   ├── antigravity/
-│   │   ├── antigravity_client.py    # Client Gemini + síntese de prompt e validação
-│   │   └── tools/                   # Facades retrocompatíveis
-│   ├── jules/
-│   │   ├── jules_client.py          # Client REST API oficial do Jules
-│   │   ├── jules_watcher.py         # Sentinela e inspetor de sessões do Jules
-│   │   └── tools/                   # Facades e automações Git (merge_session_pr, cleanup)
-│   └── stitch/
-│       ├── stitch_client.mjs        # Runner Node.js do Stitch SDK
-│       ├── stitch_client.py         # Client Python oficial (telas, variantes, design system)
-│       └── tools/                   # Facades retrocompatíveis
-└── pipeline/
-    ├── README.md                    # Documentação da arquitetura do pipeline
-    └── pipeline.py                  # Orquestrador Design-to-Deploy ponta a ponta
+├── amb_cli/                         # Pacote Python principal da CLI (92 arquivos, todos <= 300 linhas)
+│   ├── cli.py                       # Ponto de entrada CLI (Single Source of Truth)
+│   ├── cli_modules/                 # Handlers e parsers modulares da CLI (SRP)
+│   │   ├── alert_notifier.py        # Emissor de alertas visuais e sonoros
+│   │   ├── cli_handlers.py          # Despacho enxuto de subcomandos
+│   │   ├── cli_parsers.py           # Definição modular de argumentos e subcomandos
+│   │   └── handlers_core/           # Handlers desacoplados por domínio (antigravity, git, jules, stitch)
+│   ├── config/                      # Governança de ambiente, bootstrap e setup
+│   │   ├── config.py                # Diagnóstico de saúde e variáveis (.env)
+│   │   ├── bootstrap.py             # Bootstrap centralizado de ambiente e sys.path
+│   │   ├── rules_manager.py         # Governança e cache das regras arquiteturais
+│   │   ├── setup_project.py         # Orquestrador do fluxo amb setup
+│   │   ├── config_core/             # Núcleo de diagnósticos e tokens de design
+│   │   └── setup_modules/           # Analisador de projetos, provisionador .amb/ e sintetizador
+│   ├── gui/                         # Assistente Gráfico Nativo (UI Wizard)
+│   │   ├── wizard_app.py            # Janela mestre e launcher do Wizard (Tkinter)
+│   │   └── wizard_core/             # Runner dinâmico, gestor de .env e parser extractor
+│   ├── architecture/                # Inteligência de repositório e leitura de schemas
+│   │   ├── db_schema_reader.py      # Leitor de schemas e banco de dados (Read-Only)
+│   │   ├── ai_context_builder.py    # Construtor de contexto por camadas para IA
+│   │   └── context_core/            # Configurações de camadas e constantes
+│   ├── agents/                      # Agentes autônomos e personas
+│   │   ├── auto_reply.py            # Resposta cognitiva com Gemini
+│   │   ├── autonomous_loop.py       # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
+│   │   ├── local_agent_runner.py    # Executor dinâmico de personas
+│   │   ├── monitor.py               # Sentinela contínuo em tempo real
+│   │   ├── auto_reply_core/         # Extração de histórico turn-by-turn e conselheiro cognitivo
+│   │   └── loop_core/               # Despachante de ciclos e assistente de sessão
+│   ├── integrations/                # Integrações oficiais com APIs e SDKs externos
+│   │   ├── antigravity/             # Cliente cognitivo Google Antigravity & Gemini REST
+│   │   ├── jules/                   # Cliente REST oficial do Google Jules & watcher
+│   │   ├── stitch/                  # Cliente oficial para Google Stitch SDK
+│   │   ├── git/                     # Serviço de Git de alta performance e automação GitHub CLI
+│   │   └── common/                  # BaseGoogleClient com retries e backoff exponencial
+│   └── pipeline/                    # Orquestrador Design-to-Deploy
+│       ├── pipeline.py              # Orquestrador do fluxo ponta a ponta
+│       ├── quality_gatekeeper.py    # Gatekeeper local de QA e integridade
+│       └── pipeline_core/           # Estágio de design no Stitch e construtor de prompts
+├── .agents/rules/                   # Regras arquiteturais canônicas do ecossistema
+└── tests/                           # Suíte de testes unitários (158 testes, 100% green)
 ```
 
 ---
