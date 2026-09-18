@@ -8,6 +8,14 @@ está aberto, configura os paths do Python e invoca o parser de CLI.
 """
 
 import sys
+from pathlib import Path
+
+_cur = Path(__file__).resolve()
+_pkg = _cur.parent
+_root = _pkg.parent
+for _p in [str(_pkg), str(_root)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from config.bootstrap import ensure_amb_env
 ensure_amb_env()
