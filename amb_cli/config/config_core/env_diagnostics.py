@@ -6,12 +6,16 @@ from typing import Dict, Any
 def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
     """Valida e exibe o checklist visual de configurações e saúde do repositório ativo."""
     from amb_cli.config.config import find_repo_root, load_project_json, get_env, Colors
+    from amb_cli.workspace.setup.project_analyzer import ProjectAnalyzer
 
     root = find_repo_root()
     p_meta = load_project_json()
     p_json_exists = bool(p_meta)
     env_exists = os.path.exists(os.path.join(root, ".env"))
     gitignore_path = os.path.join(root, ".gitignore")
+
+    # Stack detection
+    stack_info = ProjectAnalyzer.detect_stack(root)
 
     # 1. Checagem de Git e GitHub CLI
     git_detected = False
@@ -40,25 +44,40 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
         except Exception:
             pass
 
-    # 3. Chaves de API
-    keys_to_check = [
+    # 3. Credenciais do AMB Framework (Plataforma)
+    platform_keys = [
         ("JULES_API_KEY", "Google Jules SDK / API"),
         ("GEMINI_API_KEY", "Google Antigravity / Gemini"),
         ("STITCH_API_KEY", "Google Stitch SDK"),
-        ("STITCH_PROJECT_ID", "Stitch Project ID"),
-        ("GITHUB_REPOSITORY", "Repositório GitHub"),
+        ("STITCH_PROJECT_ID", "Stitch Project ID")
     ]
-    keys_status = {}
-    for key, desc in keys_to_check:
+    platform_status = {}
+    for key, desc in platform_keys:
         val = get_env(key)
-        keys_status[key] = {
+        platform_status[key] = {
             "description": desc,
             "configured": bool(val),
             "masked": (val[:4] + "..." + val[-4:] if len(val) > 10 else "***") if val else None
         }
 
-    # 4. QA Commands e binários
+    # 4. Contexto do Workspace Alvo (Projeto Consumidor)
+    workspace_keys = [
+        ("GITHUB_REPOSITORY", "Repositório GitHub")
+    ]
+    workspace_status = {}
+    for key, desc in workspace_keys:
+        val = get_env(key)
+        workspace_status[key] = {
+            "description": desc,
+            "configured": bool(val),
+            "masked": val if val else None
+        }
+
+    # 5. QA Commands e binários
     qa_cfg = p_meta.get("qa", {})
+    if not qa_cfg:
+        qa_cfg = ProjectAnalyzer.infer_qa_commands(stack_info, root)
+
     qa_status = {}
     for step, cmd in qa_cfg.items():
         parts = cmd.split()
@@ -70,9 +89,10 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
             "available": bin_found
         }
 
-    # 5. Personas
+    # 6. Regras e Personas
     personas_dir = os.path.join(root, ".amb", "personas")
     personas_count = len([f for f in os.listdir(personas_dir) if f.endswith(".md")]) if os.path.exists(personas_dir) else 0
+    active_rules_dir = stack_info.get("rules_dir") or ".amb/rules (fallback)"
 
     report = {
         "root": root,
@@ -88,10 +108,16 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
             "installed": gh_installed,
             "authenticated": gh_auth
         },
-        "keys": keys_status,
+        "platform_keys": platform_status,
+        "workspace_keys": workspace_status,
+        "stack": stack_info,
         "qa": qa_status,
-        "personas_count": personas_count
+        "personas_count": personas_count,
+        "active_rules_dir": active_rules_dir
     }
+
+    # Compatibilidade com testes antigos: colocar todas as chaves em 'keys'
+    report["keys"] = {**platform_status, **workspace_status}
 
     if as_json:
         print(json.dumps(report, indent=2, ensure_ascii=False))
@@ -99,6 +125,16 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
 
     # Renderização Visual no Terminal
     print(f"\n{Colors.BOLD}{Colors.CYAN}=== AMB_V2 - DIAGNÓSTICO DE AMBIENTE E SAÚDE DO PROJETO ==={Colors.RESET}\n")
+
+    # SEÇÃO 1: PLATAFORMA (AMB Framework)
+    print(f"{Colors.BOLD}{Colors.BLUE}=== Credenciais do AMB Framework (Plataforma) ==={Colors.RESET}")
+    for key, info in platform_status.items():
+        if info["configured"]:
+            print(f"  ✅ {info['description']:<30} ({key}): {Colors.GREEN}{info['masked']}{Colors.RESET}")
+        else:
+            print(f"  ⚠️  {info['description']:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
+
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== Contexto do Workspace Alvo (Projeto Consumidor) ==={Colors.RESET}")
     print(f"📁 Raiz do Projeto: {Colors.BOLD}{root}{Colors.RESET}")
     print(f"📄 Arquivo .env:     {'✅ Encontrado' if env_exists else f'{Colors.YELLOW}⚠️  Não encontrado{Colors.RESET}'}")
     print(f"📄 Config .amb/:    {'✅ amb_project.json ativo' if p_json_exists else f'{Colors.YELLOW}⚠️  Não configurado (rode amb setup){Colors.RESET}'}")
@@ -109,6 +145,13 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
             print(f"🛡️  Segurança:        {Colors.GREEN}✅ .env protegido no .gitignore{Colors.RESET}")
         else:
             print(f"🛡️  Segurança:        {Colors.RED}{Colors.BOLD}🚨 ALERTA: .env NÃO está no .gitignore! Risco de vazamento!{Colors.RESET}")
+
+    # Workspace Chaves
+    for key, info in workspace_status.items():
+        if info["configured"]:
+            print(f"  ✅ {info['description']:<30} ({key}): {Colors.GREEN}{info['masked']}{Colors.RESET}")
+        else:
+            print(f"  ⚠️  {info['description']:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
 
     # Git & GitHub
     print(f"\n{Colors.BOLD}🌿 Integração Git & GitHub CLI:{Colors.RESET}")
@@ -126,13 +169,12 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
     else:
         print(f"  • GitHub CLI (gh): {Colors.YELLOW}⚠️  Não instalado (recomendado para automação de PRs){Colors.RESET}")
 
-    # Chaves de API
-    print(f"\n{Colors.BOLD}🔑 Credenciais e Chaves de API:{Colors.RESET}")
-    for key, info in keys_status.items():
-        if info["configured"]:
-            print(f"  ✅ {info['description']:<30} ({key}): {Colors.GREEN}{info['masked']}{Colors.RESET}")
-        else:
-            print(f"  ⚠️  {info['description']:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
+    # Stack Técnica
+    print(f"\n{Colors.BOLD}🛠️  Stack Técnica Detectada:{Colors.RESET}")
+    print(f"  • Tipo:            {Colors.GREEN}{stack_info.get('type', 'Desconhecido')}{Colors.RESET}")
+    print(f"  • Gerenciador:     {Colors.GREEN}{stack_info.get('package_manager', 'N/A')}{Colors.RESET}")
+    fw_list = ", ".join(stack_info.get("frameworks", []))
+    print(f"  • Frameworks:      {Colors.GREEN}{fw_list if fw_list else 'Nenhum específico detectado'}{Colors.RESET}")
 
     # QA
     print(f"\n{Colors.BOLD}🛡️  Suíte de Testes e Validação Local (QA):{Colors.RESET}")
@@ -143,11 +185,12 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
             bin_note = "" if qinfo["available"] else f" ({qinfo['binary']} não encontrado no PATH)"
             print(f"  {status_icon} {step:<12}: {color}{qinfo['command']}{bin_note}{Colors.RESET}")
     else:
-        print(f"  {Colors.YELLOW}⚠️  Nenhum comando de QA configurado no amb_project.json{Colors.RESET}")
+        print(f"  {Colors.YELLOW}⚠️  Nenhum comando de QA configurado ou inferido.{Colors.RESET}")
 
-    # Personas
-    print(f"\n{Colors.BOLD}🤖 Inteligência Local & Personas:{Colors.RESET}")
+    # Personas e Regras
+    print(f"\n{Colors.BOLD}🤖 Inteligência Local & Regras:{Colors.RESET}")
     print(f"  • Personas Ativas: {Colors.GREEN}{personas_count} persona(s) em .amb/personas/{Colors.RESET}")
+    print(f"  • Regras Ativas:   {Colors.GREEN}{active_rules_dir}{Colors.RESET}")
 
     print(f"\n{Colors.DIM}Para reconfigurar ou atualizar a stack do projeto: amb setup --force{Colors.RESET}\n")
     return report
