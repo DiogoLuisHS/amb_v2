@@ -75,7 +75,7 @@ Thumbs.db
 # AMB temporary cache / artifacts
 .amb/cache/
 scratch/
-
+*.log
 
 node_modules/
 

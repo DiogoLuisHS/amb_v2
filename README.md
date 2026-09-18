@@ -430,9 +430,9 @@ Instruções detalhadas que serão enviadas ao Google Jules...
 
 | Arquivo | Descrição |
 | :--- | :--- |
-| [`SUGGESTIONS.md`](./SUGGESTIONS.md) | Roadmap estratégico e priorização MoSCoW (MUST/SHOULD/COULD/WON'T) das próximas sprints. |
-| [`CHANGELOG_FIXES.md`](./CHANGELOG_FIXES.md) | Fonte única da verdade para histórico de melhorias arquiteturais, features e bugs corrigidos. |
-| [`config/README.md`](./config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
-| [`gui/README.md`](./gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
-| [`pipeline/README.md`](./pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
+| [`_docs/SUGGESTIONS.md`](./_docs/SUGGESTIONS.md) | Roadmap estratégico e priorização MoSCoW (MUST/SHOULD/COULD/WON'T) das próximas sprints. |
+| [`_docs/CHANGELOG_FIXES.md`](./_docs/CHANGELOG_FIXES.md) | Fonte única da verdade para histórico de melhorias arquiteturais, features e bugs corrigidos. |
+| [`amb_cli/config/README.md`](./amb_cli/config/README.md) | Guia de variáveis de ambiente e estrutura do `.env`. |
+| [`amb_cli/gui/README.md`](./amb_cli/gui/README.md) | Documentação do Assistente Gráfico Interativo (Tkinter) e Gestor de .env. |
+| [`amb_cli/pipeline/README.md`](./amb_cli/pipeline/README.md) | Guia da arquitetura de prompts separados Design-to-Deploy. |
 

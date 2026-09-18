@@ -21,7 +21,7 @@ py-modules = ["cli", "amb_bootstrap"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["amb_cli*"]
-exclude = ["tests*", "scratch*", "docs*"]
+exclude = ["tests*", "scratch*", "docs*", "_docs*"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "amb_cli"]
