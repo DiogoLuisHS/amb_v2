@@ -45,6 +45,7 @@ def test_canonical_submodules_list():
         "architecture",
         "architecture/context_core",
         "pipeline",
+        "pipeline/pipeline_core",
         "gui",
         "gui/wizard_core",
         "integrations",
