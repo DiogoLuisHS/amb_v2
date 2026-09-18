@@ -43,6 +43,7 @@ def test_canonical_submodules_list():
         "core/bootstrap",
         "workspace",
         "workspace/project_context",
+        "workspace/setup",
         "config",
         "config/config_core",
         "config/setup_modules",
