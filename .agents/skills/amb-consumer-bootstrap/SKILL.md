@@ -100,6 +100,9 @@ amb agent --role bolt --agy
 
 # Iniciar o loop autônomo completo com auto-merge:
 amb agent --all --loop
+
+# Desenvolver features por pasta de prompts em lote:
+amb agent -p .amb/prompts/
 ```
 
 ---

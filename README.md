@@ -87,9 +87,11 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
+| `amb agent -p <pasta_ou_arquivo>` | `-p` | **Desenvolvimento em Lote:** Executa um arquivo `.md` ou **PASTA INTEIRA de prompts** (ex: `-p .amb/prompts/`) sequencialmente com auto-reply e auto-merge. |
+| `amb agent -p <pasta> --loop` | `-c` | Loop contínuo iterando sobre todos os prompts da pasta. |
 | `amb agent --list` | `-l` | Lista todas as personas disponíveis no projeto ativo. |
-| `amb agent --role <nome>` | `-r` | Executa uma persona localmente via CLI `agy` (ex: `engineer`, ou customizadas). |
-| `amb agent --role <nome> --dispatch-jules` | `-j` | Despacha a persona para a nuvem do Google Jules (Cloud VM + Branch + PR). |
+| `amb agent --role <nome>` | `-r` | Despacha uma persona para o Google Jules na nuvem (Cloud VM + Branch + PR). |
+| `amb agent --role <nome> --agy` | `--local` | Executa a persona localmente via CLI `agy`. |
 | `amb agent --role <nome> --task "<texto>"` | `-t` | Anexa instruções ou escopo adicional ao prompt base da persona. |
 | `amb agent --all` | `-a` | Executa todas as personas da pasta sequencialmente em lote. |
 | `amb agent --loop` | `-c`, `--continuous` | **Ciclo Autônomo:** loop contínuo de envio, vigilância, auto-reply e auto-merge no Git. |
@@ -104,9 +106,12 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 
 ```bash
 # Exemplos:
+amb agent -p .amb/prompts/                               # Desenvolvimento em lote: executa todos os prompts da pasta
+amb agent -p .amb/prompts/ --branch feature/nova-ui      # Executar pasta de prompts na branch alvo
+amb agent -p .amb/prompts/ --loop                        # Loop contínuo sobre a pasta de prompts
 amb agent --list                                        # Ver personas disponíveis
-amb agent --role engineer                               # Executar persona localmente
-amb agent --role engineer -j                            # Despachar persona para o Jules na nuvem
+amb agent --role engineer                               # Despachar persona para o Jules na nuvem
+amb agent --role engineer --agy                         # Executar persona localmente via agy
 amb agent --role engineer --loop                        # Loop contínuo infinito com auto-merge de PR
 amb agent --role engineer --loop --max-cycles 3         # Loop com limite de 3 ciclos
 amb agent --all --loop --max-cycles 2                   # Todas as personas, 2 ciclos completos
@@ -293,6 +298,7 @@ amb git pr merge 42
 | **Vigilância** | `amb advisor` | `amb jules reply` (Menu cognitivo) |
 | **Interface** | `amb gui` | `amb ui` (Assistente Gráfico Tkinter) |
 | **Personas** | `amb agent --list` | `amb agent -l` |
+| **Personas** | `amb agent -p <pasta>` | `amb agent -p .amb/prompts/` (Lote de prompts) |
 | **Personas** | `amb agent --role <nome>` | `amb agent -r <nome>` (Jules Cloud) |
 | **Personas** | `amb agent --role <nome> --agy`| `amb agent -r <nome> --local` (Local CLI) |
 | **Personas** | `amb agent --loop` | `amb agent -c` (Loop contínuo autônomo) |

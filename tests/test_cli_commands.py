@@ -70,6 +70,13 @@ def test_parser_agent_command(parser):
     assert args.no_auto_merge is True
 
 
+def test_parser_agent_prompt_folder(parser):
+    args = parser.parse_args(["agent", "-p", ".amb/prompts/", "--branch", "feature/auth"])
+    assert args.command == "agent"
+    assert args.prompt == ".amb/prompts/"
+    assert args.branch == "feature/auth"
+
+
 def test_parser_jules_subcommands(parser):
     subcmds = [
         (["jules", "status", "--json"], "status"),

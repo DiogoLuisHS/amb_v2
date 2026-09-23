@@ -182,6 +182,7 @@ def run_setup(
     print(f"\n👉 Próximos passos recomendados:")
     print(f"   • Validar ambiente:         {Colors.CYAN}amb check{Colors.RESET}")
     print(f"   • Executar agente autônomo: {Colors.CYAN}amb agent --role engineer{Colors.RESET}")
+    print(f"   • Desenvolver por lote/dir: {Colors.CYAN}amb agent -p .amb/prompts/{Colors.RESET}")
     print(f"   • Iniciar sentinela:        {Colors.CYAN}amb monitor{Colors.RESET}\n")
 
     return project_data

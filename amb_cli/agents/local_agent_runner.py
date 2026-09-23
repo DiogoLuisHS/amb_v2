@@ -130,7 +130,8 @@ def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str) -> Non
     print(f"{Colors.YELLOW}Como Executar:{Colors.RESET}")
     print(f"  • Despachar Jules (Padrão): amb agent --role <nome>  (ou python amb_cli/agents/local_agent_runner.py --role <nome>)")
     print(f"  • TODAS as Personas (Jules):  amb agent --all")
-    print(f"  • Executar Local (agy CLI):   amb agent --role <nome> --agy (ou --local)\n")
+    print(f"  • Executar Local (agy CLI):   amb agent --role <nome> --agy (ou --local)")
+    print(f"  • Pasta de Prompts (Lote):    amb agent -p .amb/prompts/ (executa todos os .md sequencialmente)\n")
 
 
 def execute_single_persona(

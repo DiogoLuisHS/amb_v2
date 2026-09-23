@@ -197,7 +197,10 @@ amb agent --role engineer
 # 4. Despachar para a VM em nuvem do Google Jules:
 amb agent --role engineer --loop
 
-# 5. Iniciar o sentinela de vigilância contínua:
+# 5. Desenvolvimento autônomo por pasta de prompts (em lote com auto-merge):
+amb agent -p .amb/prompts/
+
+# 6. Iniciar o sentinela de vigilância contínua:
 amb monitor --auto-approve
 ```
 """

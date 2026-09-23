@@ -46,21 +46,32 @@ graph TD
 ## 🚀 Como Executar o Pipeline Autônomo
 
 ```bash
-# Loop contínuo infinito com uma persona:
+# 1. Desenvolvimento por PASTA DE PROMPTS em lote (Recomendado para Features):
+amb agent -p .amb/prompts/
+
+# 2. Pasta de prompts direcionada para branch específica:
+amb agent -p .amb/prompts/ --branch feature/minha-stack
+
+# 3. Loop contínuo infinito com uma persona:
 amb agent --role pure --loop
 
-# Loop contínuo iterando por TODAS as personas da pasta:
+# 4. Loop contínuo iterando por TODAS as personas da pasta:
 amb agent --all --loop
 
-# Loop limitado a 3 ciclos completos:
+# 5. Loop limitado a 3 ciclos completos:
 amb agent --all --loop --max-cycles 3
 
-# Loop direcionado para uma branch específica (ex: main):
+# 6. Loop direcionado para uma branch específica (ex: main):
 amb agent --all --loop --branch main
 
-# Loop rotacionando o foco entre módulos do projeto:
+# 7. Loop rotacionando o foco entre módulos do projeto:
 amb agent --role relay --loop --modules agenda,financeiro,auth
 ```
+
+### 📁 Como Funciona o Lote por Pasta (`-p <pasta>`):
+- Ao passar uma pasta (ex: `-p .amb/prompts/`), o orquestrador coleta todos os arquivos `.md` ordenados (ex: `01_models.md`, `02_service.md`, `03_ui.md`).
+- Cada prompt é executado sequencialmente até a conclusão do PR e validação do QA.
+- Por padrão, uma rodada de cada prompt é executada e o ciclo conclui com segurança. Para manter em rotação infinita, adicione `--loop`.
 
 ---
 

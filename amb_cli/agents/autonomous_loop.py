@@ -77,6 +77,9 @@ def run_autonomous_loop(
     prompts_to_run: List[Path] = []
     if prompt_file:
         p_target = Path(prompt_file)
+        if not p_target.exists():
+            log_error("AGENT", f"Caminho de prompts '{prompt_file}' não encontrado.", hint="Verifique se o arquivo ou diretório existe.")
+            return
         if p_target.is_dir():
             prompts_to_run = sorted(
                 [
@@ -85,6 +88,9 @@ def run_autonomous_loop(
                     if p.name.lower() != "readme.md" and not p.name.startswith(("_", "."))
                 ]
             )
+            if not prompts_to_run:
+                log_error("AGENT", f"Nenhum arquivo markdown (.md) encontrado na pasta '{prompt_file}'.", hint="Adicione arquivos .md na pasta ou especifique um arquivo .md diretamente.")
+                return
         elif p_target.is_file():
             prompts_to_run = [p_target]
 
@@ -214,7 +220,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)")
     parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
-    parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou diretório de prompts em lote.")
+    parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou PASTA INTEIRA de prompts em lote (ex: .amb/prompts/).")
     parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
     parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
     parser.add_argument("--delay", "-d", type=int, default=8, help="Intervalo em segundos entre ciclos (Padrão: 8s).")

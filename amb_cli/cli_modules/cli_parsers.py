@@ -13,8 +13,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     subs = parser.add_subparsers(dest="command", help="Comandos disponíveis")
 
-    def _c(name, h, fn, als=None):
-        p = subs.add_parser(name, aliases=als or [], help=h)
+    def _c(name, h, fn, als=None, desc=None):
+        p = subs.add_parser(name, aliases=als or [], help=h, description=desc or h)
         p.set_defaults(func=fn)
         return p
 
@@ -55,15 +55,23 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
     p.add_argument("--auto-approve", "-y", action="store_true", help="Responde ou aprova automaticamente com IA sem confirmação.")
     _c("gui", "Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).", cmd_gui, ["ui", "wizard"])
-    p = _c("agent", "Executor de personas autônomas de manutenção.", cmd_agent, ["persona"])
-    p.add_argument("--role", "-r", help="Nome da persona (ex: engineer, etc.).")
-    p.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote.")
-    p.add_argument("--prompt", "-p", help="Caminho de um arquivo markdown (.md) com prompt estruturado.")
+    p = _c(
+        "agent",
+        "Desenvolvimento autônomo e personas (suporta pasta de prompts em lote -p <dir> ou personas em loop).",
+        cmd_agent,
+        ["persona"],
+        desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).\n"
+             "Suporta execução sequencial em lote de uma pasta inteira de prompts (ex: amb agent -p .amb/prompts/)\n"
+             "ou personas individuais, com auto-approval, QA local e auto-merge no Git."
+    )
+    p.add_argument("--role", "-r", help="Nome da persona a executar (ex: engineer). Opcional se usar -p/--prompt.")
+    p.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote a cada ciclo.")
+    p.add_argument("--prompt", "-p", help="Arquivo .md individual OU PASTA INTEIRA de prompts (ex: .amb/prompts/) para desenvolvimento autônomo sequencial em lote.")
     p.add_argument("--task", "-t", help="Instruções ou escopo adicional.")
     p.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis.")
     p.add_argument("--agy", "--local", action="store_true", default=False, help="Executa o agente localmente via agy CLI (por padrão despacha para o Google Jules na nuvem).")
     p.add_argument("--dispatch-jules", "-j", action="store_true", help="(Legado) Força o despacho para o Google Jules (comportamento padrão).")
-    p.add_argument("--loop", "-c", "--continuous", action="store_true", help="Executa o ciclo contínuo e autônomo de personas.")
+    p.add_argument("--loop", "-c", "--continuous", action="store_true", help="Executa o ciclo contínuo e autônomo (se omitido com -p, executa 1 rodada completa do lote).")
     p.add_argument("--max-cycles", type=int, help="Limite de ciclos no modo loop (se omitido, roda continuamente).")
     p.add_argument("--branch", "-b", help="Branch de início para o Jules (se omitido, auto-detecta a branch ativa do Git).")
     p.add_argument("--modules", "-m", help="Lista de módulos para rotacionar no loop (separados por vírgula).")
