@@ -1,8 +1,8 @@
-# 📚 Catálogo de Prompts Atômicos: Desacoplamento de `amb_cli/config`
+# 📚 Catálogo de Prompts Atômicos: Expansão do Ecossistema Google AI
 
-Este diretório contém os prompts modulares específicos para orientar o **Google Jules** no refatoramento, desacoplamento e auditoria contínua da separação entre **AMB Framework Core** e **Workspace do Consumidor**.
+Este diretório contém os prompts modulares específicos para orientar o **Google Jules** na implementação em lote das novas integrações do ecossistema Google AI no **AMB_V2**.
 
-Cada prompt é 100% focado em um único domínio, garantindo economia de tokens, precisão de contexto cirúrgica e ausência de alucinações cognitivas.
+Cada prompt é 100% focado em um único domínio, garantindo economia de tokens, precisão cirúrgica de contexto e respeito rigoroso às regras arquiteturais (SRP, atomização <= 300 linhas, DRY e tipagem estrita).
 
 ---
 
@@ -10,24 +10,30 @@ Cada prompt é 100% focado em um único domínio, garantindo economia de tokens,
 
 | # | Arquivo Prompt | Módulo Alvo | Responsabilidade Principal |
 |---|---|---|---|
-| **01** | [`01_extract_core_primitives.md`](./01_extract_core_primitives.md) | `amb_cli/core/` | Isola logging (`Colors`, `log`), exceções (`AmbError`), env do AMB e `bootstrap.py`. |
-| **02** | [`02_extract_workspace_context.md`](./02_extract_workspace_context.md) | `amb_cli/workspace/` | Isola raiz de repo (`find_repo_root`), metadados `amb_project.json`, `repo_name` e `device_type`. |
-| **03** | [`03_relocate_scaffolding_and_setup.md`](./03_relocate_scaffolding_and_setup.md) | `amb_cli/workspace/setup/` | Realoca `project_analyzer`, `amb_provisioner`, `cognitive_synthesizer` e `setup_project`. |
-| **04** | [`04_relocate_rules_and_design_tokens.md`](./04_relocate_rules_and_design_tokens.md) | `amb_cli/workspace/` | Realoca `rules_manager.py` e `design_tokens.py` mantendo pontes na camada legada. |
-| **05** | [`05_consolidate_config_facade_and_diagnostics.md`](./05_consolidate_config_facade_and_diagnostics.md) | `amb_cli/config/` | Transforma `config.py` em Facade limpa e atualiza diagnósticos visuais do `amb check`. |
+| **01** | [`01_integrate_google_genai_sdk.md`](./01_integrate_google_genai_sdk.md) | `amb_cli/integrations/antigravity/` | Migra o backend Gemini para o SDK unificado `google-genai`, suportando Thinking models e Context Caching. |
+| **02** | [`02_developer_knowledge_mcp_grounding.md`](./02_developer_knowledge_mcp_grounding.md) | `amb_cli/architecture/` | Grounding semântico com a documentação oficial do Google Developer Knowledge MCP em `amb context`. |
+| **03** | [`03_vertex_model_armor_guardrail.md`](./03_vertex_model_armor_guardrail.md) | `amb_cli/agents/auto_reply_core/` | Guardrail de segurança com Vertex AI Model Armor para sanitizar prompt injection e mascarar PII/senhas em logs. |
+| **04** | [`04_stitch_native_mcp_server.md`](./04_stitch_native_mcp_server.md) | `amb_cli/integrations/stitch/` | Expõe as ferramentas de design generativo do Stitch como um servidor MCP nativo (`amb stitch mcp`). |
+| **05** | [`05_mcp_toolbox_database_introspection.md`](./05_mcp_toolbox_database_introspection.md) | `amb_cli/architecture/` | Introspecção dinâmica de banco de dados em tempo de execução via `amb schema --live` (estilo MCP Toolbox). |
 
 ---
 
-## 🚀 Como Executar com o AMB Agent Loop
+## 🚀 Como Executar com o AMB Agent em Lote
 
-### Execução Autônoma Sequencial Completa
+### 1. Execução Sequencial em Lote
+Para executar todos os prompts em sequência na branch ativa com o Google Jules:
 ```bash
-python amb_cli/cli.py agent --prompt .amb/prompts --loop --max-cycles 1
+amb agent -p .amb/prompts/
 ```
 
-O orquestrador executará os 5 prompts em ordem numérica estrita:
-1. Cria VM isolada no Google Jules para cada prompt.
-2. Monitora os logs e responde dúvidas via Consultor Cognitivo Gemini (Auto-Advisor).
-3. Executa a suíte de testes de QA localmente (`pytest`).
-4. Realiza auto-merge do Pull Request e sincroniza a branch (`git pull origin main`).
-5. Transiciona suavemente para o próximo prompt até concluir o ciclo.
+### 2. Direcionar para uma Feature Branch
+```bash
+amb agent -p .amb/prompts/ --branch feature/google-ai-ecosystem
+```
+
+### 3. O que o AMB fará automaticamente em cada prompt:
+1. Cria a Cloud VM dedicada no Google Jules para a tarefa.
+2. Anexa automaticamente o mapa de arquivos via `ai_context_builder` para acelerar a VM.
+3. Monitora logs ao vivo e responde dúvidas do agente através do Auto-Advisor Gemini.
+4. Ao abrir o PR (sempre em Draft pelo Jules), executa `gh pr ready`, roda os testes locais do projeto (`pytest`), aprova e faz auto-merge no GitHub.
+5. Faz `git pull` local e passa de forma limpa para o próximo prompt até concluir os 5 desenvolvimentos!
