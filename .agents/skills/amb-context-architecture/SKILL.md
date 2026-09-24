@@ -1,65 +1,109 @@
 ---
 name: amb-context-architecture
 description: >-
-  Map repository layers and generate structured architectural blueprints using ai_context_builder.py in AMB_V2. Use when analyzing project topology, generating AI context maps for Jules or AGY prompts, or customizing layer configurations.
+  Map repository layers and database schemas using amb context and amb schema inside any consumer project. Use when analyzing project topology, generating structured AI context blueprints for Jules or Antigravity prompts, or inspecting Drizzle/DB schemas.
 ---
 
 # 🏗️ AMB Context Architecture
 
-Especialista no mapeamento de camadas e sintetização de blueprints arquiteturais via [`amb_cli/architecture/ai_context_builder.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/architecture/ai_context_builder.py) no `amb_v2`.
-
-## 📌 Visão Geral & Benefício
-
-Modelos de IA na nuvem (como o Google Jules) perdem de 20 a 30 minutos por sessão explorando arquivos do repositório para entender onde ficam o banco de dados, os serviços e as rotas.
-
-O **`ai_context_builder`** resolve isso:
-- Ele varre o projeto ativo em milissegundos.
-- Classifica cada arquivo em sua camada arquitetural correta (`Database`, `Services`, `API`, `UI`, `Config`).
-- Gera um roteiro Markdown compacto que é injetado diretamente no início do prompt do agente.
+Guia para mapear a **arquitetura em camadas** e inspecionar **schemas de banco de dados** em qualquer projeto consumidor através dos comandos `amb context` e `amb schema`.
 
 ---
 
-## 🏛️ As Camadas Arquiteturais (`LAYERS_CONFIG`)
+## 📌 1. Por que o Mapeamento Arquitetural é Vital?
 
-O builder classifica arquivos com base nas seguintes categorias canônicas:
+Modelos de IA na nuvem (como o Google Jules) perdem de **20 a 30 minutos por sessão** explorando arquivos do repositório para entender onde ficam os modelos de banco de dados, os serviços, os controladores e os componentes visuais.
 
-| Camada | Padrões de Pastas & Nomes | Finalidade |
-| :--- | :--- | :--- |
-| **Database** | `models/`, `db/`, `migrations/`, `entities/`, `schema` | Modelagem e persistência de dados. |
-| **Domain / Services** | `services/`, `use_cases/`, `domain/`, `core/`, `logic/` | Regras de negócio e casos de uso. |
-| **API / Transport** | `api/`, `routes/`, `controllers/`, `handlers/`, `endpoints/` | Interfaces HTTP, REST ou RPC. |
-| **UI / Client** | `views/`, `components/`, `pages/`, `frontend/`, `templates/` | Telas e componentes visuais. |
-| **Configuration** | `config/`, `.env`, `settings/`, `setup` | Ajustes de ambiente e dependências. |
-| **Tests** | `tests/`, `spec/`, `__tests__/` | Suítes de validação automatizada. |
+O comando **`amb context`** resolve isso instantaneamente:
+- Varre o repositório consumidor em milissegundos.
+- Classifica os arquivos do projeto em 6 camadas canônicas: **Database ➔ Domain/Services ➔ API/Transport ➔ UI/Client ➔ Configuration ➔ Tests**.
+- Gera um roteiro Markdown ordenado que pode ser colado no topo de prompts ou injetado automaticamente nas sessões do Jules.
+- **Resultado:** A IA vai direto ao ponto, não alucina caminhos de imports e conclui as tarefas na metade do tempo.
 
 ---
 
-## 🚀 Como Executar o Builder
+## 🚀 2. Operação do `amb context`
 
-### 1. Via Linha de Comando (`amb context`)
+### 1. Mapear a Arquitetura Completa do Projeto
+No terminal do seu projeto:
 ```bash
-# Mapeia a arquitetura completa do projeto ativo:
 amb context
-
-# Mapeia com foco em um módulo ou submódulo específico:
-amb context auth
 ```
 
-### 2. Uso Programático em Python
-```python
-from amb_cli.architecture.ai_context_builder import build_ai_context
+### 2. Mapear com Foco em um Módulo Específico
+Quando estiver desenvolvendo uma funcionalidade restrita a uma área do sistema:
+```bash
+# Foco no módulo de autenticação:
+amb context auth
 
-# Gera o bloco Markdown de contexto arquitetural
-context_md = build_ai_context(focus_module="financeiro", max_files_per_layer=15)
-print(context_md)
+# Foco no módulo financeiro:
+amb context financeiro
+
+# Foco no módulo de agendamentos/agenda:
+amb context agenda
+```
+
+### 3. Obter Saída Estruturada em JSON
+Para ferramentas automatizadas ou scripts de orquestração:
+```bash
+amb context auth --json
 ```
 
 ---
 
-## 🔧 Extensibilidade e Regras de SRP
+## 🏛️ 3. As 6 Camadas Canônicas do AMB
 
-1. **Separação de Responsabilidades (SRP):**
-   - A função `_determine_file_layer(filepath)` contém a regra pura de classificação.
-   - O mapeamento é testado de forma isolada em [`tests/test_ai_context_builder.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/tests/test_ai_context_builder.py).
-2. **Customização por Repositório:**
-   - Em monorepos com estruturas específicas, padrões adicionais podem ser incluídos em `LAYERS_CONFIG` sem quebrar projetos existentes.
+O AMB classifica automaticamente os arquivos do seu repositório com base em padrões de nomes e estruturas de pastas:
+
+| Camada | Padrões de Pastas & Nomes | Finalidade no Projeto |
+| :--- | :--- | :--- |
+| **Database** | `models/`, `db/`, `migrations/`, `entities/`, `schema` | Tabelas, tipos de banco e migrações. |
+| **Domain / Services** | `services/`, `use_cases/`, `domain/`, `core/`, `logic/` | Regras de negócio, cálculos e casos de uso. |
+| **API / Transport** | `api/`, `routes/`, `controllers/`, `handlers/`, `endpoints/` | Rotas HTTP, endpoints REST ou GraphQL. |
+| **UI / Client** | `views/`, `components/`, `pages/`, `frontend/`, `templates/` | Telas visuais, componentes e formulários. |
+| **Configuration** | `config/`, `.env`, `settings/`, `setup` | Variáveis de ambiente e configuração de libs. |
+| **Tests** | `tests/`, `spec/`, `__tests__/` | Testes unitários, de integração e e2e. |
+
+---
+
+## 🗄️ 4. Inspeção de Schemas de Banco de Dados (`amb schema`)
+
+O AMB inclui um leitor de schemas somente leitura (Read-Only) que funciona em repositórios com Drizzle ORM, Prisma, TypeORM, SQLAlchemy ou arquivos SQL:
+
+```bash
+# Inspecionar todos os schemas e tabelas do projeto:
+amb schema
+
+# Filtrar tabelas por palavra-chave (ex: pedidos, users, kanban):
+amb schema kanban
+
+# Exibir os schemas em formato JSON:
+amb schema --json
+```
+
+O comando exibe o nome das tabelas, colunas, tipos de dados, chaves primárias e relacionamentos sem precisar de conexão com banco de dados externo.
+
+---
+
+## 💡 5. Como Usar o Contexto em Prompts de Desenvolvimento
+
+Ao redigir um arquivo de especificação ou prompt para enviar ao Jules ou Antigravity:
+
+1. Rode `amb context <modulo>` no terminal.
+2. Copie o bloco Markdown gerado.
+3. Cole na seção `## 🗺️ Mapa Arquitetural do Módulo` do seu prompt:
+
+```markdown
+# Tarefa: Implementar Relatório de Vendas
+
+## 🗺️ Mapa Arquitetural do Módulo
+- Database: `apps/api/src/db/schemas/vendas.ts`
+- Service: `apps/api/src/services/vendasService.ts`
+- Controller: `apps/api/src/routes/vendasRoutes.ts`
+- UI: `apps/web/src/pages/RelatorioVendas.tsx`
+
+## Requisitos
+...
+```
+
+*Nota:* Se você utilizar o `amb agent --loop`, essa injeção é realizada **100% no piloto automático** pelo AMB!

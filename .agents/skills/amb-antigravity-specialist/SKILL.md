@@ -1,108 +1,113 @@
 ---
 name: amb-antigravity-specialist
 description: >-
-  Manage local personas, prompt engineering, RulesManager and cognitive execution via Antigravity SDK and agy CLI in AMB_V2. Use when creating or tuning personas in .amb/personas/, inspecting architectural rules with amb agy rules, synthesizing prompts, running agents locally with --agy/--local, or inspecting learning diaries.
+  Manage local personas, prompt engineering, rules inspection, and local cognitive agent execution via Antigravity SDK and agy CLI inside any consumer project. Use when creating or tuning personas in .amb/personas/, running agents locally with --agy/--local, auditing architectural rules with amb validate, or synthesizing prompts.
 ---
 
 # 🛸 AMB Antigravity Specialist
 
-Especialista na gestão de personas, engenharia de prompts, gerenciamento de regras arquiteturais (`RulesManager`) e inferência cognitiva via **Antigravity SDK (`agy` CLI)** e API do Gemini no `amb_v2`.
-
-## 📌 Visão Geral & Arquitetura
-
-O ecossistema `amb_v2` integra o Google Antigravity para permitir que personas e ferramentas cognitivas operem tanto **localmente na sua máquina** quanto **na nuvem do Jules**:
-- **Cliente Cognitivo Unificado:** [`amb_cli/integrations/antigravity/antigravity_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/antigravity/antigravity_client.py)
-- **Gerenciador de Regras Centralizado:** [`amb_cli/workspace/rules_manager.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/workspace/rules_manager.py)
-- **Executor Dinâmico de Personas:** [`amb_cli/agents/local_agent_runner.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/agents/local_agent_runner.py)
-- **Diretório de Personas do Projeto Ativo:** `.amb/personas/` (ou `.jules/personas/`)
-- **Diários Cognitivos de Aprendizado:** `.amb/diarios/<persona>.md`
+Guia para criar e gerenciar **personas locais**, executar **agentes no seu terminal** sem gastar cota na nuvem (via Antigravity SDK / `agy` CLI) e auditar regras arquiteturais em qualquer projeto consumidor.
 
 ---
 
-## 🧭 Despacho Nuvem (Padrão) vs Execução Local (`--agy`)
+## 📌 1. Visão Geral: Nuvem (Jules) vs Local (`--agy`)
 
-Por padrão no `amb_v2`, qualquer persona é despachada para o **Google Jules** na nuvem:
-- `amb agent --role <persona>` ➔ **Despacha para o Jules (Cloud)** ☁️
-- `amb agent --all` ➔ **Despacha todas para o Jules (Cloud)** ☁️
+Por padrão, comandos de agente no AMB despacham tarefas para a nuvem do Google Jules:
+- `amb agent --role engineer` ➔ **Nuvem (Jules Cloud VM)** ☁️
 
-Para forçar a execução **local** no terminal usando o motor do Antigravity (`agy` CLI):
-- `amb agent --role <persona> --agy` (ou `--local`) ➔ **Executa Localmente** 💻
-- `amb agent --all --agy` ➔ **Executa todas localmente** 💻
+Quando você deseja que o agente trabalhe **diretamente nos arquivos locais da sua máquina**, com feedback instantâneo e **sem consumir cota do Google Jules**, utilize a flag `--agy` (ou `--local`):
+- `amb agent --role engineer --agy` ➔ **Execução Local (Antigravity)** 💻
+- `amb agent --all --agy` ➔ **Executa todas as personas localmente** 💻
 
-*Nota:* A execução local com `--agy` **não consome cota do Google Jules**.
-
----
-
-## 🛠️ CLI Unificada do Antigravity (`amb agy`)
-
-O AMB_V2 disponibiliza o comando mestre `amb antigravity` (alias `amb agy`) com subcomandos modulares:
-
-```bash
-# Diagnóstico de runtime (SDK, CLI agy, GEMINI_API_KEY, modelo ativo e regras):
-amb agy status [--json]
-
-# Listar e auditar regras arquiteturais ativas no repositório:
-amb agy rules [--json] [--content]
-
-# Sintetizar ideia informal em prompt executivo formal estruturado:
-amb agy prompt -i "Implementar endpoint de pagamentos idempotente" -r backend [-o prompt.md]
-
-# Auditar conformidade arquitetural e boas práticas de um arquivo:
-amb agy validate path/to/file.py [--json]
-
-# Executar inferência direta arbitrária com o modelo cognitivo:
-amb agy run "Explique a diferença entre SRP e OCP" --model gemini-3.8-flash
-
-# Ativar ou desativar confirmação interativa antes de chamadas ao Gemini:
-amb config --gemini-confirm <on|off>
-```
+*Requisito para execução local:* Chave `GEMINI_API_KEY` configurada no `.env` e a CLI `agy` instalada no PATH.
 
 ---
 
-## 📐 Gerenciamento Central de Regras (`RulesManager`)
+## 📝 2. Como Criar e Ajustar Personas no Projeto Consumidor
 
-O [`RulesManager`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/workspace/rules_manager.py) descobre automaticamente as regras arquiteturais do projeto seguindo a precedência:
-1. Diretório explicitamente configurado via CLI ou parâmetro.
-2. `.antigravity/rules/`
-3. `.gemini/rules/`
-4. `.agents/rules/` ou `rules/`
-5. Arquivos raiz (`AGENTS.md`, `GEMINI.md`).
+Todas as personas do seu projeto residem na pasta local `.amb/personas/` como arquivos Markdown (`.md`).
 
-**Garantias:**
-- **Zero Premissas a Priori:** Suporte poliglota transparente (Python, TypeScript, Go, Rust, etc.).
-- **Markdown Íntegro:** Fechamento automático de fences (```` ``` ````) quando regras são truncadas.
-- **Cache em Memória:** Performance otimizada com invalidação instantânea (`RulesManager.invalidate_cache()`).
-
----
-
-## 📝 Como Criar uma Nova Persona
-
-Toda persona é um arquivo Markdown (`.md`) colocado em `.amb/personas/` (ou na pasta definida por `--personas-dir`).
-
-### Estrutura Padrão de uma Persona:
+### Estrutura Padrão de uma Persona (`.amb/personas/frontend.md`):
 ```markdown
-# 🛡️ Nome da Persona: Especialidade
+# 🎨 Frontend Engineer: Especialista em Interface e Design System
 
-Breve resumo da missão da persona em uma ou duas frases.
+Persona responsável por componentes visuais, acessibilidade e integração com APIs.
 
 ## 🎯 Missão Principal
-Descrever o objetivo claro que o agente deve atingir no repositório.
+Construir e refatorar componentes de interface garantindo fidelidade ao Design System, responsividade e 100% de aprovação no typecheck do projeto.
 
-## 📂 Arquivos Alvos
-1. `caminho/para/arquivo1.py`
-2. `caminho/para/arquivo2.ts`
+## 📂 Arquivos de Foco
+- `apps/web/src/components/`
+- `apps/web/src/pages/`
+- `apps/web/src/styles/`
 
 ## 📋 Regras de Implementação
-- Regra 1: Manter compatibilidade com Python 3.10+ / stack do projeto
-- Regra 2: Não alterar contratos de API existentes sem aviso
-- Regra 3: Rodar os testes após implementar
+1. Utilizar classes utilitárias do Tailwind já configuradas no repositório.
+2. Não adicionar dependências externas sem aprovação prévia.
+3. Garantir labels de acessibilidade (`aria-label`, contraste) em todos os botões e inputs.
+4. Executar `npm run lint --prefix apps/web` antes de concluir.
+```
+
+### Comandos de Persona:
+```bash
+# Listar todas as personas do projeto:
+amb agent --list
+
+# Executar a persona localmente com uma instrução adicional:
+amb agent --role frontend --agy -t "Refatorar modal de login para suportar OAuth"
 ```
 
 ---
 
-## 🧠 Diários de Aprendizado (`.amb/diarios/`)
+## 📐 3. Governança e Auditoria de Regras Arquiteturais
 
-Quando uma persona é executada:
-1. O `local_agent_runner.py` verifica se existe um diário em `.amb/diarios/<nome_da_persona>.md`.
-2. Se existir, o histórico de aprendizados anteriores daquele repositório é **automaticamente concatenado** ao prompt enviado ao agente.
-3. Isso evita que o agente cometa os mesmos erros em ciclos subsequentes.
+O AMB permite definir regras de engenharia em `.agents/rules/` no seu repositório consumidor e auditar seus arquivos contra essas regras:
+
+```bash
+# Listar todas as regras ativas do seu projeto:
+amb agy rules
+
+# Exibir o conteúdo completo consolidado das regras:
+amb agy rules --content
+
+# Auditar conformidade arquitetural de um arquivo específico:
+amb validate apps/web/src/components/Modal.tsx
+
+# Diagnóstico de saúde do runtime Antigravity no projeto:
+amb agy status
+```
+
+---
+
+## 💡 4. Síntese de Prompts com Gemini (`amb prompt -s`)
+
+Transforme ideias informais ou requisitos soltos em prompts arquiteturais estruturados, prontos para enviar a qualquer IA ou persona:
+
+```bash
+# Sintetizar prompt arquitetural a partir de uma ideia informal:
+amb prompt -s "Criar sistema de notificações toast com auto-dismiss e som suave" --role frontend -o prompt.md
+
+# Sintetizar prompt via comando agy dedicado:
+amb agy prompt -i "Implementar endpoint de checkout idempotente com stripe" -r backend -o specs/checkout.md
+```
+
+O Gemini analisa a ideia, lê as regras arquiteturais ativas do seu repositório e gera um prompt profissional contendo escopo, arquivos alvos, invariantes de segurança e testes sugeridos.
+
+---
+
+## ⚡ 5. Inferência Cognitiva Direta (`amb agy run`)
+
+Execute consultas técnicas ou tire dúvidas arquiteturais com o modelo Gemini diretamente no seu terminal:
+
+```bash
+amb agy run "Qual a melhor estratégia de cache para este monorepo?" -m gemini-2.5-flash
+```
+
+### Configurar Confirmação Interativa do Gemini:
+```bash
+# Desabilitar confirmação interativa para chamadas ao Gemini (100% autônomo):
+amb config --gemini-confirm off
+
+# Reativar pedido de confirmação antes de chamadas:
+amb config --gemini-confirm on
+```

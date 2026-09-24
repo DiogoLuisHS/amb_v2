@@ -1,85 +1,109 @@
 ---
 name: amb-autonomous-pipeline
 description: >-
-  Master the autonomous continuous engineering loop in AMB_V2 (amb agent --loop). Use when orchestrating Jules cloud VMs, Gemini auto-reply advisors, automated QA pipeline testing, Git auto-merge, and learning diary updates.
+  Operate the autonomous continuous engineering loop (amb agent --loop) and batch prompt development (amb agent -p) inside any consumer project. Use when orchestrating Jules cloud VMs, Gemini auto-reply advisors, automated local QA validation, and Git auto-merge.
 ---
 
 # 🔄 AMB Autonomous Pipeline
 
-Especialista no ciclo de vida do **Loop Autônomo Contínuo de Engenharia** do `amb_v2` (`amb agent --loop`).
-
-## 📌 Visão Geral & Arquitetura
-
-O pipeline autônomo é o coração do `amb_v2`. Ele une todas as ferramentas individuais em uma esteira contínua sem intervenção humana:
-1. **Orquestrador Central:** [`amb_cli/agents/autonomous_loop.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/agents/autonomous_loop.py)
-2. **Consultor Cognitivo (Auto-Advisor):** [`amb_cli/agents/auto_reply_core/cognitive_advisor.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/agents/auto_reply_core/cognitive_advisor.py) / [`amb_cli/agents/auto_reply.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/agents/auto_reply.py)
-3. **Validador de QA Seguro:** [`amb_cli/pipeline/pipeline.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/pipeline/pipeline.py)
-4. **Executor de Merge Git:** [`amb_cli/integrations/jules/tools/merge_session_pr.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/tools/merge_session_pr.py)
+Guia de operação do **Loop Autônomo Contínuo de Engenharia** e do **Desenvolvimento em Lote por Prompts** em qualquer repositório gerenciado pelo AMB_V2.
 
 ---
 
-## 🔁 O Ciclo de 7 Etapas do Loop Autônomo
+## 📌 1. Visão Geral do Pipeline
+
+O pipeline autônomo do AMB transforma especificações em código de produção entregue e mesclado no Git sem intervenção manual repetitiva:
+- Conecta o **Google Jules** na nuvem (Cloud VM dedicada).
+- Conecta o **Google Gemini** como Conselheiro Cognitivo (Auto-Advisor) para responder dúvidas do agente e resolver erros de build.
+- Executa a **Suíte Local de QA** (`amb_project.json`) na sua máquina para garantir que o código compila e passa nos testes.
+- Realiza **Auto-Merge Seguro** no GitHub (`gh pr ready` + squash merge) e atualiza a sua branch local com `git pull`.
+
+---
+
+## 🔁 2. O Ciclo de 7 Etapas do Loop Autônomo
 
 ```mermaid
 graph TD
     A[1. Injeção de Contexto Arquitetural] --> B[2. Despacho da Sessão Jules na Nuvem]
-    B --> C[3. Vigilância em Tempo Real]
+    B --> C[3. Vigilância em Tempo Real da VM]
     C -->|Dúvida ou Erro Bash| D[4. Auto-Advisor Gemini Responde]
     D --> C
-    C -->|PR Criado com Sucesso| E[5. Execução do Pipeline QA Local]
+    C -->|PR Aberto com Sucesso| E[5. Execução do QA Local do Projeto]
     E -->|QA Aprovado| F[6. Auto-Merge do PR & Git Pull]
-    F --> G[7. Atualização do Diário de Aprendizado]
+    F --> G[7. Registro no Diário de Aprendizado]
     G --> A
 ```
 
-### Detalhamento das Etapas:
-1. **Injeção de Contexto:** Roda `amb_cli/architecture/ai_context_builder.py` para mapear camadas (DB, Services, UI) e anexa o roteiro ao prompt do Jules, economizando 20-30min de exploração inicial.
-2. **Despacho Jules:** Cria a sessão na nuvem do Google Jules em uma branch dedicada.
-3. **Vigilância:** O loop monitora o estado da sessão via polling contínuo.
-4. **Auto-Advisor com Gemini:** Quando o Jules faz uma pergunta ou encontra erros de typecheck/build, o Gemini analisa os logs (até 800 caracteres) e responde a dúvida tecnicamente.
-5. **Pipeline QA:** Ao abrir o PR, os comandos de QA configurados no `.amb/amb_project.json` (ou detectados automaticamente) são executados via `shutil.which` sem risco de injeção (`shell=False`).
-6. **Auto-Merge Seguro:** O PR (sempre aberto como Draft pelo Jules) é automaticamente publicado (`gh pr ready`), aprovado, mesclado no GitHub, a branch remota é excluída e a branch local é sincronizada (`git pull origin <branch>`).
-7. **Diário de Aprendizado:** O arquivo `.amb/diarios/<persona>.md` é atualizado com o resumo e lições da sessão.
+### Detalhamento das 7 Etapas:
+1. **Injeção de Contexto Automática:** Antes de despachar, o AMB executa internamente o mapeamento de camadas (`amb context`) e injeta no prompt o mapa de arquivos (DB ➔ Services ➔ API ➔ UI), poupando de 20 a 30 minutos de exploração do Jules por sessão.
+2. **Despacho Jules:** Cria uma Cloud VM isolada com branch própria (`jules/session-...`).
+3. **Vigilância:** O sentinela monitora as atividades e saídas bash do Jules em tempo real.
+4. **Auto-Advisor com Gemini:** Se o Jules fizer perguntas sobre bibliotecas ou encontrar erros de compilação, o Gemini analisa os logs e envia respostas técnicas diretamente ao chat da VM.
+5. **Validação de QA Local:** Quando o PR é aberto, os comandos configurados em `.amb/amb_project.json` (ex: `npm run typecheck`, `npm test`) são executados localmente.
+6. **Auto-Merge Seguro:** O PR (aberto pelo Jules como Draft) é convertido para Ready (`gh pr ready`), aprovado, mesclado com squash no GitHub e a branch local é sincronizada via `git pull origin <branch>`.
+7. **Diário de Aprendizado:** O arquivo `.amb/diarios/<persona>.md` é atualizado com o histórico do ciclo.
 
 ---
 
-## 🚀 Como Executar o Pipeline Autônomo
+## 📁 3. Modo de Desenvolvimento em Lote (`amb agent -p`)
 
-```bash
-# 1. Desenvolvimento por PASTA DE PROMPTS em lote (Recomendado para Features):
-amb agent -p .amb/prompts/
+Este é o modo mais recomendado para implementar features de médio e grande porte em um projeto consumidor.
 
-# 2. Pasta de prompts direcionada para branch específica:
-amb agent -p .amb/prompts/ --branch feature/minha-stack
+### Como Estruturar a Pasta de Prompts:
+Crie na pasta `.amb/prompts/` (ou em qualquer pasta do seu projeto) arquivos `.md` sequenciais:
 
-# 3. Loop contínuo infinito com uma persona:
-amb agent --role pure --loop
-
-# 4. Loop contínuo iterando por TODAS as personas da pasta:
-amb agent --all --loop
-
-# 5. Loop limitado a 3 ciclos completos:
-amb agent --all --loop --max-cycles 3
-
-# 6. Loop direcionado para uma branch específica (ex: main):
-amb agent --all --loop --branch main
-
-# 7. Loop rotacionando o foco entre módulos do projeto:
-amb agent --role relay --loop --modules agenda,financeiro,auth
+```text
+.amb/prompts/
+├── 01_database_schemas.md       # Criação de tabelas, tipos e migrações
+├── 02_backend_services.md       # Casos de uso e regras de negócio
+├── 03_api_endpoints.md          # Rotas REST/RPC e validações
+└── 04_frontend_components.md    # Componentes visuais e integração
 ```
 
-### 📁 Como Funciona o Lote por Pasta (`-p <pasta>`):
-- Ao passar uma pasta (ex: `-p .amb/prompts/`), o orquestrador coleta todos os arquivos `.md` ordenados (ex: `01_models.md`, `02_service.md`, `03_ui.md`).
-- Cada prompt é executado sequencialmente até a conclusão do PR e validação do QA.
-- Por padrão, uma rodada de cada prompt é executada e o ciclo conclui com segurança. Para manter em rotação infinita, adicione `--loop`.
+### Como Executar:
+```bash
+# Executa todos os prompts da pasta em sequência na branch ativa:
+amb agent -p .amb/prompts/
+
+# Direcionar a execução para uma branch específica (ex: feature/pedidos):
+amb agent -p .amb/prompts/ --branch feature/pedidos
+
+# Manter em rotação contínua (looping infinito sobre os prompts):
+amb agent -p .amb/prompts/ --loop
+```
+
+O AMB processará cada prompt até o PR ser aberto, testado no QA local e mesclado com sucesso antes de iniciar o prompt seguinte!
 
 ---
 
-## 🛡️ Regras de Segurança no Pipeline
+## ♾️ 4. Loop Autônomo com Personas (`amb agent --loop`)
 
-1. **Subprocessos no Windows:**
-   - Binários como `npm`, `yarn` ou `pytest` devem ser resolvidos com `shutil.which()` para compatibilidade com `shell=False`.
-2. **Truncamento de Logs:**
-   - Erros do compilador não podem ser cortados antes de atingir o diagnóstico. O buffer de 800 caracteres com indicador `...[+N chars omitidos]` é mantido.
-3. **Evitar Respostas Duplicadas:**
-   - O loop rastreia `last_answered_agent_msg_id` para garantir que a mesma dúvida não seja respondida duas vezes.
+Para ciclos contínuos de desenvolvimento ou refatoração guiados por uma persona:
+
+```bash
+# Loop contínuo com uma persona específica (ex: engineer):
+amb agent --role engineer --loop
+
+# Limitar a execução a 3 ciclos completos de entrega:
+amb agent --role engineer --loop --max-cycles 3
+
+# Loop contínuo iterando sobre TODAS as personas de .amb/personas/:
+amb agent --all --loop
+
+# Rotacionar o foco do loop entre módulos específicos do repositório:
+amb agent --role engineer --loop --modules api,web,auth
+
+# Desabilitar o auto-merge para revisar os PRs manualmente:
+amb agent --role engineer --loop --no-auto-merge
+```
+
+---
+
+## 🛡️ 5. Boas Práticas e Segurança no Pipeline
+
+1. **Evite Comandos Bloqueantes no QA:**
+   - No `.amb/amb_project.json`, use comandos que rodam em modo single-run (ex: `jest --watchAll=false` ou `vitest run`, nunca modos de watch interativos).
+2. **Preservação de Branches:**
+   - Sempre execute o loop a partir de uma branch limpa (`main`, `develop` ou feature branch dedicada). O AMB executa `git pull` automático a cada merge para manter o código sincronizado.
+3. **Controle de Cota de VM:**
+   - Use `--max-cycles <N>` para definir limites controlados ao rodar tarefas não supervisionadas (ex: durante a noite).

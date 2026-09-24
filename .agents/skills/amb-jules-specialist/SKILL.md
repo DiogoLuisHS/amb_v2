@@ -1,120 +1,126 @@
 ---
 name: amb-jules-specialist
 description: >-
-  Operate, automate, and troubleshoot Google Jules cloud coding agent sessions in the AMB_V2 ecosystem. Use when creating sessions, streaming live outputs, approving plans, answering agent doubts, and safely merging PRs.
+  Operate, automate, and troubleshoot Google Jules cloud coding agent sessions for any consumer repository. Use when creating cloud tasks, streaming live activities and bash commands, approving plans, answering doubts via Gemini Advisor, and safely merging PRs.
 ---
 
 # ☁️ AMB Jules Specialist
 
-Especialista no ciclo de vida e operações do **Google Jules** dentro do ecossistema `amb_v2`.
-
-## 📌 Visão Geral & Arquitetura
-
-O Google Jules é um agente de desenvolvimento em nuvem que executa em uma máquina virtual (Cloud VM) dedicada com clone do repositório, branch própria e capacidade de abrir Pull Requests no GitHub.
-
-No `amb_v2`, a integração está localizada em:
-- **Cliente Core:** [`amb_cli/integrations/jules/jules_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/jules_client.py) (Wrapper oficial da API REST v1alpha)
-- **Ferramentas Modulares:** [`amb_cli/integrations/jules/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/tools/) (`status`, `sources`, `list_sessions`, `get_session`, `create_session`, `approve_plan`, `send_message`, `monitor_activities`, `merge_session_pr`, `cleanup_sessions`)
-- **Sentinela / Watcher:** [`amb_cli/integrations/jules/jules_watcher.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/jules_watcher.py)
+Guia para operar o **Google Jules** na nuvem a partir de qualquer repositório consumidor usando o comando `amb jules`.
 
 ---
 
-## 🚀 Comandos Essenciais da CLI (`amb jules`)
+## 📌 1. O que é o Google Jules no AMB?
 
-### 1. Diagnóstico e Status da Integração
-Verifica conectividade, credenciais da API Key, repositórios vinculados e sessões ativas do repositório:
+O Google Jules é um agente de desenvolvimento em nuvem que executa em uma máquina virtual (Cloud VM) isolada. Ele clona o repositório vinculado no `.env` (`GITHUB_REPOSITORY`), cria uma branch própria (`jules/session-...`), implementa as mudanças de código e abre um Pull Request no GitHub.
+
+No AMB, a integração é 100% automatizada:
+- Suporta **Streaming ao Vivo** de pensamentos, comandos bash e logs.
+- Suporta **Auto-Advisor com Gemini** para responder dúvidas do agente sem travar a sessão.
+- Trata **Draft PRs** automaticamente via `gh pr ready`.
+- Executa **QA Local** na sua máquina antes de aprovar o merge no Git.
+
+---
+
+## 🚀 2. Comandos Operacionais da CLI (`amb jules`)
+
+### 1. Criar uma Nova Tarefa na Nuvem
+Despacha uma tarefa para uma nova Cloud VM:
 ```bash
-amb jules status [--json]
+amb jules create -p "Implementar validação Zod no schema de usuários" -t "User Schema Validation" --branch main
 ```
 
-### 2. Listar Fontes/Repositórios Conectados
-Exibe os repositórios GitHub vinculados à conta Jules:
+> **Normalização Universal de IDs:** Todos os comandos abaixo aceitam o ID numérico puro (`175...`), caminho REST (`sessions/175...`) ou a URL completa do navegador (`https://jules.google.com/session/175...`).
+
+### 2. Acompanhar em Tempo Real (Live Streaming)
+Acompanhe os logs, comandos bash executados e pensamentos do agente em tempo real no seu terminal:
 ```bash
-amb jules sources [--json]
+amb jules get <ID_OU_URL> --watch
+```
+*Para obter apenas os dados brutos em JSON:*
+```bash
+amb jules get <ID_OU_URL> --json
 ```
 
-### 3. Listar Sessões Recentes
-Lista sessões do repositório ativo com suporte a filtros e paginação:
+### 3. Listar Sessões do Repositório
 ```bash
-# Sessões do repositório ativo:
+# Listar as 10 sessões mais recentes do seu projeto:
 amb jules list --limit 10
 
-# Filtrar por estado específico:
+# Filtrar sessões aguardando resposta:
 amb jules list --state AWAITING_USER_FEEDBACK
 
-# Listar de todos os repositórios da conta:
-amb jules list --all --json
+# Listar sessões de todos os repositórios conectados à sua conta:
+amb jules list --all
 ```
 
-### 4. Criar uma Nova Sessão
-Despacha uma tarefa para uma nova VM na nuvem:
-```bash
-amb jules create --prompt "Implementar validação de input no formulário de login" --title "Auth Input Validation" --branch main
-```
-*Suporta IDs puros, rotas `sessions/<id>` ou URLs completas do navegador (`https://jules.google.com/session/<id>`).*
+### 4. Responder Dúvidas do Agente (`reply`)
+Quando a sessão entra no estado `AWAITING_USER_FEEDBACK`:
 
-### 5. Acompanhar em Tempo Real (Live Streaming)
-Mostra o fluxo de pensamento, comandos bash e logs em tempo real:
 ```bash
-amb jules get <SESSION_ID_OU_URL> --watch
-```
-*Para obter saída em JSON puro:*
-```bash
-amb jules get <SESSION_ID_OU_URL> --json
+# Opção A: Resposta manual direta via CLI:
+amb jules reply <ID> -m "Utilize a biblioteca Lucide React já instalada para os ícones."
+
+# Opção B: Resposta automática inteligente com Gemini (Auto-Advisor):
+amb jules reply <ID> -y
+
+# Opção C: Abrir menu cognitivo interativo para revisar todas as dúvidas:
+amb jules reply
 ```
 
-### 6. Aprovar o Plano do Agente
-Quando a sessão atinge o estado `AWAITING_PLAN_APPROVAL`:
+### 5. Aprovar o Plano de Execução (`approve`)
+Quando o agente formula o plano de ação e aguarda autorização (`AWAITING_PLAN_APPROVAL`):
 ```bash
-amb jules approve <SESSION_ID_OU_URL> [--force]
+amb jules approve <ID> [--force]
 ```
 
-### 7. Responder Dúvidas do Agente
-Quando a sessão atinge `AWAITING_USER_FEEDBACK`:
+### 6. Fazer Merge Seguro do Pull Request (`merge`)
+Detecta o PR aberto pelo Jules, converte de Draft para Ready (`gh pr ready`), executa a suíte de testes locais do projeto (`amb_project.json`), aprova no GitHub e faz squash merge:
 ```bash
-# Resposta manual direta:
-amb jules reply <SESSION_ID> -m "Utilize o schema existente em auth/schemas.py"
+# Mesclar PR de uma sessão específica:
+amb jules merge <ID> [--branch main]
 
-# Resposta automática assistida por Gemini (Auto-Advisor):
-amb jules reply <SESSION_ID> --auto-approve
-```
-
-### 8. Fazer Merge Seguro do PR
-Detecta o PR aberto pelo Jules (que o Jules sempre cria como Draft), converte automaticamente em Ready for Review (`gh pr ready`), aprova no GitHub, valida o QA localmente e faz merge:
-```bash
-amb jules merge <SESSION_ID_OU_URL> [--branch main]
-
-# Ou detectar automaticamente o PR mais recente:
+# Detectar e mesclar automaticamente o PR mais recente aberto:
 amb jules merge --auto-latest
 ```
 
-### 9. Limpar Sessões Antigas (Preservação de Cota)
-Remove sessões `COMPLETED` ou `FAILED` para manter o workspace limpo:
+### 7. Limpar Sessões Encerradas para Economizar Cota (`clean`)
+Remove sessões da nuvem que já foram integradas ou que falharam:
 ```bash
-amb jules clean --failed -f
+# Limpar sessões com PRs já mesclados no Git:
 amb jules clean --merged -f
+
+# Limpar sessões com erro fatal (FAILED):
+amb jules clean --failed -f
 ```
 
 ---
 
-## ⚙️ Regras de Implementação & Gotchas
+## 🛠️ 3. O Sentinela Contínuo (`amb monitor` e `amb advisor`)
 
-1. **Normalização Universal de IDs:**
-   - O `JulesClient.normalize_session_id(session_id)` extrai automaticamente o ID limpo de números puros, caminhos `sessions/<id>` e URLs `https://jules.google.com/session/<id>`. Todos os métodos e comandos aceitam qualquer um desses formatos de forma intercambiável.
+Para monitorar e responder sessões em lote em segundo plano no projeto:
 
-2. **Estrutura de Resposta de Atividades:**
-   - A API do Jules pode retornar `activities` tanto como uma lista direta `[ { ... } ]` quanto envelopada em dict `{ "activities": [...] }`.
-   - **Padrão Obrigatório:**
-     ```python
-     acts = act_res if isinstance(act_res, list) else act_res.get("activities", [])
-     ```
+```bash
+# Sentinela contínuo em tempo real (vigia a cada 15 segundos):
+amb monitor
 
-3. **Ordenação Cronológica de Atividades:**
-   - A API retorna atividades em ordem decrescente (mais recentes primeiro).
-   - Para síntese de contexto ou logs, inverta a lista com `reversed(acts)` para obter ordem cronológica correta.
+# Sentinela no Piloto Automático (vigia e auto-responde com Gemini sem parar):
+amb monitor -y
 
-4. **Subprocessos sem `shell=True`:**
-   - Comandos Git em `merge_session_pr.py` usam `shell=False` passando listas de argumentos (`["git", "pull", "origin", branch]`) para evitar injeção de comandos via nomes de branch.
+# Checagem instantânea de 1 rodada:
+amb monitor -1
 
-5. **Conversão de Draft PRs Automática:**
-   - O Google Jules cria Pull Requests em modo Draft por padrão. O utilitário `merge_session_pr` dispara `gh pr ready` antes do merge, dispensando qualquer ação manual na interface web do GitHub.
+# Menu cognitivo para revisar dúvidas pendentes:
+amb advisor
+```
+
+---
+
+## ⚠️ 4. Gotchas Críticos do Jules
+
+1. **Jules Sempre Abre PRs como Draft:**
+   - O Jules cria os PRs no GitHub no modo Draft. O comando `amb jules merge` executa automaticamente `gh pr ready` antes do merge, eliminando a necessidade de abrir a página web do GitHub.
+2. **Ambiente Isolado da Cloud VM:**
+   - A VM do Jules não tem acesso ao seu `.env` local. Passe chaves ou configurações de ambiente necessárias explicitamente no prompt ou instrua o agente a ler de `.env.example`.
+3. **Erros de Build na VM:**
+   - Se o Jules falhar por falta de um binário ou versão de runtime, o Auto-Advisor (`amb jules reply -y`) sugere os comandos alternativos automaticamente para desbloquear a VM.

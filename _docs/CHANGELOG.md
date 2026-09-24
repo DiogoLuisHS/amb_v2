@@ -7,8 +7,9 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 ## [2.4.1] — 2026-09-23
 
 ### 🤖 Agentes, Regras & Governança Cognitiva (/learn)
-- **Nova Skill Mestre (`amb-master-ecosystem`):** Referência completa e unificada da CLI `amb`, matriz de comandos, cheatsheet de troubleshooting e desenvolvimento por lote de prompts (`-p`).
-- **Atualização Canônica das 7 Skills Especialistas:** Alinhamento de todos os caminhos para a arquitetura modular `amb_cli/` e documentação de novos recursos (`amb gui`, auto-draft PR com `gh pr ready`, `amb config --gemini-confirm`, SRP prompts no pipeline).
+- **Skills 100% Orientadas a Projetos Consumidores:** Todas as 8 skills em `.agents/skills/` foram reestruturadas para ensinar como qualquer repositório externo utiliza a CLI `amb` para desenvolver, testar e automatizar código (eliminando referências a código interno da biblioteca).
+- **Nova Skill Mestre (`amb-master-ecosystem`):** Referência completa e unificada da CLI `amb`, matriz de comandos, cheatsheet de troubleshooting e fluxos de desenvolvimento em lote (`-p`).
+- **Manual Completo das 7 Skills Especialistas:** Guias de uso prático para bootstrap (`amb-consumer-bootstrap`), loop autônomo (`amb-autonomous-pipeline`), cloud coding (`amb-jules-specialist`), UI mockups (`amb-stitch-specialist`), design-to-code (`amb-design-to-code`), personas locais (`amb-antigravity-specialist`) e mapas de camadas (`amb-context-architecture`).
 - **Alinhamento das Regras Arquiteturais:** Atualização das referências de bootstrap, exceções e camadas em `.agents/rules/` (`01_single_responsibility.md`, `03_dry_and_zero_redundancy.md`, `04_code_quality_and_typing.md`).
 - **159 Testes Unitários Verificados:** Integridade mantida com 100% de sucesso.
 

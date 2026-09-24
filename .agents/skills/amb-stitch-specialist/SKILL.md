@@ -1,127 +1,100 @@
 ---
 name: amb-stitch-specialist
 description: >-
-  Generate UI mockups, extract screen assets, and manage design systems using the Stitch integration in AMB_V2. Use when calling Stitch tools, generating screens from text, or extracting UI layouts for frontend development.
+  Generate UI mockups, extract screen assets, and manage design systems using the Stitch integration for any consumer project. Use when calling Stitch tools, generating screens from text, exporting HTML/DOM layouts, or syncing design tokens with design.md.
 ---
 
 # 🎨 AMB Stitch Specialist
 
-Especialista na integração de UI, prototipagem e design systems através do **Google Stitch SDK oficial** (`@google/stitch-sdk`) no ecossistema `amb_v2`.
-
-## 📌 Visão Geral & Arquitetura
-
-O Stitch é a ferramenta de design generativo e prototipagem de telas do Google. No `amb_v2`, a integração opera em duas camadas totalmente alinhadas com a especificação oficial:
-- **Camada Node.js (Runner Oficial):** [`amb_cli/integrations/stitch/stitch_client.mjs`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/stitch_client.mjs) consumindo `@google/stitch-sdk` (`StitchToolClient` e singleton `stitch`).
-- **Camada Python (Cliente de Domínio):** [`amb_cli/integrations/stitch/stitch_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/stitch_client.py) (`StitchClient`).
-- **Ferramentas CLI / Facades:** [`amb_cli/integrations/stitch/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/tools/)
-- **Variáveis de Ambiente:** `STITCH_API_KEY` e opcionalmente `STITCH_PROJECT_ID`, `STITCH_DEVICE_TYPE` no `.env`.
+Guia para gerar **telas visuais, protótipos de interface e design systems** para o seu projeto consumidor utilizando a integração oficial com o **Google Stitch SDK** via `amb stitch`.
 
 ---
 
-## 🛠️ Ferramentas Oficiais do Stitch MCP Server
+## 📌 1. Como o Stitch se Conecta ao seu Projeto
 
-Todas as chamadas mapeiam diretamente para os 12 tools do `@google/stitch-sdk`:
+O Google Stitch gera telas interativas com código HTML, CSS puro, screenshots e estruturas de DOM a partir de instruções em linguagem natural:
+- As telas geradas podem ser exportadas para a pasta pública do seu projeto (ex: `public/screens/` ou `dist/stitch_assets/`).
+- O Design System do projeto pode ser sincronizado a partir de um arquivo local `design.md`.
+- Funciona em conjunto com o `amb pipeline` para transformar os protótipos em componentes nativos de produção (React, Vue, Tailwind, etc.).
 
-| Ferramenta Oficial | Parâmetros Principais | Finalidade |
-| :--- | :--- | :--- |
-| `generate_screen_from_text` | `projectId`, `prompt`, `deviceType?`, `modelId?` | Gera nova tela interativa a partir de descrição textual. |
-| `edit_screens` | `projectId`, `selectedScreenIds`, `prompt`, `deviceType?` | Refina e edita uma ou mais telas existentes. |
-| `get_screen` | `name` (`projects/{pId}/screens/{sId}`) | Retorna DOM HTML, screenshots, dimensões e metadados. |
-| `list_screens` | `projectId` | Lista todas as telas criadas no projeto. |
-| `generate_variants` | `projectId`, `selectedScreenIds`, `prompt`, `variantOptions` | Gera variantes visuais exploratórias (1-5 variações). |
-| `create_project` | `title?` | Cria um novo workspace/projeto no Stitch. |
-| `get_project` | `name` (`projects/{projectId}`) | Consulta metadados, instâncias de tela e tema do projeto. |
-| `list_projects` | `filter?` (ex: `view=owned`) | Lista projetos acessíveis ao usuário autenticado. |
-| `create_design_system` | `projectId?`, `designSystem` | Cria tokens de cores, tipografia, roundness e `theme.designMd`. |
-| `update_design_system` | `name`, `projectId`, `designSystem` | Atualiza tokens e especificações de um Design System existente. |
-| `list_design_systems` | `projectId?` | Lista Design Systems associados ao projeto ou globais. |
-| `apply_design_system` | `projectId`, `assetId`, `selectedScreenInstances` | Aplica o Design System às instâncias de tela selecionadas. |
-| `download_assets` *(Virtual)* | `projectId`, `outputDir` | Baixa telas e assets do projeto para o disco local. |
-| `upload` *(Domain)* | `filePath`, `opts?` | Faz upload de asset PNG/JPG/WEBP/HTML gerando tela canvas. |
+*Requisito:* `STITCH_API_KEY` (e opcionalmente `STITCH_PROJECT_ID`) configurada no `.env` do seu projeto.
 
 ---
 
-## 📱 Resolução Genérica de Dispositivos (`deviceType`)
+## 🚀 2. Comandos Operacionais da CLI (`amb stitch`)
 
-O Stitch aceita:
-- `"MOBILE"`
-- `"DESKTOP"`
-- `"TABLET"`
-- `"AGNOSTIC"` (design flexível/responsivo sem amarra a viewport fixa)
-
-> [!IMPORTANT]
-> **Zero Hardcoded:** O AMB_V2 **não** força `"DESKTOP"` como padrão. A prioridade de resolução é:
-> 1. Flag explícita na linha de comando (`--device DESKTOP|MOBILE|TABLET|AGNOSTIC`).
-> 2. Variável de ambiente (`STITCH_DEVICE_TYPE` ou `DEVICE_TYPE` no `.env`).
-> 3. Configuração do projeto consumidor (`stitch.device` ou `device_type` em `amb_project.json`).
-> 4. Se nenhum for especificado, o parâmetro é **omitido** (genérico), deixando o Stitch decidir.
-
----
-
-## 🚀 Como Invocar o Stitch via CLI ou Código
-
-### 1. Invocação via CLI do AMB
+### 1. Gerar uma Nova Tela a Partir de Texto (`generate`)
+Cria uma tela interativa baseada no seu prompt:
 ```bash
-# Listar telas do projeto ativo
-amb stitch list
+# Gerar tela com viewport Mobile e salvar o HTML localmente no projeto:
+amb stitch generate -p "Dashboard SaaS com cards de métricas financeiras e gráfico de barras" -d MOBILE -o public/dashboard.html
 
-# Gerar nova tela (mobile, desktop ou agnóstico) e salvar HTML local
-amb stitch generate -p "Dashboard analítico com gráficos" -d MOBILE -o public/dashboard.html
+# Gerar tela com viewport Desktop:
+amb stitch generate -p "Tabela de gestão de usuários com paginação e busca" -d DESKTOP -o public/usuarios.html
 
-# Obter detalhes e exportar HTML de uma tela existente
-amb stitch get -s <screen_id> -o public/tela.html
-
-# Refinar tela existente com novas instruções visuais
-amb stitch refine -s <screen_id> -p "Adicionar modal de exportação CSV"
-
-# Gerar variantes exploratórias
-amb stitch variants -s <screen_id> -c 3
-
-# Baixar todas as telas e assets para um diretório local
-amb stitch download -o ./public/stitch_assets
-
-# Sincronizar design.md local com o Design System oficial do Stitch
-amb stitch sync -f design.md
-
-# Consultar detalhes do projeto atual
-amb stitch project
-
-# Invocar ferramenta oficial arbitrária via JSON-RPC
-amb stitch call list_screens '{"projectId": "123456"}'
+# Gerar tela sem amarra a dispositivo fixo (Design Agnóstico/Responsivo):
+amb stitch generate -p "Página de checkout limpa com cartão de crédito e pix" -d AGNOSTIC
 ```
 
-### 2. Invocação via Python API (`StitchClient`)
-```python
-from amb_cli.integrations.stitch.stitch_client import StitchClient
+### 2. Dispositivos e Viewports Suportados (`-d / --device`)
+O Stitch aceita:
+- `MOBILE`: Viewport vertical para smartphones.
+- `DESKTOP`: Viewport horizontal para telas grandes.
+- `TABLET`: Viewport intermediária para tablets.
+- `AGNOSTIC`: Layout fluido e flexível sem amarra a tamanho de janela.
 
-client = StitchClient()
+> **Zero Hardcoded:** Se você não passar `--device`, o AMB busca a preferência em `STITCH_DEVICE_TYPE` no `.env` ou `stitch.device` no `amb_project.json`. Se nenhum estiver definido, omite o parâmetro para o Stitch decidir.
 
-# Listar telas
-screens = client.list_screens()
+### 3. Refinar uma Tela Existente (`refine`)
+Ajusta cores, componentes ou layouts em uma tela já gerada:
+```bash
+amb stitch refine -s <SCREEN_ID> -p "Mudar a cor primária para azul royal e arredondar os botões para border-radius de 12px"
+```
 
-# Gerar tela com viewport genérica/configurada
-screen_data = client.generate_screen(
-    prompt="Página de login moderna com suporte a Google OAuth",
-    output_file="specs/login.html"
-)
+### 4. Gerar Variantes Visuais Exploratórias (`variants`)
+Cria de 1 a 5 variações visuais da tela para comparação estética:
+```bash
+amb stitch variants -s <SCREEN_ID> --count 3
+```
 
-# Refinar tela existente
-refined = client.edit_screen(screen_id="123456", prompt="Mudar cor primária para azul royal")
+### 5. Inspecionar e Exportar Código da Tela (`get`)
+Obtém o código HTML completo, classes CSS, dimensões e metadados:
+```bash
+amb stitch get -s <SCREEN_ID> -o public/telas/minha_tela.html
+```
 
-# Baixar assets para diretório local
-client.download_assets(output_dir="./dist/assets")
+### 6. Baixar Telas e Assets do Projeto para Disco (`download`)
+Baixa todas as telas e assets do projeto Stitch ativo diretamente para o diretório local do projeto:
+```bash
+amb stitch download -o ./public/stitch_assets
+```
+*O comando reescreve links de imagens e CSS para torná-los 100% autônomos e utilizáveis offline.*
 
-# Sincronizar design.md com Design System nativo
-client.sync_design_system(design_md_path="design.md")
+### 7. Sincronizar Design Tokens (`sync`)
+Sincroniza as especificações do arquivo `design.md` local com o Design System oficial do Stitch:
+```bash
+amb stitch sync -f design.md
+```
+
+### 8. Invocar Qualquer Ferramenta Oficial via JSON-RPC (`call`)
+Permite invocar diretamente qualquer um dos 12 tools oficiais do `@google/stitch-sdk`:
+```bash
+amb stitch call list_screens '{"projectId": "17421675534889463957"}'
 ```
 
 ---
 
-## ⚠️ Gotchas Críticos do Stitch
+## 💡 3. O Fluxo de Prototipagem Rápida no Projeto
 
-1. **Parâmetro `name` em `get_screen`:**
-   - A API espera `projects/{projectId}/screens/{screenId}`. O `stitch_client.mjs` e `stitch_client.py` constroem essa URI canônica automaticamente se `screenId` for passado.
-2. **Design Tokens e Markdown:**
-   - O Stitch SDK suporta instruções em Markdown no campo `theme.designMd` do `create_design_system` e `update_design_system`. O AMB_V2 envia o conteúdo textual do `design.md` diretamente nesse canal nativo.
-3. **Download de Assets:**
-   - O comando `download_assets` reescreve links de imagens e CSS nos arquivos HTML baixados para torná-los 100% autônomos e utilizáveis offline.
+1. **Gere a Tela Inicial:**
+   ```bash
+   amb stitch generate -p "Kanban board com colunas To Do, In Progress e Done" -d DESKTOP -o public/kanban.html
+   ```
+2. **Abra o HTML no Navegador:**
+   Abra `public/kanban.html` para validar visualmente o layout gerado.
+3. **Refine se Necessário:**
+   ```bash
+   amb stitch refine -s <SCREEN_ID> -p "Adicionar modal de criação de card ao clicar no botão + Adicionar"
+   ```
+4. **Leve para Produção:**
+   Use o comando `amb pipeline` para instruir o Jules a converter o HTML/CSS gerado nos componentes reais da stack do seu projeto!
