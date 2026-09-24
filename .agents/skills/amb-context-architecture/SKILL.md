@@ -6,7 +6,7 @@ description: >-
 
 # 🏗️ AMB Context Architecture
 
-Especialista no mapeamento de camadas e sintetização de blueprints arquiteturais via [`architecture/ai_context_builder.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/architecture/ai_context_builder.py) no `amb_v2`.
+Especialista no mapeamento de camadas e sintetização de blueprints arquiteturais via [`amb_cli/architecture/ai_context_builder.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/architecture/ai_context_builder.py) no `amb_v2`.
 
 ## 📌 Visão Geral & Benefício
 
@@ -47,7 +47,7 @@ amb context auth
 
 ### 2. Uso Programático em Python
 ```python
-from architecture.ai_context_builder import build_ai_context
+from amb_cli.architecture.ai_context_builder import build_ai_context
 
 # Gera o bloco Markdown de contexto arquitetural
 context_md = build_ai_context(focus_module="financeiro", max_files_per_layer=15)

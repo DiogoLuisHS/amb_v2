@@ -13,7 +13,7 @@ Especialista em plugar, configurar e operar a plataforma `amb_v2` em **qualquer 
 O `amb_v2` é agnóstico a projetos:
 - É instalado globalmente no ambiente Python (`pip install -e .`).
 - O executável `amb` pode ser chamado em **qualquer diretório**.
-- A função [`find_repo_root()`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/config/__init__.py) descobre automaticamente a raiz do projeto onde o terminal está aberto (buscando por `.git`, `package.json` ou `pyproject.toml`).
+- A função [`find_repo_root()`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/workspace/project_context.py) descobre automaticamente a raiz do projeto onde o terminal está aberto (buscando por `.git`, `package.json` ou `pyproject.toml`).
 - O repositório consumidor armazena suas configurações específicas em uma pasta local chamada `.amb/`.
 
 ---
@@ -86,6 +86,9 @@ amb check
 Uma vez inicializado, você pode executar todos os fluxos normais do AMB direto do novo projeto:
 
 ```bash
+# Abrir o Assistente Gráfico Nativo (Tkinter) para gerenciar .env e comandos:
+amb gui
+
 # Iniciar o sentinela para monitorar sessões:
 amb monitor
 

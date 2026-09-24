@@ -9,19 +9,19 @@
 
 O ecossistema `amb_v2` é dividido em camadas desacopladas com fronteiras rígidas:
 
-1. **Camada de Parsing (`cli_modules/cli_parsers.py`):**
+1. **Camada de Parsing (`amb_cli/cli_modules/cli_parsers.py`):**
    - **Responsabilidade:** Única e exclusivamente declarar argumentos de linha de comando, flags, tipos e textos de ajuda (`argparse`).
    - **Proibido:** Fazer chamadas de rede, ler arquivos de configuração ou executar lógica de negócios.
 
-2. **Camada de Handlers (`cli_modules/cli_handlers.py`):**
+2. **Camada de Handlers (`amb_cli/cli_modules/cli_handlers.py` e `handlers_core/`):**
    - **Responsabilidade:** Intermediar a entrada do terminal (`args`), extrair parâmetros, invocar os serviços apropriados e formatar a saída para o usuário (texto rico ou JSON).
    - **Proibido:** Implementar lógica de domínio ou algoritmos complexos diretamente dentro dos handlers.
 
-3. **Camada de Ferramentas de Fachada (`integrations/<service>/tools/<tool>.py`):**
+3. **Camada de Ferramentas de Fachada (`amb_cli/integrations/<service>/tools/<tool>.py`):**
    - **Responsabilidade:** Expor uma função de serviço autocontida (`run_<tool_name>(...)`) que orquestra uma operação específica.
    - **Proibido:** Conter lógica de parsing de argumentos ou chamadas exclusivas em blocos `if __name__ == "__main__"`.
 
-4. **Camada de Clientes e Serviços (`integrations/<service>/<client>.py`):**
+4. **Camada de Clientes e Serviços (`amb_cli/integrations/<service>/<client>.py`):**
    - **Responsabilidade:** Comunicação com APIs externas (Google Jules, Stitch, Antigravity, Git CLI), tratamento de rede, autenticação e serialização.
    - **Proibido:** Acessar `sys.argv`, imprimir mensagens com `print` direto (usar `log` ou retornar dados) ou depender de interfaces de usuário.
 

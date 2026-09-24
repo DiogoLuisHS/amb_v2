@@ -11,9 +11,9 @@ Especialista na gestão de personas, engenharia de prompts, gerenciamento de reg
 ## 📌 Visão Geral & Arquitetura
 
 O ecossistema `amb_v2` integra o Google Antigravity para permitir que personas e ferramentas cognitivas operem tanto **localmente na sua máquina** quanto **na nuvem do Jules**:
-- **Cliente Cognitivo Unificado:** [`integrations/antigravity/antigravity_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/antigravity/antigravity_client.py)
-- **Gerenciador de Regras Centralizado:** [`config/rules_manager.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/config/rules_manager.py)
-- **Executor Dinâmico de Personas:** [`agents/local_agent_runner.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/agents/local_agent_runner.py)
+- **Cliente Cognitivo Unificado:** [`amb_cli/integrations/antigravity/antigravity_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/antigravity/antigravity_client.py)
+- **Gerenciador de Regras Centralizado:** [`amb_cli/workspace/rules_manager.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/workspace/rules_manager.py)
+- **Executor Dinâmico de Personas:** [`amb_cli/agents/local_agent_runner.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/agents/local_agent_runner.py)
 - **Diretório de Personas do Projeto Ativo:** `.amb/personas/` (ou `.jules/personas/`)
 - **Diários Cognitivos de Aprendizado:** `.amb/diarios/<persona>.md`
 
@@ -52,13 +52,16 @@ amb agy validate path/to/file.py [--json]
 
 # Executar inferência direta arbitrária com o modelo cognitivo:
 amb agy run "Explique a diferença entre SRP e OCP" --model gemini-3.8-flash
+
+# Ativar ou desativar confirmação interativa antes de chamadas ao Gemini:
+amb config --gemini-confirm <on|off>
 ```
 
 ---
 
 ## 📐 Gerenciamento Central de Regras (`RulesManager`)
 
-O [`RulesManager`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/config/rules_manager.py) descobre automaticamente as regras arquiteturais do projeto seguindo a precedência:
+O [`RulesManager`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/workspace/rules_manager.py) descobre automaticamente as regras arquiteturais do projeto seguindo a precedência:
 1. Diretório explicitamente configurado via CLI ou parâmetro.
 2. `.antigravity/rules/`
 3. `.gemini/rules/`

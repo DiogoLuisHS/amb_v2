@@ -21,13 +21,13 @@
 ## 2. Centralização de Configuração e Paths
 
 - **Resolução de Caminhos:**
-  - Raiz do AMB_V2: resolvida unicamente por `get_amb_root()` em `config/bootstrap.py`.
+  - Raiz do AMB_V2: resolvida unicamente por `get_amb_root()` em `amb_cli/core/bootstrap.py`.
   - Raiz do pacote de código: resolvida por `get_amb_package_dir()`.
-  - Raiz do repositório ativo do usuário: resolvida por `find_repo_root()` em `config/config.py`.
+  - Raiz do repositório ativo do usuário: resolvida por `find_repo_root()` em `amb_cli/workspace/project_context.py`.
   - Proibido recalcular caminhos com `Path(__file__).parent...` soltos pelo código fora de módulos de bootstrap.
 - **Gerenciamento de Ambiente:**
-  - Variáveis de ambiente são carregadas exclusivamente via `load_env_file()`.
-  - Acesso a variáveis mandatórias com validação Fail-Fast é feito via `require_env(key, hint=...)`.
+  - Variáveis de ambiente são carregadas exclusivamente via `load_env_file()` em `amb_cli/core/env.py`.
+  - Acesso a variáveis mandatórias com validação Fail-Fast é feito via `require_env(key, hint=...)` em `amb_cli/core/env.py`.
 
 ---
 

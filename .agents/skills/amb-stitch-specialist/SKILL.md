@@ -11,9 +11,9 @@ Especialista na integração de UI, prototipagem e design systems através do **
 ## 📌 Visão Geral & Arquitetura
 
 O Stitch é a ferramenta de design generativo e prototipagem de telas do Google. No `amb_v2`, a integração opera em duas camadas totalmente alinhadas com a especificação oficial:
-- **Camada Node.js (Runner Oficial):** [`integrations/stitch/stitch_client.mjs`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/stitch/stitch_client.mjs) consumindo `@google/stitch-sdk` (`StitchToolClient` e singleton `stitch`).
-- **Camada Python (Cliente de Domínio):** [`integrations/stitch/stitch_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/stitch/stitch_client.py) (`StitchClient`).
-- **Ferramentas CLI / Facades:** [`integrations/stitch/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/stitch/tools/)
+- **Camada Node.js (Runner Oficial):** [`amb_cli/integrations/stitch/stitch_client.mjs`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/stitch_client.mjs) consumindo `@google/stitch-sdk` (`StitchToolClient` e singleton `stitch`).
+- **Camada Python (Cliente de Domínio):** [`amb_cli/integrations/stitch/stitch_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/stitch_client.py) (`StitchClient`).
+- **Ferramentas CLI / Facades:** [`amb_cli/integrations/stitch/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/stitch/tools/)
 - **Variáveis de Ambiente:** `STITCH_API_KEY` e opcionalmente `STITCH_PROJECT_ID`, `STITCH_DEVICE_TYPE` no `.env`.
 
 ---
@@ -92,7 +92,7 @@ amb stitch call list_screens '{"projectId": "123456"}'
 
 ### 2. Invocação via Python API (`StitchClient`)
 ```python
-from integrations.stitch.stitch_client import StitchClient
+from amb_cli.integrations.stitch.stitch_client import StitchClient
 
 client = StitchClient()
 

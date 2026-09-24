@@ -4,6 +4,14 @@ Todas as alterações notáveis, novas funcionalidades, refatorações e correç
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.4.1] — 2026-09-23
+
+### 🤖 Agentes, Regras & Governança Cognitiva (/learn)
+- **Nova Skill Mestre (`amb-master-ecosystem`):** Referência completa e unificada da CLI `amb`, matriz de comandos, cheatsheet de troubleshooting e desenvolvimento por lote de prompts (`-p`).
+- **Atualização Canônica das 7 Skills Especialistas:** Alinhamento de todos os caminhos para a arquitetura modular `amb_cli/` e documentação de novos recursos (`amb gui`, auto-draft PR com `gh pr ready`, `amb config --gemini-confirm`, SRP prompts no pipeline).
+- **Alinhamento das Regras Arquiteturais:** Atualização das referências de bootstrap, exceções e camadas em `.agents/rules/` (`01_single_responsibility.md`, `03_dry_and_zero_redundancy.md`, `04_code_quality_and_typing.md`).
+- **159 Testes Unitários Verificados:** Integridade mantida com 100% de sucesso.
+
 ---
 
 ## [2.4.0] — 2026-09-18

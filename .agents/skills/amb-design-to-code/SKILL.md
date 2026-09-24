@@ -48,7 +48,15 @@ O prompt enviado para o agente deve conter:
 - **Responsividade:** breakpoints móvel/desktop
 - **Acessibilidade (a11y):** labels ARIA, contraste e foco navegável por teclado
 
-### 3. Despachar a Implementação para o Jules
+### 3. Despachar a Implementação para o Jules ou Pipeline Orquestrado
+
+**Opção A — Pipeline Automatizado Design-to-Deploy (Recomendado):**
+Use arquivos separados (SRP) para design no Stitch e engenharia no Jules:
+```bash
+amb pipeline -s specs/drawer_ui.md -j specs/drawer_eng.md
+```
+
+**Opção B — Despacho Manual Direto via CLI:**
 ```bash
 amb jules create \
   --prompt "Implementar o componente de Drawer conforme a tela do Stitch. Arquivos: components/Drawer.tsx, styles/drawer.css. Seguir estrutura semântica extraída." \

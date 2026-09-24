@@ -22,7 +22,7 @@
 
 ## 2. Hierarquia de Exceções e Princípio Fail-Fast
 
-- **Hierarquia Canônica `AmbError`:** Todas as exceções do AMB_V2 devem herdar de `AmbError` (definida em `config/config.py`):
+- **Hierarquia Canônica `AmbError`:** Todas as exceções do AMB_V2 devem herdar de `AmbError` (definida em `amb_cli/core/exceptions.py`):
   - `ConfigurationError`: Falha em variáveis de ambiente, dependências ou arquivos ausentes.
   - `ApiError`: Falha em chamadas de API externas (HTTP 4xx/5xx, timeouts).
   - `GitError`: Falha em comandos locais do Git ou GitHub CLI.

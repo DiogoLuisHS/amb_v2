@@ -13,9 +13,9 @@ Especialista no ciclo de vida e operações do **Google Jules** dentro do ecossi
 O Google Jules é um agente de desenvolvimento em nuvem que executa em uma máquina virtual (Cloud VM) dedicada com clone do repositório, branch própria e capacidade de abrir Pull Requests no GitHub.
 
 No `amb_v2`, a integração está localizada em:
-- **Cliente Core:** [`integrations/jules/jules_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/jules_client.py) (Wrapper oficial da API REST v1alpha)
-- **Ferramentas Modulares:** [`integrations/jules/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/tools/) (`status`, `sources`, `list_sessions`, `get_session`, `create_session`, `approve_plan`, `send_message`, `monitor_activities`, `merge_session_pr`, `cleanup_sessions`)
-- **Sentinela / Watcher:** [`integrations/jules/jules_watcher.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/integrations/jules/jules_watcher.py)
+- **Cliente Core:** [`amb_cli/integrations/jules/jules_client.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/jules_client.py) (Wrapper oficial da API REST v1alpha)
+- **Ferramentas Modulares:** [`amb_cli/integrations/jules/tools/`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/tools/) (`status`, `sources`, `list_sessions`, `get_session`, `create_session`, `approve_plan`, `send_message`, `monitor_activities`, `merge_session_pr`, `cleanup_sessions`)
+- **Sentinela / Watcher:** [`amb_cli/integrations/jules/jules_watcher.py`](file:///c:/Users/DiogoHungaro/Desktop/Script/amb_v2/amb_cli/integrations/jules/jules_watcher.py)
 
 ---
 
@@ -80,7 +80,7 @@ amb jules reply <SESSION_ID> --auto-approve
 ```
 
 ### 8. Fazer Merge Seguro do PR
-Detecta o PR aberto pelo Jules, aprova no GitHub, valida o QA localmente e faz merge:
+Detecta o PR aberto pelo Jules (que o Jules sempre cria como Draft), converte automaticamente em Ready for Review (`gh pr ready`), aprova no GitHub, valida o QA localmente e faz merge:
 ```bash
 amb jules merge <SESSION_ID_OU_URL> [--branch main]
 
@@ -115,3 +115,6 @@ amb jules clean --merged -f
 
 4. **Subprocessos sem `shell=True`:**
    - Comandos Git em `merge_session_pr.py` usam `shell=False` passando listas de argumentos (`["git", "pull", "origin", branch]`) para evitar injeção de comandos via nomes de branch.
+
+5. **Conversão de Draft PRs Automática:**
+   - O Google Jules cria Pull Requests em modo Draft por padrão. O utilitário `merge_session_pr` dispara `gh pr ready` antes do merge, dispensando qualquer ação manual na interface web do GitHub.
