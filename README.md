@@ -311,13 +311,13 @@ amb git pr merge 42
 | **Jules Cloud** | `amb jules list` | Lista sessões (`--limit <N>`, `--all`) |
 | **Jules Cloud** | `amb jules get <id>` | Detalhes e status da sessão |
 | **Jules Cloud** | `amb jules get <id> --watch` | Streaming de logs e atividades ao vivo |
-| **Jules Cloud** | `amb jules create -p "..."` | Cria sessão (`-t "<titulo>"`, `-b <branch>`) |
+| **Jules Cloud** | `amb jules create -p "..."` | Cria sessão com PR automático (`-t "<titulo>"`, `-b <branch>`, `--no-auto-pr`) |
 | **Jules Cloud** | `amb jules reply -s <id>` | Auto-resposta turn-by-turn com Gemini |
 | **Jules Cloud** | `amb jules reply -s <id> -m "..."` | Mensagem direta manual para a sessão |
 | **Jules Cloud** | `amb jules approve -s <id>` | Aprova o plano de ação formulado |
 | **Jules Cloud** | `amb jules merge -s <id>` | Merge do PR no GitHub + QA local |
 | **Jules Cloud** | `amb jules merge --auto-latest` | Merge automático do PR mais recente |
-| **Jules Cloud** | `amb jules clean` | Limpeza de sessões concluídas/mescladas |
+| **Jules Cloud** | `amb jules clean` | Limpeza de sessões (`--days <N>`, `--all-repos`, `-f`) |
 | **Stitch SDK** | `amb stitch list` | Lista todas as telas do projeto |
 | **Stitch SDK** | `amb stitch generate -p "..."` | Gera tela (`-d <device>`, `-o <html_file>`) |
 | **Stitch SDK** | `amb stitch refine -s <id> -p "..."` | Refina tela existente com novos tokens |

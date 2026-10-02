@@ -100,6 +100,7 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--title", "-t", help="Título descritivo da sessão.")
     j.add_argument("--branch", "-b", help="Branch base inicial no repositório (padrão: auto-detecta a branch ativa do Git).")
     j.add_argument("--source", help="Fonte conectada no Jules (padrão: auto-detecta sources/github/owner/repo).")
+    j.add_argument("--no-auto-pr", action="store_true", help="Desabilita a criação automática de Pull Request pelo Jules ao concluir.")
     _j(j)
     j = _sc(js, "reply", "Responde uma dúvida com IA (ou envia mensagem direta se --message).", ["advisor", "ask"])
     _sid(j, "ID ou URL da sessão do Jules (opcional).", "ID ou URL da sessão (opcional; se omitido, lista todas as sessões pendentes).")
@@ -118,6 +119,9 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--force", "-f", action="store_true", help="Remove sem pedir confirmação.")
     j.add_argument("--failed", action="store_true", help="Remove todas as sessões que estão em estado de falha (FAILED).")
     j.add_argument("--merged", action="store_true", help="Remove sessões cujos PRs já foram integrados ao Git.")
+    j.add_argument("--all", action="store_true", help="Remove todas as sessões concluídas do escopo selecionado.")
+    j.add_argument("--all-repos", action="store_true", help="Audita e remove sessões de todos os repositórios conectados à conta.")
+    j.add_argument("--days", "-d", type=int, help="Filtra apenas sessões criadas há mais de N dias (ex: --days 3).")
     j.add_argument("--id", help="Remove uma sessão específica por ID.")
 
     p = _c("stitch", "Comandos de integração com o Google Stitch SDK.", cmd_stitch)

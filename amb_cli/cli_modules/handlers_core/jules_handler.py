@@ -61,7 +61,8 @@ def handle_cmd_jules(args: Any) -> None:
             title=getattr(args, "title", None),
             base_branch=getattr(args, "branch", None),
             source_name=getattr(args, "source", None),
-            as_json=getattr(args, "json", False)
+            as_json=getattr(args, "json", False),
+            auto_pr=not getattr(args, "no_auto_pr", False)
         )
 
     elif sub in ["reply", "advisor", "ask"]:
@@ -110,12 +111,20 @@ def handle_cmd_jules(args: Any) -> None:
 
     elif sub in ["clean", "cleanup"]:
         from integrations.jules.tools.cleanup_sessions import run_cleanup_sessions
-        delete_mode = "failed" if getattr(args, "failed", False) else ("merged" if getattr(args, "merged", False) else "merged")
+        if getattr(args, "failed", False):
+            delete_mode = "failed"
+        elif getattr(args, "all", False):
+            delete_mode = "all"
+        else:
+            delete_mode = "merged"
+
         delete_id = getattr(args, "id", None)
         run_cleanup_sessions(
             delete_mode=delete_mode,
             delete_id=delete_id,
-            dry_run=not getattr(args, "force", False)
+            dry_run=not getattr(args, "force", False),
+            days=getattr(args, "days", None),
+            all_repos=getattr(args, "all_repos", False)
         )
 
     else:

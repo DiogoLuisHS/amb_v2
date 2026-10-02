@@ -28,11 +28,18 @@ def get_git_merge_history() -> str:
     return GitService().get_log_oneline(count=300)
 
 
-def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]]]:
+def audit_project_sessions(
+    client: JulesClient,
+    all_repos: bool = False,
+    days: Optional[int] = None
+) -> Dict[str, List[Dict[str, Any]]]:
     """Classifica as sessões do projeto em: merged, completed_no_pr, pending."""
-    repo = get_repo_name()
-    sessions = client.list_sessions(page_size=100, repo_filter=repo)
-    git_history = get_git_merge_history()
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days) if days is not None else None
+
+    repo = None if all_repos else get_repo_name()
+    sessions = client.list_sessions(page_size=100, repo_filter=repo, fetch_all=True)
+    git_history = get_git_merge_history() if not all_repos else ""
 
     categorized = {
         "merged": [],
@@ -42,6 +49,20 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
     }
 
     for s in sessions:
+        ctime_str = s.get("createTime")
+        if cutoff and ctime_str:
+            try:
+                s_clean = (ctime_str[:26] + "Z") if "." in ctime_str else ctime_str
+                dt = datetime.fromisoformat(s_clean)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if dt >= cutoff:
+                    continue  # Mais recente que a data limite: preserva
+            except Exception:
+                continue  # Em caso de falha de parsing, preserva por segurança
+        elif cutoff and not ctime_str:
+            continue
+
         sid = JulesClient.normalize_session_id(s.get("name", "") or s.get("id"))
         state = s.get("state", "UNKNOWN")
         title = s.get("title", "Sem título")
@@ -49,7 +70,7 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
         pr_url = pr_info.get("url") if pr_info else None
         pr_num = str(pr_info.get("number")) if pr_info and pr_info.get("number") else (pr_url.split("/")[-1] if pr_url else None)
         
-        is_merged = (f"#{pr_num}" in git_history) if pr_num else False
+        is_merged = (f"#{pr_num}" in git_history) if (pr_num and git_history) else False
 
         item = {
             "session_id": sid,
@@ -57,6 +78,7 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
             "title": title,
             "pr_url": pr_url,
             "is_merged": is_merged,
+            "create_time": ctime_str,
             "raw": s
         }
 
@@ -72,14 +94,15 @@ def audit_project_sessions(client: JulesClient) -> Dict[str, List[Dict[str, Any]
     return categorized
 
 
-def print_audit_report(categorized: Dict[str, List[Dict[str, Any]]]):
+def print_audit_report(categorized: Dict[str, List[Dict[str, Any]]], all_repos: bool = False, days: Optional[int] = None):
     """Exibe o relatório visual de auditoria."""
-    repo = get_repo_name()
+    repo = "Todos os Repositórios Conectados" if all_repos else get_repo_name()
     total = sum(len(v) for v in categorized.values())
+    filter_str = f" (> {days} dias atrás)" if days is not None else ""
     print("\n" + "=" * 78)
-    print(f"📊 {Colors.BOLD}{Colors.CYAN}AUDITORIA DE SESSÕES DO GOOGLE JULES — {repo}{Colors.RESET}")
+    print(f"📊 {Colors.BOLD}{Colors.CYAN}AUDITORIA DE SESSÕES DO GOOGLE JULES — {repo}{filter_str}{Colors.RESET}")
     print("=" * 78)
-    print(f"Total de sessões encontradas no projeto: {Colors.BOLD}{total}{Colors.RESET}\n")
+    print(f"Total de sessões encontradas no escopo: {Colors.BOLD}{total}{Colors.RESET}\n")
 
     print(f"✅ {Colors.BOLD}{Colors.GREEN}[1] SESSÕES COM PRs JÁ MERGEADOS NO GIT ({len(categorized['merged'])}) — SEGURAS PARA EXCLUSÃO:{Colors.RESET}")
     for it in categorized["merged"]:
@@ -163,12 +186,18 @@ def run_cleanup_sessions(
     delete_mode: str = "merged",
     dry_run: bool = True,
     delete_id: Optional[str] = None,
-    client: Optional[JulesClient] = None
+    client: Optional[JulesClient] = None,
+    days: Optional[int] = None,
+    all_repos: bool = False
 ) -> Dict[str, Any]:
     """Serviço canônico de auditoria e limpeza de sessões do Jules para chamadas diretas de CLI e API (F1-M7)."""
     c = client or JulesClient()
-    categorized = audit_project_sessions(c)
-    print_audit_report(categorized)
+    categorized = audit_project_sessions(c, all_repos=all_repos, days=days)
+    print_audit_report(categorized, all_repos=all_repos, days=days)
+
+    effective_mode = delete_mode
+    if days is not None and delete_mode == "merged":
+        effective_mode = "all_completed"
 
     if delete_id:
         found = False
@@ -188,18 +217,19 @@ def run_cleanup_sessions(
                 execute_deletion(c, [{"session_id": delete_id, "title": title, "state": state}], dry_run=dry_run)
             except Exception as e:
                 print(f"{Colors.RED}Erro ao buscar sessão {delete_id}:{Colors.RESET} {e}")
-    elif delete_mode == "merged":
+    elif effective_mode == "merged":
         execute_deletion(c, categorized["merged"], dry_run=dry_run)
-    elif delete_mode == "failed":
+    elif effective_mode == "failed":
         execute_deletion(c, categorized["failed"], dry_run=dry_run)
-    elif delete_mode in ["all", "all_completed"]:
+    elif effective_mode in ["all", "all_completed"]:
         all_completed = categorized["merged"] + categorized["completed_no_pr"]
         execute_deletion(c, all_completed, dry_run=dry_run)
     elif not dry_run:
         print(f"💡 Dica de Execução:")
         print(f"  • Simular exclusão de PRs integrados: amb jules clean")
         print(f"  • Excluir PRs já integrados no Git:   amb jules clean --force")
-        print(f"  • Excluir sessões falhas (FAILED):     amb jules clean --failed --force\n")
+        print(f"  • Excluir sessões falhas (FAILED):     amb jules clean --failed --force")
+        print(f"  • Excluir sessões com mais de N dias:  amb jules clean --days 3 --force\n")
 
     return categorized
 
@@ -211,6 +241,8 @@ def main():
     parser.add_argument("--delete-all-completed", action="store_true", help="Exclui todas as sessões concluídas (com e sem PR mergeado).")
     parser.add_argument("--delete-failed", action="store_true", help="Exclui todas as sessões que falharam (FAILED).")
     parser.add_argument("--delete-id", help="Exclui uma sessão específica por ID.")
+    parser.add_argument("--days", "-d", type=int, help="Filtra apenas sessões criadas há mais de N dias.")
+    parser.add_argument("--all-repos", action="store_true", help="Audita e limpa sessões de todos os repositórios conectados à conta.")
 
     args = parser.parse_args()
 
@@ -223,7 +255,9 @@ def main():
     run_cleanup_sessions(
         delete_mode=mode,
         dry_run=args.dry_run,
-        delete_id=args.delete_id
+        delete_id=args.delete_id,
+        days=args.days,
+        all_repos=args.all_repos
     )
 
 

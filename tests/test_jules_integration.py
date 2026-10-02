@@ -98,6 +98,7 @@ def test_create_session_respects_explicit_branch():
         _, kwargs = mock_client._request.call_args
         payload = kwargs["data"]
         assert payload["sourceContext"]["githubRepoContext"]["startingBranch"] == "custom-branch"
+        assert payload["automationMode"] == "AUTO_CREATE_PR"
 
 
 def test_create_session_auto_detects_branch():
@@ -112,6 +113,24 @@ def test_create_session_auto_detects_branch():
         _, kwargs = mock_client._request.call_args
         payload = kwargs["data"]
         assert payload["sourceContext"]["githubRepoContext"]["startingBranch"] == "feature-x"
+        assert payload["automationMode"] == "AUTO_CREATE_PR"
+
+
+def test_create_session_automation_mode_options():
+    mock_client = MagicMock(spec=JulesClient)
+    mock_client.create_session = JulesClient.create_session.__get__(mock_client)
+    mock_client._request = MagicMock(return_value={"id": "999"})
+
+    with patch("workspace.get_repo_name", return_value="org/repo"):
+        # Explicitly disable automationMode
+        mock_client.create_session("Prompt sem PR", base_branch="main", automation_mode=None)
+        _, kwargs = mock_client._request.call_args
+        assert "automationMode" not in kwargs["data"]
+
+        # Custom automationMode
+        mock_client.create_session("Prompt custom", base_branch="main", automation_mode="CUSTOM_MODE")
+        _, kwargs = mock_client._request.call_args
+        assert kwargs["data"]["automationMode"] == "CUSTOM_MODE"
 
 
 def test_list_sessions_strict_filtering():
@@ -216,6 +235,23 @@ def test_jules_facade_tools():
     # run_create_session
     created = run_create_session(prompt="Test prompt", title="Test", as_json=True, client=mock_client)
     assert created["name"] == "sessions/s2"
+    mock_client.create_session.assert_called_with(
+        prompt="Test prompt",
+        title="Test",
+        source_name=None,
+        base_branch=None,
+        automation_mode="AUTO_CREATE_PR"
+    )
+
+    # run_create_session with auto_pr=False
+    run_create_session(prompt="Test prompt", title="Test", as_json=True, client=mock_client, auto_pr=False)
+    mock_client.create_session.assert_called_with(
+        prompt="Test prompt",
+        title="Test",
+        source_name=None,
+        base_branch=None,
+        automation_mode=None
+    )
 
 
 @patch("integrations.jules.jules_client.require_env", return_value="dummy_key")
@@ -268,3 +304,27 @@ def test_cleanup_sessions_service_dry_run():
         assert res["merged"][0]["session_id"] == "1001"
         # Since dry_run=True, delete_session must not be called
         mock_client.delete_session.assert_not_called()
+
+
+def test_cleanup_sessions_filter_by_days():
+    mock_client = MagicMock()
+    mock_client.list_sessions.return_value = [
+        {
+            "name": "sessions/old_sess",
+            "title": "Old Task",
+            "state": "COMPLETED",
+            "createTime": "2026-09-01T12:00:00Z"
+        },
+        {
+            "name": "sessions/recent_sess",
+            "title": "Recent Task",
+            "state": "COMPLETED",
+            "createTime": "2026-10-01T20:00:00Z"
+        }
+    ]
+
+    with patch("integrations.jules.tools.cleanup_sessions.get_git_merge_history", return_value=""):
+        # Filter sessions older than 3 days
+        res = run_cleanup_sessions(days=3, dry_run=False, client=mock_client)
+        # old_sess should be deleted, recent_sess must be preserved
+        mock_client.delete_session.assert_called_once_with("old_sess")

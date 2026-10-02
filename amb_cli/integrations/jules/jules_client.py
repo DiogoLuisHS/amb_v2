@@ -67,7 +67,8 @@ class JulesClient(BaseGoogleClient):
         prompt: str,
         source_name: Optional[str] = None,
         title: Optional[str] = None,
-        base_branch: Optional[str] = None
+        base_branch: Optional[str] = None,
+        automation_mode: Optional[str] = "AUTO_CREATE_PR"
     ) -> Dict[str, Any]:
         if os.path.isfile(prompt):
             try:
@@ -95,6 +96,8 @@ class JulesClient(BaseGoogleClient):
                 }
             }
         }
+        if automation_mode:
+            payload["automationMode"] = automation_mode
         if title:
             payload["title"] = title
         return self._request("POST", "sessions", data=payload)
@@ -107,10 +110,22 @@ class JulesClient(BaseGoogleClient):
         self,
         page_size: int = 50,
         repo_filter: Optional[str] = None,
-        state_filter: Optional[str] = None
+        state_filter: Optional[str] = None,
+        fetch_all: bool = False
     ) -> List[Dict[str, Any]]:
-        res = self._request("GET", "sessions", params={"pageSize": page_size})
-        sessions = res.get("sessions", [])
+        sessions = []
+        page_token = None
+        while True:
+            params = {"pageSize": page_size}
+            if page_token:
+                params["pageToken"] = page_token
+            res = self._request("GET", "sessions", params=params)
+            batch = res.get("sessions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            sessions.extend(batch)
+            if not fetch_all or not isinstance(res, dict) or not res.get("nextPageToken"):
+                break
+            page_token = res.get("nextPageToken")
+
         filtered = []
         target = repo_filter.lower().strip() if repo_filter else None
         target_state = state_filter.upper().strip() if state_filter else None

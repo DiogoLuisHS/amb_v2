@@ -29,6 +29,7 @@ Despacha uma tarefa para uma nova Cloud VM:
 ```bash
 amb jules create -p "Implementar validação Zod no schema de usuários" -t "User Schema Validation" --branch main
 ```
+> **Abertura Automática de PR:** Por padrão, toda sessão criada inclui `automationMode: AUTO_CREATE_PR`, fazendo o Jules abrir o Pull Request no GitHub automaticamente assim que o patch final de código for gerado. Use `--no-auto-pr` caso queira desabilitar.
 
 > **Normalização Universal de IDs:** Todos os comandos abaixo aceitam o ID numérico puro (`175...`), caminho REST (`sessions/175...`) ou a URL completa do navegador (`https://jules.google.com/session/175...`).
 
@@ -89,6 +90,9 @@ Remove sessões da nuvem que já foram integradas ou que falharam:
 ```bash
 # Limpar sessões com PRs já mesclados no Git:
 amb jules clean --merged -f
+
+# Limpar sessões com mais de N dias em todos os repositórios da conta:
+amb jules clean --days 3 --all-repos -f
 
 # Limpar sessões com erro fatal (FAILED):
 amb jules clean --failed -f

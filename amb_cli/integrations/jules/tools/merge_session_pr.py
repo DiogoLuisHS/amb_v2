@@ -134,10 +134,20 @@ def apply_session_patch(
         patch_path = os.path.join(repo_root, ".tmp_jules.patch")
         with open(patch_path, "w", encoding="utf-8") as pf:
             pf.write(diff)
-        apply_res = subprocess.run(
-            ["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", patch_path],
-            cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False
-        )
+        def _exec_git_apply(file_to_apply: str) -> subprocess.CompletedProcess:
+            base_cmd = ["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace"]
+            last_res = None
+            for flag in [[], ["-p0"], ["-p1", "--recount"], ["-p0", "--recount"]]:
+                res = subprocess.run(
+                    base_cmd + flag + [file_to_apply],
+                    cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False
+                )
+                if res.returncode == 0:
+                    return res
+                last_res = res
+            return last_res
+
+        apply_res = _exec_git_apply(patch_path)
         if os.path.exists(patch_path):
             os.remove(patch_path)
 
@@ -154,7 +164,7 @@ def apply_session_patch(
                 p_part = os.path.join(repo_root, f".tmp_{p_idx}.patch")
                 with open(p_part, "w", encoding="utf-8") as ppf:
                     ppf.write(single_p)
-                p_res = subprocess.run(["git", "apply", "--whitespace=fix", "--ignore-space-change", "--ignore-whitespace", p_part], cwd=repo_root, capture_output=True, text=True, check=False)
+                p_res = _exec_git_apply(p_part)
                 if os.path.exists(p_part):
                     os.remove(p_part)
                 if p_res.returncode != 0:
