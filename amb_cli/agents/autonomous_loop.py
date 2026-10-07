@@ -56,7 +56,7 @@ def run_autonomous_loop(
     prompt_file: Optional[str] = None,
     modules: Optional[List[str]] = None,
     max_cycles: Optional[int] = None,
-    delay_between_cycles: int = 8,
+    delay_between_cycles: int = 0,
     branch: Optional[str] = None,
     no_auto_merge: bool = False,
 ) -> None:
@@ -188,14 +188,8 @@ def run_autonomous_loop(
                 log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
                 return
 
-            if len(items_to_run) > 1:
-                # Sincroniza branch local com origin antes do próximo item
-                GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
-                log(
-                    "LOOP",
-                    f"Pausa de {delay_between_cycles}s antes do próximo item...",
-                    Colors.DIM,
-                )
+            if delay_between_cycles > 0 and len(items_to_run) > 1:
+                log("LOOP", f"Pausa de {delay_between_cycles}s antes do próximo item...", Colors.DIM)
                 time.sleep(delay_between_cycles)
 
         # Checagem de Limite de Ciclos Globais
@@ -207,13 +201,9 @@ def run_autonomous_loop(
             )
             break
 
-        wait_seconds = max(delay_between_cycles, 10)
-        log(
-            "LOOP",
-            f"Ciclo #{completed_cycles} concluído. Aguardando {wait_seconds}s para propagação do Git antes do Ciclo #{completed_cycles + 1}...",
-            Colors.CYAN,
-        )
-        time.sleep(wait_seconds)
+        log("LOOP", f"Ciclo #{completed_cycles} concluído. Iniciando Ciclo #{completed_cycles + 1}...", Colors.CYAN)
+        if delay_between_cycles > 0:
+            time.sleep(delay_between_cycles)
 
 
 def main() -> None:
@@ -223,7 +213,7 @@ def main() -> None:
     parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou PASTA INTEIRA de prompts em lote (ex: .amb/prompts/).")
     parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
     parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
-    parser.add_argument("--delay", "-d", type=int, default=8, help="Intervalo em segundos entre ciclos (Padrão: 8s).")
+    parser.add_argument("--delay", "-d", type=int, default=0, help="Pausa opcional em segundos entre itens/ciclos (Padrão: 0, sem espera).")
     parser.add_argument("--branch", "-b", default="develop", help="Branch alvo no GitHub (Padrão: develop).")
     parser.add_argument("--no-auto-merge", action="store_true", help="Não faz o merge automático do PR.")
 

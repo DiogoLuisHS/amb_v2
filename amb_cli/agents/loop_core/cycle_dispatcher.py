@@ -98,9 +98,6 @@ def dispatch_jules_session(
         f"🔗 Acompanhe: {Colors.BLUE}https://jules.google.com/session/{session_id}{Colors.RESET}\n"
     )
 
-    log("LOOP", "Aguardando provisionamento da VM no Jules (5s)...", Colors.DIM)
-    time.sleep(5)
-
     return session_id
 
 
@@ -116,13 +113,13 @@ def handle_pr_merge(
     try:
         merged = approve_and_merge_pr(session_id=session_id, target_branch=branch)
         if merged:
+            # Sincroniza o git local ANTES de declarar sucesso (ordem correta)
+            GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
             log(
                 "GIT-SYNC",
                 f"✔ Sincronização concluída com sucesso! origin/{branch} atualizado com as mudanças do Ciclo #{completed_cycles}.",
                 Colors.GREEN,
             )
-            # Garante que o git local puxa e valida origin
-            GitService(repo_root=repo_root).pull(remote="origin", branch=branch, cwd=repo_root)
             return True
         log_error("GIT-MERGE", f"PR da sessão {session_id} não foi integrado na branch '{branch}'.")
         return False

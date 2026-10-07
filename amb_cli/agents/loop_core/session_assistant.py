@@ -16,6 +16,10 @@ from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
 from agents.auto_reply import advise_and_reply, get_last_conversation_turn
 
+POLL_INTERVAL_SECONDS = 8
+POST_ACTION_INTERVAL_SECONDS = 3
+
+
 def monitor_and_assist_session(
     client: JulesClient, session_id: str, auto_reply_ai: bool = True
 ) -> str:
@@ -42,9 +46,6 @@ def monitor_and_assist_session(
 
             if state in ["COMPLETED", "SUCCEEDED", "CLOSED"]:
                 log("LOOP-MONITOR", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso ({state})!", Colors.GREEN)
-                if state in ["COMPLETED", "SUCCEEDED"]:
-                    log("LOOP-MONITOR", "Aguardando registro do PR nos outputs (10s)...", Colors.DIM)
-                    time.sleep(10)
                 return state
 
             if state in ["FAILED", "ERROR", "ABORTED"]:
@@ -75,7 +76,7 @@ def monitor_and_assist_session(
                         "A última ação já foi do usuário. Aguardando o Jules processar...",
                         Colors.DIM,
                     )
-                    time.sleep(15)
+                    time.sleep(POLL_INTERVAL_SECONDS)
                     continue
 
                 if last_answered_agent_msg_id and turn_info.get("last_agent_msg_id") == last_answered_agent_msg_id:
@@ -84,7 +85,7 @@ def monitor_and_assist_session(
                         "A última mensagem do agente já foi respondida recentemente. Aguardando atualização de estado...",
                         Colors.DIM,
                     )
-                    time.sleep(15)
+                    time.sleep(POLL_INTERVAL_SECONDS)
                     continue
 
                 if turn_info.get("has_unapproved_plan") and turn_info.get("last_speaker") == "PLAN":
@@ -111,11 +112,13 @@ def monitor_and_assist_session(
                         last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
                     except Exception as ar_err:
                         log_error("LOOP-MONITOR", f"Falha no Auto-Reply: {ar_err}")
+                time.sleep(POST_ACTION_INTERVAL_SECONDS)
+                continue
 
-            time.sleep(15)
+            time.sleep(POLL_INTERVAL_SECONDS)
 
         except KeyboardInterrupt:
             raise
         except Exception as e:
             log_error("LOOP-MONITOR", f"Erro ao checar status: {e}")
-            time.sleep(15)
+            time.sleep(POLL_INTERVAL_SECONDS)

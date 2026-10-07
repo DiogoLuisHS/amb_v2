@@ -307,19 +307,23 @@ def test_cleanup_sessions_service_dry_run():
 
 
 def test_cleanup_sessions_filter_by_days():
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    old_ts = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    recent_ts = (now - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     mock_client = MagicMock()
     mock_client.list_sessions.return_value = [
         {
             "name": "sessions/old_sess",
             "title": "Old Task",
             "state": "COMPLETED",
-            "createTime": "2026-09-01T12:00:00Z"
+            "createTime": old_ts
         },
         {
             "name": "sessions/recent_sess",
             "title": "Recent Task",
             "state": "COMPLETED",
-            "createTime": "2026-10-01T20:00:00Z"
+            "createTime": recent_ts
         }
     ]
 
