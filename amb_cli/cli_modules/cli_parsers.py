@@ -44,6 +44,8 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("check", "Valida chaves e configurações do projeto ativo.", cmd_check, ["status"])
     p.add_argument("--json", action="store_true", help="Exibe o diagnóstico em formato JSON estruturado.")
     p = _c("config", "Configura preferências de IA, quotas e autorizações do AMB_V2.", cmd_config, ["settings", "pref"])
+    cs = p.add_subparsers(dest="config_action", help="Ações de configuração")
+    cr = _sc(cs, "reload", "Recarrega as configurações em memória (.env e amb_project.json)")
     p.add_argument("--gemini-confirm", choices=["on", "off", "true", "false"], help="Ativa (on) ou desativa (off) a exigência de autorização manual a cada chamada ao Gemini.")
     p = _c("monitor", "Sentinela em tempo real (Jules) com suporte a auto-resposta Gemini.", cmd_monitor, ["watch", "sentinel"])
     p.add_argument("--interactive", "-i", action="store_true", help="Abre o menu interativo cognitivo (Advisor) para inspecionar e responder pendências.")

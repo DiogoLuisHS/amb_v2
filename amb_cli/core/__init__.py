@@ -7,6 +7,7 @@ from .env import (
     is_gemini_confirmation_required,
     set_gemini_confirmation,
 )
+from .config_manager import ConfigManager
 from .bootstrap import (
     ensure_amb_env,
     get_amb_root,
@@ -40,4 +41,5 @@ __all__ = [
     "add_to_sys_path",
     "CANONICAL_SUBMODULES",
     "run_environment_diagnostics",
+    "ConfigManager",
 ]

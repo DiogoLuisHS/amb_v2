@@ -72,17 +72,8 @@ def cmd_gui(args: Any) -> None:
 
 def cmd_config(args: Any) -> None:
     """Gerencia preferências e controles do AMB_V2."""
-    from core import set_gemini_confirmation, is_gemini_confirmation_required, Colors
-    if getattr(args, "gemini_confirm", None) is not None:
-        enable = args.gemini_confirm.lower() in ["on", "true", "1", "yes", "sim", "ativar"]
-        set_gemini_confirmation(enable)
-        status_msg = f"{Colors.GREEN}ATIVADA (Exige confirmação interativa antes de cada requisição ao Gemini){Colors.RESET}" if enable else f"{Colors.YELLOW}DESATIVADA (Chamadas ao Gemini automáticas){Colors.RESET}"
-        print(f"\n🛡️ Autorização prévia do Gemini: {status_msg}\n")
-    else:
-        status = is_gemini_confirmation_required()
-        status_msg = f"{Colors.GREEN}ATIVADA (Exige confirmação manual){Colors.RESET}" if status else f"{Colors.DIM}DESATIVADA (Chamadas automáticas){Colors.RESET}"
-        print(f"\n🛡️ Status da Autorização do Gemini: {status_msg}")
-        print(f"👉 Para alterar: amb config --gemini-confirm on (ou off)\n")
+    from cli_modules.handlers_core.config_handler import handle_cmd_config
+    handle_cmd_config(args)
 
 
 # -------------------------------------------------------------
