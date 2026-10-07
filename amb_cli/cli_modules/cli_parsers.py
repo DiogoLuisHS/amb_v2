@@ -2,7 +2,7 @@
 import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
-    cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate,
+    cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate, cmd_hooks,
     cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop
 )
 
@@ -175,7 +175,8 @@ def create_parser() -> argparse.ArgumentParser:
     a.add_argument("--role", "-r", default="general", help="Especialidade ou papel da persona (padrão: general).")
     a.add_argument("--output", "-o", help="Caminho do arquivo para salvar o prompt sintetizado.")
     a = _sc(ag, "validate", "Audita conformidade arquitetural de um arquivo contra as regras do repositório.", ["audit", "lint"])
-    a.add_argument("file", help="Caminho do arquivo a ser auditado.")
+    a.add_argument("file", nargs="?", help="Caminho do arquivo a ser auditado.")
+    a.add_argument("--staged", action="store_true", help="Auditar apenas os arquivos no stage.")
     a.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
     a = _sc(ag, "rules", "Lista e inspeciona as regras arquiteturais descobertas no projeto.")
     a.add_argument("--json", action="store_true", help="Exibe a lista de regras em JSON.")
@@ -188,7 +189,8 @@ def create_parser() -> argparse.ArgumentParser:
     a.add_argument("--output", "-o", help="Salva a saída em arquivo.")
 
     p = _c("validate", "Audita um arquivo contra as regras arquiteturais do repositório.", cmd_validate, ["lint", "audit"])
-    p.add_argument("file", help="Caminho do arquivo de código a ser auditado.")
+    p.add_argument("file", nargs="?", help="Caminho do arquivo de código a ser auditado.")
+    p.add_argument("--staged", action="store_true", help="Auditar apenas os arquivos no stage.")
     p.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
 
     p = _c("pipeline", "Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub) com prompts separados para Design e Engenharia.", cmd_pipeline, ["run", "deploy"])
@@ -206,6 +208,10 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais antes de gerar a tela.")
     p.add_argument("--branch", "-b", help="Branch alvo para PR e checkout (default: detecta a atual).")
 
+
+    p = _c("hooks", "Gerencia hooks do Git no repositório.", cmd_hooks)
+    hs = p.add_subparsers(dest="hooks_cmd", help="Subcomandos de hooks")
+    _sc(hs, "install", "Instala o pre-commit hook do AMB_V2.")
 
     p = _c("loop", "Controle da Máquina de Estados do Autonomous Loop.", cmd_loop)
     ls = p.add_subparsers(dest="loop_cmd", help="Subcomandos do Loop")

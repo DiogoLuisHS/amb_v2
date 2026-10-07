@@ -47,17 +47,52 @@ def handle_cmd_antigravity(args: Any) -> None:
 
     elif sub in ["validate", "audit", "lint"]:
         from integrations.antigravity.tools.validate_architecture import run_validate_architecture
-        target_file = getattr(args, "file", "")
-        log("ANTIGRAVITY", f"Auditando conformidade arquitetural de {target_file}...", Colors.CYAN)
-        res = run_validate_architecture(file_path=target_file)
+        import sys
+
+        is_staged = getattr(args, "staged", False)
+
+        files_to_check = []
+        if is_staged:
+            mgr = get_rules_manager()
+            staged_files = mgr.get_staged_files()
+            if not staged_files:
+                print(f"\n{Colors.CYAN}Nenhum arquivo no stage (git add) para auditar.{Colors.RESET}")
+                return
+            files_to_check = staged_files
+        else:
+            target_file = getattr(args, "file", "")
+            if not target_file:
+                print(f"{Colors.RED}Erro: Arquivo não especificado para auditoria.{Colors.RESET}")
+                sys.exit(1)
+            files_to_check = [target_file]
+
+        reports = []
+        has_violations = False
+
+        for file in files_to_check:
+            log("ANTIGRAVITY", f"Auditando conformidade arquitetural de {file}...", Colors.CYAN)
+            res = run_validate_architecture(file_path=file)
+
+            # Simple heuristic to detect violation
+            res_lower = res.lower()
+            if "violação" in res_lower or "violacao" in res_lower or "não conform" in res_lower or "falha" in res_lower or "erro" in res_lower or "issue" in res_lower:
+                has_violations = True
+
+            reports.append({"file": file, "report": res})
+
+            if not getattr(args, "json", False):
+                print("\n" + "=" * 75)
+                print(f"{Colors.BOLD}RELATÓRIO DE AUDITORIA ARQUITETURAL: {file}{Colors.RESET}")
+                print("=" * 75)
+                print(res)
+                print("=" * 75 + "\n")
+
         if getattr(args, "json", False):
-            print(json.dumps({"file": target_file, "report": res}, indent=2, ensure_ascii=False))
-            return
-        print("\n" + "=" * 75)
-        print(f"{Colors.BOLD}RELATÓRIO DE AUDITORIA ARQUITETURAL:{Colors.RESET}")
-        print("=" * 75)
-        print(res)
-        print("=" * 75 + "\n")
+            print(json.dumps({"reports": reports}, indent=2, ensure_ascii=False))
+
+        if is_staged and has_violations:
+            print(f"{Colors.RED}❌ Auditoria barrada: Violações encontradas nos arquivos em stage.{Colors.RESET}")
+            sys.exit(1)
 
     elif sub == "rules":
         mgr = get_rules_manager()

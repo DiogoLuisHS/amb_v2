@@ -203,6 +203,11 @@ def cmd_git(args: Any) -> None:
     from cli_modules.handlers_core.git_handler import handle_cmd_git
     handle_cmd_git(args)
 
+def cmd_hooks(args: Any) -> None:
+    """Gerencia hooks do Git."""
+    from cli_modules.handlers_core.hooks_handler import handle_cmd_hooks
+    handle_cmd_hooks(args)
+
 def cmd_loop(args: Any) -> None:
     """Comandos de controle do Autonomous Loop (status, pause, resume)."""
     from cli_modules.handlers_core.loop_handler import handle_cmd_loop
