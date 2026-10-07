@@ -10,6 +10,7 @@ sem qualquer premissa tecnológica a priori.
 
 import os
 import re
+import subprocess
 from typing import List, Dict, Any, Optional
 
 from amb_cli.core.bootstrap import ensure_amb_env
@@ -188,6 +189,35 @@ class RulesManager:
 
         self._cached_rules_by_dir[cache_key] = combined
         return combined
+
+
+    def get_staged_files(self, repo_root: Optional[str] = None) -> List[str]:
+        """Obtém a lista de arquivos atualmente em stage no Git."""
+        root = repo_root or find_repo_root()
+        if not root:
+            return []
+
+        try:
+            # Tenta verificar se há commits no repositório.
+            subprocess.run(
+                ["git", "rev-parse", "--verify", "HEAD"],
+                cwd=root, capture_output=True, check=True
+            )
+            # Se há commits, usa diff --cached
+            cmd = ["git", "diff", "--name-only", "--cached"]
+        except subprocess.CalledProcessError:
+            # Repositório sem commits iniciais, usa ls-files --cached
+            cmd = ["git", "ls-files", "--cached"]
+
+        try:
+            res = subprocess.run(
+                cmd, cwd=root, capture_output=True, text=True, check=True
+            )
+            files = [f.strip() for f in res.stdout.split("\n") if f.strip()]
+            return [f for f in files if os.path.isfile(os.path.join(root, f))]
+        except Exception as e:
+            log("RULES", f"Aviso: falha ao obter arquivos em stage: {e}", Colors.YELLOW)
+            return []
 
     def filter_rules_for_agent(
         self,
