@@ -3,7 +3,7 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate,
-    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop
 )
 
 def create_parser() -> argparse.ArgumentParser:
@@ -205,6 +205,13 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--screen-id", help="Utiliza uma tela já existente no Stitch como ponto de partida (não recria).")
     p.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais antes de gerar a tela.")
     p.add_argument("--branch", "-b", help="Branch alvo para PR e checkout (default: detecta a atual).")
+
+
+    p = _c("loop", "Controle da Máquina de Estados do Autonomous Loop.", cmd_loop)
+    ls = p.add_subparsers(dest="loop_cmd", help="Subcomandos do Loop")
+    _sc(ls, "status", "Exibe o status atual do loop autônomo.")
+    _sc(ls, "pause", "Pausa a execução do loop.")
+    _sc(ls, "resume", "Retoma a execução do loop.")
 
     p = _c("schema", "Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only).", cmd_schema, ["db"])
     p.add_argument("target", nargs="?", default=None, help="Nome da tabela ou módulo a filtrar (ex: kanban, agenda, projects).")

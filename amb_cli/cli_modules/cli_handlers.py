@@ -202,3 +202,8 @@ def cmd_git(args: Any) -> None:
     """Gerencia comandos locais do Git e ciclo de vida de Pull Requests."""
     from cli_modules.handlers_core.git_handler import handle_cmd_git
     handle_cmd_git(args)
+
+def cmd_loop(args: Any) -> None:
+    """Comandos de controle do Autonomous Loop (status, pause, resume)."""
+    from cli_modules.handlers_core.loop_handler import handle_cmd_loop
+    handle_cmd_loop(args)
