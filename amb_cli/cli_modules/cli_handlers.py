@@ -203,3 +203,11 @@ def cmd_loop(args: Any) -> None:
     """Comandos de controle do Autonomous Loop (status, pause, resume)."""
     from cli_modules.handlers_core.loop_handler import handle_cmd_loop
     handle_cmd_loop(args)
+
+# -------------------------------------------------------------
+# X. STATS
+# -------------------------------------------------------------
+def cmd_stats(args: Any) -> None:
+    """Exibe as métricas de produtividade consolidadas."""
+    from cli_modules.handlers_core.stats_handler import handle_cmd_stats
+    handle_cmd_stats(args)

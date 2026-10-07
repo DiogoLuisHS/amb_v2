@@ -3,7 +3,7 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate, cmd_hooks,
-    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats
 )
 
 def create_parser() -> argparse.ArgumentParser:
@@ -228,6 +228,8 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("module", nargs="?", default="agenda", help="Nome do módulo ou pasta para rastrear (ex: agenda, kanban, projects).")
     p.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
 
+    p = _c("stats", "Exibe métricas históricas de tempo de execução, PRs e telemetria local.", cmd_stats)
+    _j(p)
     p = _c("git", "Comandos de controle de versão e ciclo de vida de Pull Requests via Git & GitHub CLI.", cmd_git)
     gs = p.add_subparsers(dest="git_cmd", help="Subcomandos do Git")
     g = _sc(gs, "status", "Exibe status detalhado do repositório Git, branches, upstream e GitHub CLI.")
