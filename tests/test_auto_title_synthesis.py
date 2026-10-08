@@ -67,7 +67,8 @@ def test_create_session_with_title_none(MockClient):
         source_name=None,
         base_branch=None,
         automation_mode="AUTO_CREATE_PR",
-        require_plan_approval=None
+        require_plan_approval=None,
+        repoless=False
     )
     assert res == {"id": "123", "name": "sessions/123"}
 
@@ -88,6 +89,7 @@ def test_create_session_with_explicit_title(MockClient):
         source_name=None,
         base_branch=None,
         automation_mode="AUTO_CREATE_PR",
-        require_plan_approval=None
+        require_plan_approval=None,
+        repoless=False
     )
     assert res == {"id": "123", "name": "sessions/123"}

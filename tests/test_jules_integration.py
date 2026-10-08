@@ -241,7 +241,8 @@ def test_jules_facade_tools():
         source_name=None,
         base_branch=None,
         automation_mode="AUTO_CREATE_PR",
-        require_plan_approval=None
+        require_plan_approval=None,
+        repoless=False
     )
 
     # run_create_session with auto_pr=False
@@ -252,7 +253,8 @@ def test_jules_facade_tools():
         source_name=None,
         base_branch=None,
         automation_mode=None,
-        require_plan_approval=None
+        require_plan_approval=None,
+        repoless=False
     )
 
     # run_create_session with require_plan_approval=True
@@ -263,7 +265,8 @@ def test_jules_facade_tools():
         source_name=None,
         base_branch=None,
         automation_mode="AUTO_CREATE_PR",
-        require_plan_approval=True
+        require_plan_approval=True,
+        repoless=False
     )
 
 

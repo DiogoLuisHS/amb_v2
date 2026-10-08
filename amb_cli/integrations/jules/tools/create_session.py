@@ -28,7 +28,8 @@ def run_create_session(
     as_json: bool = False,
     client: Optional[JulesClient] = None,
     auto_pr: bool = True,
-    require_plan_approval: Optional[bool] = None
+    require_plan_approval: Optional[bool] = None,
+    repoless: bool = False
 ) -> Dict[str, Any]:
     """Cria uma nova sessão no Google Jules a partir de prompt ou arquivo markdown."""
     c = client or JulesClient()
@@ -43,7 +44,8 @@ def run_create_session(
         source_name=source_name,
         base_branch=base_branch,
         automation_mode=automation_mode,
-        require_plan_approval=require_plan_approval
+        require_plan_approval=require_plan_approval,
+        repoless=repoless
     )
 
     sid = res.get("name", "").split("/")[-1] or res.get("id")
@@ -55,8 +57,13 @@ def run_create_session(
     log("JULES", f"🎉 Sessão do Jules criada com sucesso! ID: {sid}", Colors.GREEN)
     if title:
         print(f"  • Título: {title}")
-    if auto_pr:
+
+    is_repoless = repoless or source_name in ("none", "repoless")
+    if is_repoless:
+        print(f"  • Modo:       Repoless (Sessão livre sem repositório vinculado)")
+    elif auto_pr:
         print(f"  • Modo:       Automático (PR será aberto ao concluir)")
+
     if require_plan_approval:
         print(f"  • Aprovação: Exige aprovação manual do plano de execução")
     print(f"  • Painel Web: https://jules.google.com/session/{sid}")
@@ -77,6 +84,7 @@ def main():
     p.add_argument("--no-auto-pr", action="store_true", help="Desabilita a abertura automática de Pull Request pelo Jules.")
     p.add_argument("--require-approval", action="store_true", help="Exige aprovação explícita do plano antes de codificar.")
     p.add_argument("--json", action="store_true", help="Exibe a resposta em formato JSON puro.")
+    p.add_argument("--no-repo", "--repoless", action="store_true", help="Cria sessão avulsa no Jules sem vincular repositório Git.")
     args = p.parse_args()
 
     try:
@@ -87,7 +95,8 @@ def main():
             source_name=args.source,
             as_json=args.json,
             auto_pr=not args.no_auto_pr,
-            require_plan_approval=True if args.require_approval else None
+            require_plan_approval=True if args.require_approval else None,
+            repoless=args.no_repo
         )
     except Exception as e:
         log_error("JULES", str(e))

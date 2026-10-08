@@ -69,7 +69,8 @@ class JulesClient(BaseGoogleClient):
         title: Optional[str] = None,
         base_branch: Optional[str] = None,
         automation_mode: Optional[str] = "AUTO_CREATE_PR",
-        require_plan_approval: Optional[bool] = None
+        require_plan_approval: Optional[bool] = None,
+        repoless: bool = False
     ) -> Dict[str, Any]:
         if os.path.isfile(prompt):
             try:
@@ -77,28 +78,38 @@ class JulesClient(BaseGoogleClient):
                     prompt = f.read()
             except Exception:
                 pass
-        from workspace import get_repo_name
-        resolved_source = source_name or f"sources/github/{get_repo_name()}"
-
-        if not base_branch:
-            try:
-                from integrations.git.git_service import GitService
-                base_branch = GitService().get_current_branch()
-            except Exception:
-                base_branch = None
-        base_branch = base_branch or "main"
 
         payload = {
-            "prompt": prompt,
-            "sourceContext": {
+            "prompt": prompt
+        }
+
+        is_repoless = repoless or source_name in ("none", "repoless")
+
+        if not is_repoless:
+            from workspace import get_repo_name
+            resolved_source = source_name or f"sources/github/{get_repo_name()}"
+
+            if not base_branch:
+                try:
+                    from integrations.git.git_service import GitService
+                    base_branch = GitService().get_current_branch()
+                except Exception:
+                    base_branch = None
+            base_branch = base_branch or "main"
+
+            payload["sourceContext"] = {
                 "source": resolved_source,
                 "githubRepoContext": {
                     "startingBranch": base_branch
                 }
             }
-        }
-        if automation_mode:
-            payload["automationMode"] = automation_mode
+
+            if automation_mode:
+                payload["automationMode"] = automation_mode
+        else:
+            # Exclude automationMode and sourceContext when repoless
+            pass
+
         if title:
             payload["title"] = title
         if require_plan_approval is not None:
