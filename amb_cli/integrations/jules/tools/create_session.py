@@ -53,7 +53,7 @@ def run_create_session(
     if auto_pr:
         print(f"  • Modo:       Automático (PR será aberto ao concluir)")
     if require_plan_approval:
-        print(f"  • Aprovação:  Exige aprovação manual do plano de execução")
+        print(f"  • Aprovação: Exige aprovação manual do plano de execução")
     print(f"  • Painel Web: https://jules.google.com/session/{sid}")
     print(f"👉 Para monitorar ao vivo: amb jules get {sid} --watch\n")
     return res
