@@ -10,7 +10,7 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 | :--- | :--- | :--- | :--- |
 | 🔴 **MUST HAVE** | • `LoopStateMachine` com persistência (`.amb/loop_state.json`)<br>• `SessionMonitor` e enum `SessionState`<br>• Validador Pré-Commit de Regras (`amb validate --staged`) e `amb hooks install` | Estabilidade do loop contínuo e resiliência a falhas/interrupções | ✅ **100% Concluído (PRs #31, #32, #33)** |
 | 🟡 **SHOULD HAVE** | • `ConfigManager` Singleton com cache em memória e `amb config reload`<br>• `LocalTelemetry` em `.amb/telemetry.jsonl` e comando `amb stats`<br>• `PersonaEngine` unificado com interpolação e `amb persona validate` | Otimização de performance local e observabilidade de execução | ✅ **100% Concluído (PRs #34, #35, #36)** |
-| 🟢 **COULD HAVE** | • `ConsolePresenter` centralizado (`--json` e `--quiet`)<br>• `LocalQASandbox` e sanitizador de logs de QA em `.amb/logs/qa/`<br>• Notificações no Google Chat via Webhooks<br>• Deploy serverless no Google Cloud Run (`amb cloudrun`)<br>• Sincronização com Google Secret Manager (`amb secret`)<br>• Exportação de telemetria para Google Sheets / Looker Studio | Refinamentos de DX e expansão de integrações no ecossistema Google | 🟡 **Core Concluído (PR #37)** / Extensões em Backlog |
+| 🟢 **COULD HAVE** | • `ConsolePresenter` centralizado (`--json` e `--quiet`)<br>• `LocalQASandbox` e sanitizador de logs de QA em `.amb/logs/qa/`<br>• Scanner Proativo de TODOs (`amb suggest`) inspirado no Jules<br>• Notificações no Google Chat via Webhooks<br>• Deploy serverless no Google Cloud Run (`amb cloudrun`)<br>• Sincronização com Google Secret Manager (`amb secret`)<br>• Exportação de telemetria para Google Sheets / Looker Studio | Refinamentos de DX e expansão de integrações no ecossistema Google | 🟡 **Core Concluído (PR #37)** / Extensões em Backlog |
 | 🔵 **WON'T HAVE** | • Reescrita do core em TypeScript ou Rust<br>• Frameworks pesados de injeção de dependência (DI)<br>• Bancos de dados relacionais externos para persistência local<br>• Orquestração complexa de clusters Kubernetes (GKE) | Decisões arquiteturais deliberadas fora do escopo | 🔵 Mantido fora de escopo |
 
 ---
@@ -72,6 +72,12 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 
 ### 3.5. Sincronização com Google Secret Manager (`amb secret`)
 * **Status:** ⏳ *Em Backlog*. Sincronização de credenciais locais com o console GCP.
+
+### 3.6. Scanner Proativo de Débitos Técnicos e TODOs (`amb suggest`)
+* **Status:** ⏳ *Em Backlog (Inspirado em Jules Suggested Tasks)*.
+* **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/suggested-tasks/`).
+* **Conceito:** Varredura proativa de marcações `# TODO:`, `// TODO:`, `# FIXME:` e pendências técnicas na árvore do projeto.
+* **Funcionalidade:** Extração de contexto e rationale ao redor da marcação, listagem no terminal e conversão direta em issues/prompts para resolução autônoma via Google Jules (`amb suggest [--sync-issues] [--dispatch <id>]`).
 
 ---
 
