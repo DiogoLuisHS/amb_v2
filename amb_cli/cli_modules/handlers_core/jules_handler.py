@@ -56,13 +56,15 @@ def handle_cmd_jules(args: Any) -> None:
 
     elif sub == "create":
         from integrations.jules.tools.create_session import run_create_session
+        req_appr = getattr(args, "require_approval", False)
         run_create_session(
             prompt=args.prompt,
             title=getattr(args, "title", None),
             base_branch=getattr(args, "branch", None),
             source_name=getattr(args, "source", None),
             as_json=getattr(args, "json", False),
-            auto_pr=not getattr(args, "no_auto_pr", False)
+            auto_pr=not getattr(args, "no_auto_pr", False),
+            require_plan_approval=True if req_appr else None
         )
 
     elif sub == "extract":
