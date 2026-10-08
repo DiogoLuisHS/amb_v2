@@ -15,6 +15,7 @@ ensure_amb_env()
 from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
 from agents.auto_reply import advise_and_reply, get_last_conversation_turn
+from integrations.jules.jules_core.plan_auditor import PlanAuditor
 
 POLL_INTERVAL_SECONDS = 8
 POST_ACTION_INTERVAL_SECONDS = 3
@@ -28,8 +29,10 @@ def monitor_and_assist_session(
     Se a sessão solicitar feedback, utiliza o AntiGravity SDK para formular uma resposta autônoma e prosseguir.
     """
     log("LOOP-MONITOR", f"Iniciando monitoramento da sessão {session_id}...", Colors.CYAN)
+
     last_state = None
     last_answered_agent_msg_id = None
+    plan_challenges_count: Dict[str, int] = {}
 
     while True:
         try:
@@ -89,17 +92,39 @@ def monitor_and_assist_session(
                     continue
 
                 if turn_info.get("has_unapproved_plan") and turn_info.get("last_speaker") == "PLAN":
-                    log(
-                        "LOOP-MONITOR",
-                        f"Detectado plano pendente: '{turn_info.get('unapproved_plan_title')}'. Aprovando via API...",
-                        Colors.CYAN,
-                    )
-                    try:
-                        client.approve_plan(session_id)
-                        log("LOOP-MONITOR", "✔ Plano aprovado via API com sucesso.", Colors.GREEN)
-                        last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
-                    except Exception as e:
-                        log_error("LOOP-MONITOR", f"Falha ao aprovar plano via client.approve_plan: {e}")
+                    # Extrair o texto completo do plano para auditoria
+                    plan_text = ""
+                    for a in acts:
+                        plan_obj = a.get("plan") or a.get("planGenerated", {}).get("plan")
+                        if plan_obj:
+                            plan_title = plan_obj.get("title", "")
+                            steps = plan_obj.get("steps", [])
+                            steps_desc = " ".join([s.get("description", "") for s in steps])
+                            plan_text = f"{plan_title} {steps_desc}"
+                            break
+
+                    is_compliant, feedback = PlanAuditor.audit_plan(plan_text)
+
+                    if not is_compliant and plan_challenges_count.get(session_id, 0) < 1:
+                        log("LOOP-MONITOR", f"Plano contestado pela auditoria: {feedback}", Colors.YELLOW)
+                        try:
+                            client.send_message(session_id, feedback)
+                            plan_challenges_count[session_id] = plan_challenges_count.get(session_id, 0) + 1
+                        except Exception as e:
+                            log_error("LOOP-MONITOR", f"Falha ao enviar feedback corretivo: {e}")
+                    else:
+                        log(
+                            "LOOP-MONITOR",
+                            f"Detectado plano pendente: '{turn_info.get('unapproved_plan_title')}'. Aprovando via API...",
+                            Colors.CYAN,
+                        )
+                        try:
+                            client.approve_plan(session_id)
+                            log("LOOP-MONITOR", "✔ Plano aprovado via API com sucesso.", Colors.GREEN)
+                            plan_challenges_count[session_id] = 0
+                            last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
+                        except Exception as e:
+                            log_error("LOOP-MONITOR", f"Falha ao aprovar plano via client.approve_plan: {e}")
                 elif auto_reply_ai and turn_info.get("last_speaker") == "AGENT":
                     log(
                         "LOOP-MONITOR",
