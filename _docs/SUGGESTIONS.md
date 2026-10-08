@@ -89,6 +89,12 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 * **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/errors/`).
 * **Conceito:** Reiniciar tarefas que falharam ou foram interrompidas diretamente pela CLI, recuperando prompt e branch originais com suporte a parâmetros de ajuste (`amb jules rerun <id> [--prompt "novo"] [--branch <alvo>]`).
 
+### 3.9. Rastreador de Cota Diária e Janela Móvel do Jules (`amb jules quota`)
+* **Status:** ⏳ *Em Backlog (Inspirado em Jules Usage and Limits)*.
+* **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/usage-limits/`).
+* **Conceito:** Cálculo e monitoramento da cota de tarefas na janela móvel de 24 horas (`rolling 24h window`) a partir dos registros em `.amb/telemetry.jsonl`.
+* **Funcionalidade:** Exibição gráfica do consumo diário (ex: 5/15 Free ou 5/100 Pro) no terminal, estimativa de tempo para liberação da próxima tarefa e alerta preventivo no `amb agent` antes de disparar lotes que excedam o saldo disponível.
+
 ---
 
 ## 🔵 4. WON'T HAVE — Fora de Escopo Desta Fase
