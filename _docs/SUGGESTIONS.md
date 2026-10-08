@@ -84,6 +84,11 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 * **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/repo/`).
 * **Conceito:** Dashboard no terminal agrupando sessões do repositório ativo em seções categorizadas: 🔄 Em Execução (`Running`), ⏳ Aguardando Atenção (`Waiting Feedback/Plan`), ✅ Concluídas com PR (`Completed`) e ❌ Falhas (`Failed`).
 
+### 3.8. Comando de Re-execução e Rerun de Tarefas (`amb jules rerun <session_id>`)
+* **Status:** ⏳ *Em Backlog (Inspirado em Jules Errors & Failures)*.
+* **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/errors/`).
+* **Conceito:** Reiniciar tarefas que falharam ou foram interrompidas diretamente pela CLI, recuperando prompt e branch originais com suporte a parâmetros de ajuste (`amb jules rerun <id> [--prompt "novo"] [--branch <alvo>]`).
+
 ---
 
 ## 🔵 4. WON'T HAVE — Fora de Escopo Desta Fase
