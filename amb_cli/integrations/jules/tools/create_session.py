@@ -17,6 +17,7 @@ ensure_amb_env()
 
 from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
+from integrations.jules.jules_core.title_synthesizer import synthesize_session_title
 
 
 def run_create_session(
@@ -32,6 +33,10 @@ def run_create_session(
     """Cria uma nova sessão no Google Jules a partir de prompt ou arquivo markdown."""
     c = client or JulesClient()
     automation_mode = "AUTO_CREATE_PR" if auto_pr else None
+
+    if not title:
+        title = synthesize_session_title(prompt)
+
     res = c.create_session(
         prompt=prompt,
         title=title,
@@ -49,7 +54,7 @@ def run_create_session(
 
     log("JULES", f"🎉 Sessão do Jules criada com sucesso! ID: {sid}", Colors.GREEN)
     if title:
-        print(f"  • Título:     {title}")
+        print(f"  • Título: {title}")
     if auto_pr:
         print(f"  • Modo:       Automático (PR será aberto ao concluir)")
     if require_plan_approval:
