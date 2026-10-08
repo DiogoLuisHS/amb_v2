@@ -126,3 +126,15 @@ def format_plan_step(step: Any) -> str:
         return title or desc or "Passo sem descrição"
     return str(step)
 
+def extract_progress_update(activity: Dict[str, Any]) -> Optional[Tuple[str, str]]:
+    """
+    Extrai (title, description) do evento progressUpdated de uma atividade.
+    Retorna None se a atividade não contiver o evento.
+    """
+    p = activity.get("progressUpdated")
+    if isinstance(p, dict):
+        title = p.get("title", "").strip()
+        description = p.get("description", "").strip()
+        if title or description:
+            return (title, description)
+    return None

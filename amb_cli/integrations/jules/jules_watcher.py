@@ -224,6 +224,15 @@ def stream_session_activities(session_id: str, poll_interval: int = 4, client: O
                         print(f"    {idx}. {format_plan_step(step)}")
                     continue
 
+                # 3.1. Atualização Dinâmica de Progresso
+                from amb_cli.integrations.jules.jules_core.session_helpers import extract_progress_update
+                prog = extract_progress_update(act)
+                if prog:
+                    p_title, p_desc = prog
+                    desc_str = f" — {p_desc}" if p_desc else ""
+                    print(f"{Colors.BOLD}{Colors.CYAN}[{ctime}] ⏳ {p_title}{Colors.RESET}{Colors.DIM}{desc_str}{Colors.RESET}")
+                    continue
+
                 # 4. Ação genérica ou bash command
                 desc = act.get("description") or act.get("type") or "Atividade"
                 print(f"{Colors.DIM}[{ctime}] ⚙️  {desc}{Colors.RESET}")
