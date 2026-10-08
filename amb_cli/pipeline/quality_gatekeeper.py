@@ -19,6 +19,7 @@ ensure_amb_env()
 from core import Colors, log, log_error
 from workspace import find_repo_root, load_project_json
 from workspace.setup.project_analyzer import ProjectAnalyzer
+from pipeline.pipeline_core.qa_sandbox import LocalQASandbox
 
 
 class QualityGatekeeper:
@@ -61,16 +62,19 @@ class QualityGatekeeper:
             shell=True
         )
 
+        stdout_txt = proc.stdout.strip() if proc.stdout else ""
+        stderr_txt = proc.stderr.strip() if proc.stderr else ""
+        combined_output = stdout_txt + "\n" + stderr_txt
+
         if proc.returncode != 0:
-            stdout_txt = proc.stdout.strip() if proc.stdout else ""
-            stderr_txt = proc.stderr.strip() if proc.stderr else ""
-            if stdout_txt:
-                print(f"{Colors.DIM}{stdout_txt}{Colors.RESET}")
-            if stderr_txt:
-                print(f"{Colors.RED}{stderr_txt}{Colors.RESET}")
-            log_error("QA", f"Falha no passo de validação: '{label}' (código {proc.returncode})")
+            saved_log_path = LocalQASandbox.save_run_log(clean_cmd, combined_output, False, cwd)
+            sanitized = LocalQASandbox.extract_sanitized_failure(combined_output)
+
+            print(f"{Colors.RED}{sanitized}{Colors.RESET}")
+            log_error("QA", f"Falha no passo de validação: '{label}' (código {proc.returncode}). Log completo salvo em: {saved_log_path}")
             return False
 
+        LocalQASandbox.save_run_log(clean_cmd, combined_output, True, cwd)
         print(f"{Colors.GREEN}✔ {label}: concluído com sucesso!{Colors.RESET}")
         return True
 
