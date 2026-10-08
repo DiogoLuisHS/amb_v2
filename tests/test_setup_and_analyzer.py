@@ -165,3 +165,8 @@ def test_setup_force_provision(tmp_path):
     assert project_data["$schema"] == "https://amb-v2.dev/schemas/amb_project.v2.json"
     assert project_data["stack"]["type"] == "python"
     assert project_data["personas"]["active"] == ["engineer"]
+
+    # Verifica se AGENTS.md para Google Jules foi gerado na raiz
+    agents_file = tmp_path / "AGENTS.md"
+    assert agents_file.exists()
+    assert "Autonomous Agent Guide" in agents_file.read_text(encoding="utf-8")

@@ -108,6 +108,9 @@ STITCH_PROJECT_ID=
         # 6. Criação de .amb/README.md informativo
         cls.write_amb_readme(amb_root, repo_name, stack, qa)
 
+        # 7. Geração de AGENTS.md na raiz para Google Jules & agentes autônomos
+        cls.ensure_agents_markdown(root, repo_name, stack, qa, force=force)
+
     @classmethod
     def ensure_gitignore_security(cls, root: str) -> None:
         """Garante que .env e artefatos de telemetria local estejam no .gitignore de forma não-destrutiva."""
@@ -206,3 +209,51 @@ amb monitor --auto-approve
 """
         with open(readme_file, "w", encoding="utf-8") as rf:
             rf.write(readme_content)
+
+    @classmethod
+    def ensure_agents_markdown(
+        cls,
+        root: str,
+        repo_name: str,
+        stack: Dict[str, Any],
+        qa: Dict[str, str],
+        force: bool = False
+    ) -> None:
+        """Gera ou preserva o arquivo AGENTS.md na raiz para guiar nativamente o Google Jules."""
+        agents_file = os.path.join(root, "AGENTS.md")
+        if os.path.exists(agents_file) and not force:
+            return
+
+        frameworks_str = ", ".join(stack.get("frameworks", [])) or "Genérico"
+        qa_lines = "\n".join([f"- **{k.title()}**: `{v}`" for k, v in qa.items()]) if qa else "- *Nenhum comando de QA configurado*"
+
+        content = f"""# 🤖 Autonomous Agent Guide (`AGENTS.md`)
+
+Este repositório possui suporte ao Google Jules e agentes autônomos via AMB_V2.
+As diretrizes abaixo devem ser seguidas rigorosamente por qualquer agente de IA.
+
+---
+
+## 🎯 1. Visão Geral do Projeto
+- **Repositório:** `{repo_name}`
+- **Stack:** `{stack.get('type')}` (`{stack.get('primary_language', 'N/A')}`)
+- **Gerenciador de Pacotes:** `{stack.get('package_manager', 'N/A')}`
+- **Frameworks:** `{frameworks_str}`
+
+---
+
+## 🛡️ 2. Verificação de Qualidade Mandatória (Quality Gates)
+Antes de finalizar alterações ou abrir Pull Requests, valide com sucesso:
+{qa_lines}
+
+---
+
+## 📐 3. Convenções e Diretrizes
+1. **Responsabilidade Única (SRP):** Mantenha arquivos pequenos e de propósito único.
+2. **Qualidade e Tipagem:** Garanta tipagem explícita e tratamento de erros defensivo.
+3. **Escopo Cirúrgico:** Não realize modificações além do escopo solicitado.
+4. **Histórico e Lições:** Consulte `.amb/personas/engineer.md` e registre aprendizados em `.amb/diarios/engineer.md`.
+"""
+        with open(agents_file, "w", encoding="utf-8") as f:
+            f.write(content.strip() + "\n")
+
