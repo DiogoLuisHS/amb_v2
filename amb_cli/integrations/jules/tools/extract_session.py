@@ -4,11 +4,38 @@ from integrations.jules.jules_client import JulesClient
 from integrations.jules.jules_core.session_extractor import SessionExtractor
 from core import Colors, log_error
 
-def run_extract_session(session_id: str, dest: str = None, apply: bool = False):
+from typing import Optional
+
+def run_extract_session(
+    session_id: str,
+    dest: Optional[str] = None,
+    apply: bool = False,
+    show_bash: bool = False,
+    client: Optional[JulesClient] = None
+):
     try:
-        client = JulesClient()
+        if not client:
+            client = JulesClient()
         sid = client.normalize_session_id(session_id)
         print(f"\n{Colors.BOLD}{Colors.CYAN}📥 EXTRAÇÃO DE SESSÃO DO JULES{Colors.RESET}")
+
+        if show_bash:
+            activities = client.list_activities(sid)
+            bash_list = SessionExtractor.extract_bash_outputs(activities)
+
+            print(f"\n=== 🖥️ COMANDOS BASH EXECUTADOS NA VM ===")
+            if not bash_list:
+                print("Nenhum comando bash registrado nos artefatos desta sessão.")
+            else:
+                for b in bash_list:
+                    cmd = b.get("command", "")
+                    exit_code = b.get("exitCode", 0)
+                    out = b.get("output", "")
+
+                    color = Colors.GREEN if exit_code == 0 else Colors.RED
+                    print(f"{color}[$] {cmd}{Colors.RESET}")
+                    print(f"    Status: exit {exit_code}")
+                    print(f"    Saída:\n{out}")
         print(f"Buscando payload da sessão: {sid}...")
 
         session_data = client.get_session(sid)

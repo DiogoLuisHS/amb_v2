@@ -109,6 +109,7 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("session_id", help="ID ou URL da sessão do Jules.")
     j.add_argument("--dest", "-d", help="Caminho de destino para salvar o patch (Padrão: .amb/patches/session_<session_id>.patch).")
     j.add_argument("--apply", "-a", action="store_true", help="Aplica o patch extraído no workspace atual via git apply.")
+    j.add_argument("--bash", action="store_true", help="Lista e exibe todos os comandos bash executados pelo Jules na VM com status e saídas.")
     j = _sc(js, "merge", "Detecta o PR da sessão, aprova, faz merge no GitHub e valida localmente.")
     _sid(j, "ID ou URL da sessão do Jules para detectar o PR.", "ID da sessão para detectar o PR (flag alternativa).")
     j.add_argument("--auto-latest", "-a", action="store_true", help="Detecta automaticamente o PR aberto mais recente.")

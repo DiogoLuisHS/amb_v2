@@ -17,6 +17,38 @@ class SessionExtractor:
         return None
 
     @staticmethod
+    def extract_bash_outputs(activities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Extrai todos os artefatos de bashOutput das atividades da sessão.
+        Retorna lista de dicionários com 'command', 'output' e 'exitCode'.
+        """
+        bash_outputs = []
+        if not activities:
+            return bash_outputs
+
+        for act in activities:
+            if not isinstance(act, dict):
+                continue
+
+            artifacts = act.get("artifacts", [])
+            if not isinstance(artifacts, list):
+                continue
+
+            for artifact in artifacts:
+                if not isinstance(artifact, dict):
+                    continue
+
+                bash_out = artifact.get("bashOutput")
+                if isinstance(bash_out, dict):
+                    bash_outputs.append({
+                        "command": bash_out.get("command", ""),
+                        "output": bash_out.get("output", ""),
+                        "exitCode": bash_out.get("exitCode", 0)
+                    })
+
+        return bash_outputs
+
+    @staticmethod
     def extract_failure_reason(activities: Optional[List[Dict[str, Any]]]) -> Optional[str]:
         """Extrai o motivo de falha (reason) a partir dos eventos sessionFailed das atividades."""
         if not activities:
