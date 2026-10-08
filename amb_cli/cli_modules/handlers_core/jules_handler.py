@@ -135,6 +135,31 @@ def handle_cmd_jules(args: Any) -> None:
             all_repos=getattr(args, "all_repos", False)
         )
 
+    elif sub in ["delete", "del", "rm"]:
+        sid = getattr(args, "session_id", None)
+        if not sid:
+            log_error("JULES", "Informe o ID da sessão para deletar.")
+            return
+
+        force = getattr(args, "force", False)
+        if not force:
+            conf = input(f"{Colors.YELLOW}⚠️ Tem certeza que deseja deletar a sessão '{sid}' na nuvem? [y/N]: {Colors.RESET}")
+            if conf.lower() not in ["y", "yes"]:
+                print("Operação cancelada.")
+                return
+
+        from integrations.jules.jules_client import JulesClient
+        client = JulesClient()
+        try:
+            client.delete_session(sid)
+            print(f"{Colors.GREEN}✔ Sessão {sid} excluída com sucesso da nuvem Jules.{Colors.RESET}")
+        except Exception as e:
+            err_str = str(e)
+            if "404" in err_str or "NOT_FOUND" in err_str or "not found" in err_str.lower():
+                print(f"{Colors.YELLOW}Aviso: A sessão {sid} já foi excluída ou não existe.{Colors.RESET}")
+            else:
+                log_error("JULES", f"Erro ao deletar sessão {sid}: {err_str}")
+
     elif sub in ["env", "environment"]:
         from integrations.jules.tools.env_inspector import run_inspect_env
         run_inspect_env(

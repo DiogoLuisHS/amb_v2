@@ -97,6 +97,7 @@ def cmd_agent(args: Any) -> None:
             "max_cycles": max_c,
             "branch": getattr(args, "branch", None),
             "no_auto_merge": getattr(args, "no_auto_merge", False),
+            "concurrency": getattr(args, "concurrency", 1),
         }
         if getattr(args, "sync_issues", False):
             loop_kwargs["use_issues"] = True

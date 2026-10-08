@@ -22,13 +22,14 @@ POST_ACTION_INTERVAL_SECONDS = 3
 
 
 def monitor_and_assist_session(
-    client: JulesClient, session_id: str, auto_reply_ai: bool = True
+    client: JulesClient, session_id: str, auto_reply_ai: bool = True, quiet: bool = False
 ) -> str:
     """
     Monitora a sessão no Jules, verificando seu estado.
     Se a sessão solicitar feedback, utiliza o AntiGravity SDK para formular uma resposta autônoma e prosseguir.
     """
-    log("LOOP-MONITOR", f"Iniciando monitoramento da sessão {session_id}...", Colors.CYAN)
+    if not quiet:
+        log("LOOP-MONITOR", f"Iniciando monitoramento da sessão {session_id}...", Colors.CYAN)
 
     last_state = None
     last_answered_agent_msg_id = None
@@ -40,19 +41,22 @@ def monitor_and_assist_session(
             state = session.get("state", "UNKNOWN")
 
             if state != last_state:
-                log(
-                    "LOOP-MONITOR",
-                    f"Sessão alterou estado de {last_state} para {state}",
-                    Colors.CYAN,
-                )
+                if not quiet:
+                    log(
+                        "LOOP-MONITOR",
+                        f"Sessão {session_id} alterou estado de {last_state} para {state}",
+                        Colors.CYAN,
+                    )
                 last_state = state
 
             if state in ["COMPLETED", "SUCCEEDED", "CLOSED"]:
-                log("LOOP-MONITOR", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso ({state})!", Colors.GREEN)
+                if not quiet:
+                    log("LOOP-MONITOR", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso ({state})!", Colors.GREEN)
                 return state
 
             if state in ["FAILED", "ERROR", "ABORTED"]:
-                log_error("LOOP-MONITOR", f"Sessão encerrou com estado de falha: {state}")
+                if not quiet:
+                    log_error("LOOP-MONITOR", f"Sessão {session_id} encerrou com estado de falha: {state}")
                 return state
 
             is_feedback_state = (
