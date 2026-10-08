@@ -65,6 +65,14 @@ def handle_cmd_jules(args: Any) -> None:
             auto_pr=not getattr(args, "no_auto_pr", False)
         )
 
+    elif sub == "extract":
+        from integrations.jules.tools.extract_session import run_extract_session
+        run_extract_session(
+            session_id=args.session_id,
+            dest=getattr(args, "dest", None),
+            apply=getattr(args, "apply", False)
+        )
+
     elif sub in ["reply", "advisor", "ask"]:
         sid = getattr(args, "session_id_flag", None) or getattr(args, "session_id", None)
         if sid:
