@@ -18,6 +18,8 @@ ensure_amb_env()
 from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
 from integrations.jules.jules_core.title_synthesizer import synthesize_session_title
+from integrations.jules.jules_core.session_helpers import check_branch_exists_in_source
+import logging
 
 
 def run_create_session(
@@ -29,7 +31,8 @@ def run_create_session(
     client: Optional[JulesClient] = None,
     auto_pr: bool = True,
     require_plan_approval: Optional[bool] = None,
-    repoless: bool = False
+    repoless: bool = False,
+    skip_branch_check: bool = False
 ) -> Dict[str, Any]:
     """Cria uma nova sessão no Google Jules a partir de prompt ou arquivo markdown."""
     c = client or JulesClient()
@@ -37,6 +40,37 @@ def run_create_session(
 
     if not title:
         title = synthesize_session_title(prompt)
+
+    is_repoless = repoless or source_name in ("none", "repoless")
+
+    # Pre-validation of branch if required
+    if not skip_branch_check and not is_repoless:
+        resolved_source = source_name
+        if not resolved_source:
+            # Emulate how JulesClient resolves the default source
+            try:
+                env_repo = os.environ.get("JULES_TARGET_REPO", "").strip()
+                if not env_repo:
+                    from core.env import AMBEnv
+                    env_repo = AMBEnv().get("JULES_TARGET_REPO", "")
+                if env_repo:
+                    resolved_source = f"sources/github/{env_repo.lstrip('/')}"
+            except Exception:
+                pass
+
+        # If we still don't have base_branch, assume it will be auto-detected later,
+        # but if we do, check it against the source.
+        if base_branch and resolved_source:
+            try:
+                source_info = c.get_source(resolved_source)
+                if source_info:
+                    exists, default_branch = check_branch_exists_in_source(source_info, base_branch)
+                    if not exists:
+                        print(f"{Colors.YELLOW}⚠️ Aviso: A branch '{base_branch}' não foi encontrada nas branches sincronizadas da fonte '{resolved_source}'.")
+                        print(f"   Branch padrão detectada: '{default_branch}'. Certifique-se de ter feito 'git push' da branch.{Colors.RESET}")
+            except Exception as e:
+                # Tratar exceção silenciosamente
+                logging.debug(f"Falha na verificação de branch: {e}")
 
     res = c.create_session(
         prompt=prompt,
@@ -58,7 +92,6 @@ def run_create_session(
     if title:
         print(f"  • Título: {title}")
 
-    is_repoless = repoless or source_name in ("none", "repoless")
     if is_repoless:
         print(f"  • Modo:       Repoless (Sessão livre sem repositório vinculado)")
     elif auto_pr:
