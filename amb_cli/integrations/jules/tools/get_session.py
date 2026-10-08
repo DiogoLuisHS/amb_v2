@@ -71,6 +71,14 @@ def run_get_session(
     if starting_branch:
         print(f"  • Branch Base: {Colors.DIM}{starting_branch}{Colors.RESET}")
 
+    create_time = data.get("createTime")
+    if create_time:
+        print(f"  • Criada em:     {create_time}")
+
+    update_time = data.get("updateTime")
+    if update_time:
+        print(f"  • Atualizada em: {update_time}")
+
     print(f"  • Painel Web:  https://jules.google.com/session/{sid}\n")
     return data
 
