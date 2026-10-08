@@ -3,7 +3,7 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate, cmd_hooks,
-    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats, cmd_persona
 )
 
 def create_parser() -> argparse.ArgumentParser:
@@ -61,7 +61,7 @@ def create_parser() -> argparse.ArgumentParser:
         "agent",
         "Desenvolvimento autônomo e personas (suporta pasta de prompts em lote -p <dir> ou personas em loop).",
         cmd_agent,
-        ["persona"],
+        ["agent_alias"],
         desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).\n"
              "Suporta execução sequencial em lote de uma pasta inteira de prompts (ex: amb agent -p .amb/prompts/)\n"
              "ou personas individuais, com auto-approval, QA local e auto-merge no Git."
@@ -214,6 +214,10 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("hooks", "Gerencia hooks do Git no repositório.", cmd_hooks)
     hs = p.add_subparsers(dest="hooks_cmd", help="Subcomandos de hooks")
     _sc(hs, "install", "Instala o pre-commit hook do AMB_V2.")
+
+    p = _c("persona", "Engine unificada de personas com descoberta, interpolação e validação.", cmd_persona)
+    ps = p.add_subparsers(dest="persona_cmd", help="Subcomandos de persona")
+    _sc(ps, "validate", "Audita conformidade arquitetural de personas.")
 
     p = _c("loop", "Controle da Máquina de Estados do Autonomous Loop.", cmd_loop)
     ls = p.add_subparsers(dest="loop_cmd", help="Subcomandos do Loop")
