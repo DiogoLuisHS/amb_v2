@@ -211,3 +211,7 @@ def cmd_stats(args: Any) -> None:
     """Exibe as métricas de produtividade consolidadas."""
     from cli_modules.handlers_core.stats_handler import handle_cmd_stats
     handle_cmd_stats(args)
+
+def cmd_persona(args: Any) -> None:
+    from cli_modules.handlers_core.persona_handler import cmd_persona as handler
+    handler(args)
