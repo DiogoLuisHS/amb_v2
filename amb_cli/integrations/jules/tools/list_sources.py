@@ -44,8 +44,25 @@ def run_list_sources(
         github_repo = s.get("githubRepo", {})
         owner = github_repo.get("owner", "")
         repo = github_repo.get("repo", "")
+        is_private = github_repo.get("isPrivate")
+        default_branch = (github_repo.get("defaultBranch") or {}).get("displayName", "")
+
         repo_str = f"({owner}/{repo})" if owner and repo else ""
-        print(f"  {idx}. {Colors.BOLD}{name}{Colors.RESET} {Colors.GREEN}{repo_str}{Colors.RESET}")
+
+        tags = []
+        if is_private is True:
+            tags.append(f"{Colors.YELLOW}[🔒 Privado]{Colors.RESET}")
+        elif is_private is False:
+            tags.append(f"{Colors.BLUE}[🌐 Público]{Colors.RESET}")
+
+        if default_branch:
+            tags.append(f"{Colors.DIM}[🌿 Default: {default_branch}]{Colors.RESET}")
+
+        tags_str = " ".join(tags)
+        if tags_str:
+            print(f"  {idx}. {Colors.BOLD}{name}{Colors.RESET} {Colors.GREEN}{repo_str}{Colors.RESET} {tags_str}")
+        else:
+            print(f"  {idx}. {Colors.BOLD}{name}{Colors.RESET} {Colors.GREEN}{repo_str}{Colors.RESET}")
     print()
     return sources
 
