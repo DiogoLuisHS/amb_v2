@@ -15,6 +15,7 @@ ensure_amb_env()
 
 from core import Colors, log
 from workspace.setup.project_analyzer import ProjectAnalyzer
+from workspace.setup.setup_sanitizer import SetupSanitizer
 
 
 def inspect_jules_env(target_dir: Optional[str] = None) -> Dict[str, Any]:
@@ -22,7 +23,12 @@ def inspect_jules_env(target_dir: Optional[str] = None) -> Dict[str, Any]:
     root = os.path.abspath(target_dir or os.getcwd())
     stack = ProjectAnalyzer.detect_stack(root)
     qa = ProjectAnalyzer.infer_qa_commands(stack, root)
-    setup_script = ProjectAnalyzer.infer_setup_script(stack, root)
+    setup_script_raw = ProjectAnalyzer.infer_setup_script(stack, root)
+
+    setup_script, removed_commands = SetupSanitizer.sanitize_script(setup_script_raw)
+
+    for cmd in removed_commands:
+        log("ENV", f"Comando bloqueante ignorado no setup: {cmd}", Colors.YELLOW)
 
     # Ferramentas nativas garantidas pelo Jules Ubuntu 24.04 VM
     stype = stack.get("type", "").lower()
