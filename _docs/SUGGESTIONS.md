@@ -95,6 +95,42 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 * **Conceito:** Cálculo e monitoramento da cota de tarefas na janela móvel de 24 horas (`rolling 24h window`) a partir dos registros em `.amb/telemetry.jsonl`.
 * **Funcionalidade:** Exibição gráfica do consumo diário (ex: 5/15 Free ou 5/100 Pro) no terminal, estimativa de tempo para liberação da próxima tarefa e alerta preventivo no `amb agent` antes de disparar lotes que excedam o saldo disponível.
 
+### 3.10. Paginação Completa de Fontes Conectadas com `nextPageToken`
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Overview)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/overview`).
+* **Conceito:** Adicionar iteração por `nextPageToken` no método `JulesClient.list_sources(fetch_all=True)`.
+* **Funcionalidade:** Garante que contas de desenvolvedores ou organizações com mais de 50 repositórios conectados no GitHub App do Jules tenham todos os repositórios listados e auditados sem truncamento.
+
+### 3.11. Filtro Rápido de Repositórios na CLI (`amb jules sources --filter`)
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Overview)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/overview`).
+* **Conceito:** Flag de busca por substring no comando de fontes conectadas.
+* **Funcionalidade:** Permite verificar rapidamente se um repositório específico está conectado (`amb jules sources -f meurepo`) sem necessidade de rolagem ou parsing manual no terminal.
+
+### 3.12. Sanitização Preventiva de Espaços em Chaves de API (`api_key.strip()`)
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Authentication)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/authentication`).
+* **Conceito:** Aplicação de `.strip()` automático nas chaves de API durante a instanciação de `BaseGoogleClient`.
+* **Funcionalidade:** Previne o erro comum `"API key not valid"` documentado oficialmente, provocado por espaços em branco, quebras de linha ou caracteres invisíveis copiados para o arquivo `.env`.
+
+### 3.13. Guia de Resolução Acionável para Falhas de Autenticação
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Authentication)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/authentication`).
+* **Conceito:** Mapeamento específico em `_normalize_error` para mensagens `"API key not valid"` ou status 401/403.
+* **Funcionalidade:** Exibe orientações diretas no terminal com link para o painel de configurações (`https://jules.google.com/settings`) para gerar ou checar o status de revogação da chave.
+
+### 3.14. Mapeamento e Tratamento do Estado Canônico `PAUSED`
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Sessions)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/sessions`).
+* **Conceito:** Inclusão explícita de `PAUSED = "PAUSED"` no enum `SessionState` e no método `from_api_string`.
+* **Funcionalidade:** Permite ao `SessionMonitor` e ao loop autônomo identificar quando uma sessão do Jules foi pausada pelo sistema ou pelo operador, emitindo alerta visual específico sem cair no estado genérico `IDLE` ou timeout falso.
+
+### 3.15. Extração e Salvamento de Artefatos Multimídia (`media`)
+* **Status:** ⏳ *Em Backlog (Inspirado em API Reference - Types)*.
+* **Origem:** Documentação oficial da REST API do Google Jules (`https://jules.google/docs/api/reference/types`).
+* **Conceito:** Suporte a artefatos do tipo `media` (`mimeType`, `data` em base64) retornados nas atividades do Jules.
+* **Funcionalidade:** Decodificação de arquivos de imagem, vídeo ou diagramas gerados pelo Jules na nuvem, salvando-os de forma estruturada em `.amb/artifacts/` para integração com telas do Stitch e inspeção visual no terminal.
+
 ---
 
 ## 🔵 4. WON'T HAVE — Fora de Escopo Desta Fase
