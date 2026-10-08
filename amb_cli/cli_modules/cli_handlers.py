@@ -177,7 +177,8 @@ def cmd_pipeline(args: Any) -> None:
         edit_screen_id=getattr(args, "edit_screen_id", None),
         screen_id=getattr(args, "screen_id", None),
         sync_ds=getattr(args, "sync_ds", False),
-        starting_branch=getattr(args, "branch", None)
+        starting_branch=getattr(args, "branch", None),
+        auto_merge=getattr(args, "auto_merge", False)
     )
 
 

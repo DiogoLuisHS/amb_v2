@@ -294,9 +294,10 @@ Orquestração unificada de alto nível conectando a geração de interface no S
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb pipeline -s <stitch.md> -j <jules.md>` | `run`, `deploy` | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** com prompts separados para Stitch e Jules. |
+| `amb pipeline -s <stitch.md> -j <jules.md>` | — | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** com prompts separados para Stitch e Jules. |
 | `amb pipeline -j <jules.md> --skip-stitch` | — | Pula a etapa visual do Stitch e vai direto para a engenharia no Jules. |
 | `amb pipeline -s <s.md> -j <j.md> -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
+| `amb pipeline -s <s.md> -j <j.md> --auto-merge` | — | Aprova formalmente e faz merge do Pull Request no GitHub após aprovação no QA local. |
 | `amb pipeline -s <s.md> -j <j.md> --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: detecta a atual). |
 | `amb pipeline -s <s.md> -j <j.md> --device <D>`| `-d` | Dispositivo alvo para o Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
 | `amb pipeline -s <s.md> -j <j.md> --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar. |

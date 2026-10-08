@@ -36,14 +36,10 @@ def load_persona_content(role: str) -> tuple[str, str]:
     default_personas = {
         "engineer": (
             "Autonomous Software Engineer",
-            "Você é o Autonomous Software Engineer. Sua missão é dar continuidade ao desenvolvimento, auditoria e aperfeiçoamento do projeto.\n"
-            "1. Analise arquivos recentes e identifique débitos técnicos, bugs ou novas funcionalidades.\n"
-            "2. Implemente melhorias sólidas seguindo o Design System e padrões arquiteturais do repositório.\n"
-            "3. Garanta integridade total passando na suíte de testes e validação de QA configurada.\n"
-            "4. Crie commits descritivos e abra o Pull Request quando concluído.",
+            "Você é o Autonomous Software Engineer. Sua missão é dar continuidade ao desenvolvimento do projeto.\n"
+            "Analise débitos técnicos, implemente melhorias e abra o Pull Request quando concluído.",
         ),
     }
-
     if clean_role in default_personas:
         return default_personas[clean_role]
 
@@ -200,8 +196,16 @@ def run_autonomous_loop(
                         client=client, session_id=session_id, auto_reply_ai=True
                     )
 
-                    # Aprovação e Integração do PR no Git
+                    # Aprovação e Integração do PR no Git com QA
                     if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
+                        from pipeline.quality_gatekeeper import QualityGatekeeper
+                        if not QualityGatekeeper.run_qa(repo_root):
+                            log_error(
+                                "LOOP",
+                                f"QA local falhou para o item '{item_name}'. "
+                                f"Interrompendo a esteira para garantir a integridade da branch principal.",
+                            )
+                            return
                         merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
                         if not merged:
                             log_error(

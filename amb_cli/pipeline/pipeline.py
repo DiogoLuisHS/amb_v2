@@ -32,7 +32,8 @@ class PipelineOrchestrator:
         cls, prompt_file: str = None, stitch_prompt_file: str = None, jules_prompt_file: str = None,
         auto_approve: bool = False, skip_stitch: bool = False, no_qa: bool = False,
         resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
-        screen_id: str = None, sync_ds: bool = False, starting_branch: str = None
+        screen_id: str = None, sync_ds: bool = False, starting_branch: str = None,
+        auto_merge: bool = False
     ):
         repo_root = find_repo_root()
         repo_name = get_repo_name()
@@ -41,7 +42,7 @@ class PipelineOrchestrator:
 
         if resume_session:
             log("PIPELINE", f"Retomando monitoramento: {resume_session}", Colors.HEADER)
-            cls._monitor_jules_session(resume_session, repo_root, no_qa)
+            cls._monitor_jules_session(resume_session, repo_root, no_qa, auto_merge, starting_branch)
             return
 
         log("ETAPA 1/6", f"📄 Lendo arquivos de prompt...", Colors.HEADER)
@@ -107,18 +108,29 @@ class PipelineOrchestrator:
         session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get("id", "")
         if not session_id: raise AmbError(f"Resposta inválida Jules: {session_resp}")
 
-        print(f"🎉 {Colors.BOLD}Sessão Iniciada: {Colors.GREEN}{session_id}{Colors.RESET}")
-
-        cls._monitor_jules_session(session_id, repo_root, no_qa)
+        if auto_merge:
+            cls._monitor_jules_session(session_id, repo_root, no_qa, auto_merge=auto_merge, starting_branch=starting_branch)
+        else:
+            cls._monitor_jules_session(session_id, repo_root, no_qa)
 
     @classmethod
-    def _monitor_jules_session(cls, session_id: str, repo_root: str, no_qa: bool = False):
+    def _monitor_jules_session(
+        cls, session_id: str, repo_root: str, no_qa: bool = False,
+        auto_merge: bool = False, starting_branch: str = "main"
+    ):
         client = JulesClient()
         from agents.autonomous_loop import monitor_and_assist_session
-        monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
+        state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
         if not no_qa:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
-            QualityGatekeeper.run_qa(repo_root)
+            qa_ok = QualityGatekeeper.run_qa(repo_root)
+            if not qa_ok:
+                log_error("PIPELINE", "Validação local de QA falhou. Abortando processo de integração.")
+                return
+        if auto_merge and state in ["COMPLETED", "SUCCEEDED"]:
+            from agents.loop_core.cycle_dispatcher import handle_pr_merge
+            log("PIPELINE", "🔀 Executando auto-merge do Pull Request pós-QA...", Colors.CYAN)
+            handle_pr_merge(session_id, starting_branch, repo_root, 1)
 
     @staticmethod
     def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
