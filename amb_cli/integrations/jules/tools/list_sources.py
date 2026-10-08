@@ -21,11 +21,12 @@ from integrations.jules.jules_client import JulesClient
 
 def run_list_sources(
     as_json: bool = False,
+    filter_expr: Optional[str] = None,
     client: Optional[JulesClient] = None
 ) -> List[Dict[str, Any]]:
     """Consulta fontes e repositórios conectados ao Google Jules."""
     c = client or JulesClient()
-    sources = c.list_sources()
+    sources = c.list_sources(filter_expr=filter_expr)
 
     if as_json:
         print(json.dumps(sources, indent=2, ensure_ascii=False))
@@ -52,10 +53,11 @@ def run_list_sources(
 def main():
     p = argparse.ArgumentParser(description="Lista fontes/repositórios conectados no Google Jules.")
     p.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
+    p.add_argument("--filter", "-f", help="Filtro AIP-160 para consultar fontes específicas na API.")
     args = p.parse_args()
 
     try:
-        run_list_sources(as_json=args.json)
+        run_list_sources(as_json=args.json, filter_expr=args.filter)
     except Exception as e:
         log_error("JULES", str(e))
         sys.exit(1)

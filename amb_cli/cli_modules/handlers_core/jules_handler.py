@@ -30,7 +30,8 @@ def handle_cmd_jules(args: Any) -> None:
 
     elif sub in ["sources", "source"]:
         from integrations.jules.tools.list_sources import run_list_sources
-        run_list_sources(as_json=getattr(args, "json", False))
+        filter_expr = getattr(args, "filter", None)
+        run_list_sources(as_json=getattr(args, "json", False), filter_expr=filter_expr)
 
     elif sub == "list":
         from integrations.jules.tools.list_sessions import run_list_sessions
