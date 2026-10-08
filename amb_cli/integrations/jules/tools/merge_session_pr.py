@@ -23,7 +23,6 @@ from workspace import find_repo_root, get_repo_name
 from integrations.git.git_service import GitService
 from jules_client import JulesClient
 
-
 def detect_pr_from_session(session_id: str) -> Optional[int]:
     """Inspeciona os outputs da sessão e as atividades para extrair o número do PR via JulesClient."""
     client = JulesClient()
@@ -43,7 +42,6 @@ def detect_pr_from_session(session_id: str) -> Optional[int]:
     except Exception as e:
         log_error("DETECT-PR", f"Falha ao consultar PR da sessão no Jules: {e}")
     return None
-
 
 def detect_pr_from_github(session_id: str, repo_name: Optional[str] = None) -> Optional[int]:
     """Consulta diretamente o GitHub via GitService buscando PRs abertos correlacionados com o session_id."""
@@ -65,7 +63,6 @@ def detect_pr_from_github(session_id: str, repo_name: Optional[str] = None) -> O
     except Exception as e:
         log_error("DETECT-PR", f"Falha ao consultar PRs diretamente no GitHub: {e}")
     return None
-
 
 def detect_and_create_pr_from_branch(
     session_id: str,
@@ -104,11 +101,9 @@ def detect_and_create_pr_from_branch(
         log_error("GIT-SYNC", f"Falha ao auto-criar PR a partir da branch remota: {e}")
     return None
 
-
 def get_latest_open_pr(repo_name: str) -> Optional[Dict[str, Any]]:
     """Consulta os PRs abertos no repositório via GitService (GitHub CLI), incluindo drafts."""
     return GitService().get_latest_open_pr(repo_name=repo_name)
-
 
 def apply_session_patch(
     session_id: str,
@@ -189,7 +184,6 @@ def apply_session_patch(
     except Exception as e:
         log_error("GIT-SYNC", f"Falha ao processar patch da sessão: {e}")
         return False
-
 
 def approve_and_merge_pr(
     session_id: Optional[str] = None,
@@ -282,7 +276,6 @@ def approve_and_merge_pr(
 # Alias canônico de serviço para desacoplamento de handlers e testes (F1-M7)
 run_merge_session_pr = approve_and_merge_pr
 
-
 def main():
     parser = argparse.ArgumentParser(description="Aprovação e Merge Automático de PRs do Jules no Git (AMB_V2)")
     parser.add_argument("--session-id", "-s", help="ID da sessão Jules para extrair o PR.")
@@ -298,7 +291,6 @@ def main():
         target_branch=args.branch
     )
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     main()

@@ -6,32 +6,25 @@ from cli_modules.cli_handlers import (
     cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats, cmd_persona,
     cmd_workflow
 )
-
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="amb",
         description="CLI Unificada do AMB_V2 — Automação, Agentes e Integrações para Monorepos e Projetos."
     )
     subs = parser.add_subparsers(dest="command", help="Comandos disponíveis")
-
     def _c(name, h, fn, als=None, desc=None):
         p = subs.add_parser(name, aliases=als or [], help=h, description=desc or h)
         p.set_defaults(func=fn)
         return p
-
     def _sc(ps, name, h, als=None):
         return ps.add_parser(name, aliases=als or [], help=h)
-
     def _j(p):
         p.add_argument("--json", action="store_true", help="Exibe a saída em formato JSON puro.")
-
     def _d(p, h="Tipo de dispositivo alvo."):
         p.add_argument("--device", "-d", choices=["DESKTOP", "MOBILE", "TABLET", "AGNOSTIC"], default=None, help=h)
-
     def _sid(p, h1="ID ou URL da sessão do Jules.", h2="ID ou URL da sessão (flag alternativa)."):
         p.add_argument("session_id", nargs="?", help=h1)
         p.add_argument("--session-id", "-s", dest="session_id_flag", help=h2)
-
     p = _c("setup", "Analisa e configura o projeto atual.", cmd_setup, ["init"])
     p.add_argument("--auto", action="store_true", help="Executa o setup de forma automática/não-interativa.")
     p.add_argument("--path", help="Diretório alvo específico para configurar (padrão: diretório atual).")
@@ -59,15 +52,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
     p.add_argument("--auto-approve", "-y", action="store_true", help="Responde ou aprova automaticamente com IA sem confirmação.")
     _c("gui", "Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).", cmd_gui, ["ui", "wizard"])
-    p = _c(
-        "agent",
-        "Desenvolvimento autônomo e personas (suporta pasta de prompts em lote -p <dir> ou personas em loop).",
-        cmd_agent,
-        ["agent_alias"],
-        desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).\n"
-             "Suporta execução sequencial em lote de uma pasta inteira de prompts (ex: amb agent -p .amb/prompts/)\n"
-             "ou personas individuais, com auto-approval, QA local e auto-merge no Git."
-    )
+    p = _c("agent", "Desenvolvimento autônomo e personas (lote -p <dir> ou loop contínuo).", cmd_agent, ["agent_alias"], desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).")
     p.add_argument("--role", "-r", help="Nome da persona a executar (ex: engineer). Opcional se usar -p/--prompt.")
     p.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote a cada ciclo.")
     p.add_argument("--prompt", "-p", help="Arquivo .md individual OU PASTA INTEIRA de prompts (ex: .amb/prompts/) para desenvolvimento autônomo sequencial em lote.")
@@ -83,7 +68,6 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--sync-issues", "--issues", dest="sync_issues", action="store_true", help="Sincroniza os prompts da pasta com o GitHub Issues e executa rastreando a fila.")
     p.add_argument("--personas-dir", help="Pasta customizada de personas.")
     p.add_argument("--concurrency", "-c", type=int, default=1, help="Nível de concorrência para processamento em lote no Jules (Padrão: 1).")
-
     p = _c("jules", "Comandos de integração com o Google Jules.", cmd_jules)
     js = p.add_subparsers(dest="jules_cmd", help="Subcomandos do Jules")
     j = _sc(js, "status", "Diagnóstico de conectividade, credenciais e sessões ativas do Jules.", ["check"])
@@ -128,11 +112,11 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--branch", "-b", default="main", help="Branch de destino local após merge (padrão: main).")
     j = _sc(js, "clean", "Audita e remove na nuvem sessões do Jules já integradas.", ["cleanup"])
     j.add_argument("--force", "-f", action="store_true", help="Remove sem pedir confirmação.")
-    j.add_argument("--failed", action="store_true", help="Remove todas as sessões que estão em estado de falha (FAILED).")
+    j.add_argument("--failed", action="store_true", help="Remove todas as sessões que falharam (FAILED).")
     j.add_argument("--merged", action="store_true", help="Remove sessões cujos PRs já foram integrados ao Git.")
     j.add_argument("--all", action="store_true", help="Remove todas as sessões concluídas do escopo selecionado.")
-    j.add_argument("--all-repos", action="store_true", help="Audita e remove sessões de todos os repositórios conectados à conta.")
-    j.add_argument("--days", "-d", type=int, help="Filtra apenas sessões criadas há mais de N dias (ex: --days 3).")
+    j.add_argument("--all-repos", action="store_true", help="Audita e remove sessões de todos os repositórios.")
+    j.add_argument("--days", "-d", type=int, help="Filtra apenas sessões criadas há mais de N dias.")
     j.add_argument("--id", help="Remove uma sessão específica por ID.")
     j = _sc(js, "delete", "Deleta diretamente uma sessão específica no Jules.", ["del", "rm"])
     j.add_argument("session_id", help="ID ou URL da sessão do Jules.")
@@ -141,10 +125,9 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--dir", "-d", help="Diretório do projeto a ser analisado (padrão: diretório atual).")
     _j(j)
     j = _sc(js, "sync-issues", "Sincroniza arquivos de prompts com o GitHub Issues de forma idempotente.", ["issues", "sync"])
-    j.add_argument("path", nargs="?", default=".amb/prompts", help="Diretório de prompts a sincronizar (padrão: .amb/prompts).")
-    j.add_argument("--dry-run", action="store_true", help="Simula a sincronização sem criar issues no GitHub.")
+    j.add_argument("path", nargs="?", default=".amb/prompts", help="Diretório de prompts a sincronizar.")
+    j.add_argument("--dry-run", action="store_true", help="Simula a sincronização sem criar issues.")
     _j(j)
-
     p = _c("stitch", "Comandos de integração com o Google Stitch SDK.", cmd_stitch)
     ss = p.add_subparsers(dest="stitch_cmd", help="Subcomandos do Stitch")
     s = _sc(ss, "list", "Lista todas as telas geradas no projeto Stitch.")
@@ -186,7 +169,6 @@ def create_parser() -> argparse.ArgumentParser:
     s.add_argument("tool", help="Nome da ferramenta (ex: get_screen, list_screens, download_assets).")
     s.add_argument("payload", nargs="?", default="{}", help="Payload JSON da ferramenta.")
     _j(s)
-
     p = _c("antigravity", "Comandos de inferência cognitiva e SDK Google Antigravity.", cmd_antigravity, ["agy"])
     ag = p.add_subparsers(dest="agy_cmd", help="Subcomandos do Antigravity")
     a = _sc(ag, "status", "Verifica status do runtime agy, chaves e regras ativas.", ["check"])
@@ -209,56 +191,46 @@ def create_parser() -> argparse.ArgumentParser:
     a.add_argument("--model", "-m", help="Modelo específico do Gemini (ex: gemini-3.8-flash).")
     a.add_argument("--temperature", "-t", type=float, default=0.2, help="Temperatura de amostragem (padrão: 0.2).")
     a.add_argument("--output", "-o", help="Salva a saída em arquivo.")
-
     p = _c("validate", "Audita um arquivo contra as regras arquiteturais do repositório.", cmd_validate, ["lint", "audit"])
     p.add_argument("file", nargs="?", help="Caminho do arquivo de código a ser auditado.")
     p.add_argument("--staged", action="store_true", help="Auditar apenas os arquivos no stage.")
     p.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
-
-    p = _c("pipeline", "Roda o orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub) com prompts separados para Design e Engenharia.", cmd_pipeline, ["run", "deploy"])
-    p.add_argument("--stitch-prompt", "-s", help="Caminho do arquivo markdown contendo a especificação visual para o Stitch.")
-    p.add_argument("--jules-prompt", "-j", help="Caminho do arquivo markdown contendo as instruções técnicas para o Jules.")
-    p.add_argument("--prompt-file", "-f", help="Arquivo único unificado (.md) com divisões claras entre [STITCH_DESIGN] e [JULES_DEV].")
-    p.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar o monitoramento sem criar nova.")
-    p.add_argument("--skip-stitch", action="store_true", help="Pula a geração de UI no Stitch, indo direto ao Jules.")
-    p.add_argument("--no-qa", action="store_true", help="Desabilita o teste QA local automático no final.")
-    p.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos no Jules automaticamente.")
-    p.add_argument("--repo", help="Repositório GitHub no formato 'dono/repo' (padrão: auto-detectado via git).")
+    p = _c("pipeline", "Orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub).", cmd_pipeline, ["run", "deploy"])
+    p.add_argument("--stitch-prompt", "-s", help="Especificação visual para o Stitch.")
+    p.add_argument("--jules-prompt", "-j", help="Instruções técnicas para o Jules.")
+    p.add_argument("--prompt-file", "-f", help="Arquivo único unificado (.md) com divisões.")
+    p.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar.")
+    p.add_argument("--skip-stitch", action="store_true", help="Pula geração de UI no Stitch.")
+    p.add_argument("--no-qa", action="store_true", help="Desabilita teste QA local automático.")
+    p.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos automaticamente.")
+    p.add_argument("--repo", help="Repositório GitHub (dono/repo).")
     _d(p, "Tipo de dispositivo para geração do Stitch.")
-    p.add_argument("--edit-screen-id", help="Refina uma tela existente no Stitch em vez de criar uma nova.")
-    p.add_argument("--screen-id", help="Utiliza uma tela já existente no Stitch como ponto de partida (não recria).")
-    p.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais antes de gerar a tela.")
-    p.add_argument("--branch", "-b", help="Branch alvo para PR e checkout (default: detecta a atual).")
-
-
+    p.add_argument("--edit-screen-id", help="Refina uma tela existente no Stitch.")
+    p.add_argument("--screen-id", help="Tela existente no Stitch como base.")
+    p.add_argument("--sync-ds", action="store_true", help="Sincroniza design tokens locais.")
+    p.add_argument("--branch", "-b", help="Branch alvo para PR e checkout.")
     p = _c("hooks", "Gerencia hooks do Git no repositório.", cmd_hooks)
     hs = p.add_subparsers(dest="hooks_cmd", help="Subcomandos de hooks")
     _sc(hs, "install", "Instala o pre-commit hook do AMB_V2.")
-
     p = _c("persona", "Engine unificada de personas com descoberta, interpolação e validação.", cmd_persona)
     ps = p.add_subparsers(dest="persona_cmd", help="Subcomandos de persona")
     _sc(ps, "validate", "Audita conformidade arquitetural de personas.")
-
     p = _c("workflow", "Gerador de automação CI/CD para GitHub Actions.", cmd_workflow)
     ws = p.add_subparsers(dest="workflow_cmd", help="Subcomandos de workflow")
     w = _sc(ws, "schedule", "Gera workflow de tarefas agendadas (cron).")
     w.add_argument("--cron", "-c", default="0 3 * * *", help="Expressão cron de agendamento (Padrão: '0 3 * * *').")
     w.add_argument("--role", "-r", action="append", help="Persona opcional a ser executada (pode ser usado múltiplas vezes).")
     w.add_argument("--output", "-o", help="Caminho customizado para salvar o arquivo yaml.")
-
     p = _c("loop", "Controle da Máquina de Estados do Autonomous Loop.", cmd_loop)
     ls = p.add_subparsers(dest="loop_cmd", help="Subcomandos do Loop")
     _sc(ls, "status", "Exibe o status atual do loop autônomo.")
     _sc(ls, "pause", "Pausa a execução do loop.")
     _sc(ls, "resume", "Retoma a execução do loop.")
-
     p = _c("schema", "Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only).", cmd_schema, ["db"])
     p.add_argument("target", nargs="?", default=None, help="Nome da tabela ou módulo a filtrar (ex: kanban, agenda, projects).")
-
     p = _c("context", "Gera o roteiro de leitura de arquivos por camadas para a IA.", cmd_context, ["ctx", "ai-context"])
     p.add_argument("module", nargs="?", default="agenda", help="Nome do módulo ou pasta para rastrear (ex: agenda, kanban, projects).")
     p.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
-
     p = _c("stats", "Exibe métricas históricas de tempo de execução, PRs e telemetria local.", cmd_stats)
     _j(p)
     p = _c("git", "Comandos de controle de versão e ciclo de vida de Pull Requests via Git & GitHub CLI.", cmd_git)
@@ -273,15 +245,16 @@ def create_parser() -> argparse.ArgumentParser:
     g.add_argument("file", nargs="?", default=None, help="Caminho do arquivo específico (opcional).")
     g.add_argument("--base", "-b", help="Branch base para comparação.")
     g.add_argument("--cached", action="store_true", help="Exibe diff das alterações preparadas (staged).")
-
+    def _pr_num(p):
+        p.add_argument("number", type=int, help="Número do Pull Request.")
+        p.add_argument("--repo", help="Repositório alvo (dono/repo).")
     prs = _sc(gs, "pr", "Gerenciador de Pull Requests no GitHub via GitHub CLI.").add_subparsers(dest="pr_cmd", help="Ações de Pull Request")
     pr = _sc(prs, "list", "Lista Pull Requests abertos no repositório.")
     pr.add_argument("--repo", help="Repositório alvo (dono/repo).")
     pr.add_argument("--no-drafts", action="store_true", help="Oculta PRs em modo draft.")
     _j(pr)
     pr = _sc(prs, "get", "Exibe detalhes completos de um Pull Request.")
-    pr.add_argument("number", type=int, help="Número do Pull Request.")
-    pr.add_argument("--repo", help="Repositório alvo (dono/repo).")
+    _pr_num(pr)
     _j(pr)
     pr = _sc(prs, "create", "Cria um novo Pull Request no GitHub.")
     pr.add_argument("--title", "-t", required=True, help="Título do PR.")
@@ -292,21 +265,16 @@ def create_parser() -> argparse.ArgumentParser:
     pr.add_argument("--repo", help="Repositório alvo.")
     _j(pr)
     pr = _sc(prs, "ready", "Marca um PR em draft como pronto para revisão.")
-    pr.add_argument("number", type=int, help="Número do Pull Request.")
-    pr.add_argument("--repo", help="Repositório alvo.")
+    _pr_num(pr)
     pr = _sc(prs, "approve", "Aprova formalmente o Pull Request.")
-    pr.add_argument("number", type=int, help="Número do Pull Request.")
+    _pr_num(pr)
     pr.add_argument("--body", default="✅ Aprovado pelo AMB_V2.", help="Comentário de aprovação.")
-    pr.add_argument("--repo", help="Repositório alvo.")
     pr = _sc(prs, "merge", "Realiza o merge do Pull Request.")
-    pr.add_argument("number", type=int, help="Número do Pull Request.")
+    _pr_num(pr)
     pr.add_argument("--no-squash", action="store_false", dest="squash", help="Não realizar squash merge.")
     pr.add_argument("--keep-branch", action="store_false", dest="delete_branch", help="Não deletar a branch remota após merge.")
-    pr.add_argument("--repo", help="Repositório alvo.")
     pr = _sc(prs, "close", "Fecha um Pull Request no GitHub.")
-    pr.add_argument("number", type=int, help="Número do Pull Request.")
+    _pr_num(pr)
     pr.add_argument("--comment", help="Comentário opcional ao fechar.")
     pr.add_argument("--delete-branch", action="store_true", help="Deletar a branch associada.")
-    pr.add_argument("--repo", help="Repositório alvo.")
-
     return parser

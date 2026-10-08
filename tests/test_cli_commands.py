@@ -220,7 +220,8 @@ def test_cmd_agent_loop_parameters():
             modules=["api", "gui"],
             max_cycles=2,
             branch="main",
-            no_auto_merge=True
+            no_auto_merge=True,
+            concurrency=1
         )
 
 
@@ -247,6 +248,7 @@ def test_cmd_agent_sync_issues_parameters():
             max_cycles=1,
             branch="develop",
             no_auto_merge=False,
+            concurrency=1,
             use_issues=True
         )
 
