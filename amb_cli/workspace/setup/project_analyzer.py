@@ -108,7 +108,7 @@ class ProjectAnalyzer:
                 stack["package_manager"] = "uv"
                 has_python = True
 
-            for py_file in ["pyproject.toml", "requirements.txt", "Pipfile"]:
+            for py_file in ["pyproject.toml", "requirements.txt", "Pipfile", "setup.py"]:
                 pypath = os.path.join(sdir, py_file)
                 if os.path.exists(pypath):
                     has_python = True
@@ -245,3 +245,46 @@ class ProjectAnalyzer:
             qa["test"] = "cargo test"
 
         return qa
+
+    @staticmethod
+    def infer_setup_script(stack: Dict[str, Any], root: str) -> str:
+        """Gera o script recomendado de setup para a VM do Google Jules (Run and Snapshot)."""
+        stype = stack.get("type", "").lower()
+        pm = stack.get("package_manager", "npm").split()[0]
+        cmds = []
+
+        if "node" in stype:
+            if pm == "bun":
+                cmds.append("bun install")
+            elif pm == "pnpm":
+                cmds.append("pnpm install --frozen-lockfile" if os.path.exists(os.path.join(root, "pnpm-lock.yaml")) else "pnpm install")
+            elif pm == "yarn":
+                cmds.append("yarn install --frozen-lockfile" if os.path.exists(os.path.join(root, "yarn.lock")) else "yarn install")
+            else:
+                cmds.append("npm ci" if os.path.exists(os.path.join(root, "package-lock.json")) else "npm install")
+        elif "python" in stype:
+            if pm == "poetry":
+                cmds.append("poetry install")
+            elif pm == "uv":
+                cmds.append("uv sync")
+            elif os.path.exists(os.path.join(root, "setup.py")) or os.path.exists(os.path.join(root, "pyproject.toml")):
+                cmds.append("pip install -e .")
+            elif os.path.exists(os.path.join(root, "requirements.txt")):
+                cmds.append("pip install -r requirements.txt")
+            else:
+                cmds.append("pip install -e .")
+        elif "go" in stype:
+            cmds.append("go mod download")
+        elif "rust" in stype:
+            cmds.append("cargo check")
+        else:
+            cmds.append("echo 'Environment ready'")
+
+        qa = ProjectAnalyzer.infer_qa_commands(stack, root)
+        if "test" in qa:
+            cmds.append(qa["test"])
+        elif "typecheck" in qa:
+            cmds.append(qa["typecheck"])
+
+        return "\n".join(cmds)
+

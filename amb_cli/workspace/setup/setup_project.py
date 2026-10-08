@@ -181,6 +181,7 @@ def run_setup(
     print(f"🛡️  Comandos de QA:    {', '.join([f'{k}: {v}' for k, v in qa_commands.items()]) or 'Nenhum'}")
     print(f"\n👉 Próximos passos recomendados:")
     print(f"   • Validar ambiente:         {Colors.CYAN}amb check{Colors.RESET}")
+    print(f"   • Setup VM do Google Jules: {Colors.CYAN}amb jules env{Colors.RESET}")
     print(f"   • Executar agente autônomo: {Colors.CYAN}amb agent --role engineer{Colors.RESET}")
     print(f"   • Desenvolver por lote/dir: {Colors.CYAN}amb agent -p .amb/prompts/{Colors.RESET}")
     print(f"   • Iniciar sentinela:        {Colors.CYAN}amb monitor{Colors.RESET}\n")

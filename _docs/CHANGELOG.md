@@ -28,7 +28,12 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 - **Apresentação Centralizada & Sandbox de Logs de QA:**
   - `ConsolePresenter` com suporte universal e consistente a `--json` e `--quiet`.
   - `LocalQASandbox` persistindo saídas em `.amb/logs/qa/` com extrator sanitizado das 30 linhas essenciais de stacktrace para os agentes cognitivos.
-- **197 Testes Unitários Verificados:** Suíte completa passando com 100% de sucesso.
+- **Integração e Diagnóstico de Ambiente da VM do Google Jules (`amb jules env`):**
+  - Implementada inferência inteligente de scripts de setup da VM Ubuntu 24.04 do Jules (`Run and Snapshot`) via `ProjectAnalyzer.infer_setup_script`.
+  - Novo comando `amb jules env [--dir <path>] [--json]` para diagnóstico de compatibilidade da stack local com a VM do Jules e exibição do script de inicialização pronto para copiar.
+  - Inclusão automática das instruções de setup da VM no `AGENTS.md` canônico gerado pelo `AmbProvisioner` e no `AGENTS.md` raiz.
+  - Suporte ao parâmetro `require_plan_approval` e à flag `--require-approval` no comando `amb jules create`.
+- **203 Testes Unitários Verificados:** Suíte completa passando com 100% de sucesso.
 
 ---
 

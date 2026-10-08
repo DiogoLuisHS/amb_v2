@@ -166,7 +166,26 @@ def test_setup_force_provision(tmp_path):
     assert project_data["stack"]["type"] == "python"
     assert project_data["personas"]["active"] == ["engineer"]
 
-    # Verifica se AGENTS.md para Google Jules foi gerado na raiz
+    # Verifica se AGENTS.md para Google Jules foi gerado na raiz com a seção de VM setup
     agents_file = tmp_path / "AGENTS.md"
     assert agents_file.exists()
-    assert "Autonomous Agent Guide" in agents_file.read_text(encoding="utf-8")
+    content = agents_file.read_text(encoding="utf-8")
+    assert "Autonomous Agent Guide" in content
+    assert "Setup da VM do Google Jules" in content
+
+
+def test_infer_setup_script(tmp_path):
+    # 1. Stack Python
+    stack_py = {"type": "python", "package_manager": "pip", "frameworks": ["Pytest"]}
+    (tmp_path / "tests").mkdir(exist_ok=True)
+    script_py = ProjectAnalyzer.infer_setup_script(stack_py, str(tmp_path))
+    assert "pip install" in script_py
+    assert "pytest" in script_py
+
+    # 2. Stack Node
+    stack_node = {"type": "node/typescript", "package_manager": "pnpm", "frameworks": []}
+    (tmp_path / "package.json").write_text('{"scripts": {"test": "pnpm test"}}', encoding="utf-8")
+    script_node = ProjectAnalyzer.infer_setup_script(stack_node, str(tmp_path))
+    assert "pnpm install" in script_node
+    assert "pnpm test" in script_node
+

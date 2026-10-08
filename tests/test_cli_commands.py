@@ -88,6 +88,7 @@ def test_parser_jules_subcommands(parser):
         (["jules", "approve", "12345"], "approve"),
         (["jules", "merge", "12345", "--auto-latest"], "merge"),
         (["jules", "clean", "--failed", "--force"], "clean"),
+        (["jules", "env", "--json"], "env"),
     ]
     for argv, expected_sub in subcmds:
         args = parser.parse_args(argv)

@@ -127,5 +127,13 @@ def handle_cmd_jules(args: Any) -> None:
             all_repos=getattr(args, "all_repos", False)
         )
 
+    elif sub in ["env", "environment"]:
+        from integrations.jules.tools.env_inspector import run_inspect_env
+        run_inspect_env(
+            target_dir=getattr(args, "dir", None),
+            as_json=getattr(args, "json", False)
+        )
+
     else:
         print("Subcomando do Jules inválido. Use 'amb jules --help'.")
+

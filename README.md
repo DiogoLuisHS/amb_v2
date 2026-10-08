@@ -145,8 +145,9 @@ Integração direta com o Google Jules para desenvolvimento remoto e gestão de 
 | `amb jules list` | — | Lista sessões do repositório (`--limit`, `--all`, `--repo`, `--state`, `--json`). |
 | `amb jules get <id_ou_url>` | — | Exibe detalhes da sessão, status da VM e URL do Pull Request (`--json`). |
 | `amb jules get <id_ou_url> --watch`| `-w` | Acompanha streaming em tempo real das atividades, mensagens e comandos bash. |
-| `amb jules create -p "<prompt>"` | `--prompt` | Cria uma nova sessão no Jules vinculada ao repositório do `.env` (`--branch`, `--json`). |
+| `amb jules create -p "<prompt>"` | `--prompt` | Cria uma nova sessão no Jules vinculada ao repositório do `.env` (`--branch`, `--require-approval`, `--json`). |
 | `amb jules create -p "..." -t "<título>"` | `--title` | Cria uma sessão com título personalizado. |
+| `amb jules env` | `environment` | Diagnóstico de compatibilidade da stack com a VM do Jules e script de setup para Run and Snapshot (`--dir`, `--json`). |
 | `amb jules reply` | `advisor` | Abre menu interativo com IA para listar e responder dúvidas pendentes. |
 | `amb jules reply <id>` | `--session-id` | Gera sugestão com Gemini e responde turn-by-turn a uma sessão específica. |
 | `amb jules reply <id> -m "<texto>"` | `--message` | Envia mensagem manual direta para o chat da sessão no Jules (`--force`). |

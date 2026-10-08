@@ -39,7 +39,20 @@ Todo agente de IA (incluindo o Jules) deve obedecer estritamente às regras can�
 
 ---
 
-## 🔍 3. Comandos de Validação e QA Local
+## 🛠️ 3. Instruções de Setup da VM (Google Jules Initial Setup)
+
+Caso execute em uma VM limpa do Google Jules sem snapshot prévio, utilize os comandos abaixo para preparar o ambiente e validar a instalação:
+
+```bash
+pip install -e .
+pytest -q
+```
+
+> **Dica de Performance (Run and Snapshot):** No painel web do Google Jules, configure esses comandos em **Configuration -> Initial Setup** e clique em **Run and Snapshot** para congelar o ambiente da VM e acelerar todas as sessões futuras.
+
+---
+
+## 🔍 4. Comandos de Validação e QA Local
 
 Antes de concluir qualquer tarefa ou abrir Pull Request, o Jules deve garantir que todos os comandos abaixo passem com 100% de sucesso na VM:
 
@@ -56,8 +69,9 @@ python -m amb_cli.cli validate <arquivo_modificado>
 
 ---
 
-## 📋 4. Convenções de Pull Request e Commits
+## 📋 5. Convenções de Pull Request e Commits
 
 - **Commits Convencionais:** Prefixar mensagens com tipo semântico: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
 - **Testes Dedicados:** Toda nova funcionalidade deve obrigatoriamente incluir um arquivo de teste unitário correspondente em `tests/test_<modulo>.py`.
 - **Atomização de PRs:** Mantenha os Pull Requests cirúrgicos e focados em estritamente um objetivo para permitir auto-merge seguro via `amb jules merge`.
+

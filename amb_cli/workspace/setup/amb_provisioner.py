@@ -227,6 +227,9 @@ amb monitor --auto-approve
         frameworks_str = ", ".join(stack.get("frameworks", [])) or "Genérico"
         qa_lines = "\n".join([f"- **{k.title()}**: `{v}`" for k, v in qa.items()]) if qa else "- *Nenhum comando de QA configurado*"
 
+        from .project_analyzer import ProjectAnalyzer
+        setup_script = ProjectAnalyzer.infer_setup_script(stack, root)
+
         content = f"""# 🤖 Autonomous Agent Guide (`AGENTS.md`)
 
 Este repositório possui suporte ao Google Jules e agentes autônomos via AMB_V2.
@@ -248,7 +251,15 @@ Antes de finalizar alterações ou abrir Pull Requests, valide com sucesso:
 
 ---
 
-## 📐 3. Convenções e Diretrizes
+## 🛠️ 3. Setup da VM do Google Jules (Initial Setup / Run and Snapshot)
+Para preparar o ambiente na VM isolada do Jules ou salvar um snapshot rápido:
+```bash
+{setup_script}
+```
+
+---
+
+## 📐 4. Convenções e Diretrizes
 1. **Responsabilidade Única (SRP):** Mantenha arquivos pequenos e de propósito único.
 2. **Qualidade e Tipagem:** Garanta tipagem explícita e tratamento de erros defensivo.
 3. **Escopo Cirúrgico:** Não realize modificações além do escopo solicitado.
