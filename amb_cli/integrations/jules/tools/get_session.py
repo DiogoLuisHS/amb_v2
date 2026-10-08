@@ -60,7 +60,8 @@ def run_get_session(
 
     pr_info = JulesClient.extract_pull_request(data)
     if pr_info and pr_info.get("url"):
-        print(f"  • Pull Request:{Colors.GREEN} {pr_info['url']}{Colors.RESET}")
+        title_str = f" (\"{pr_info['title']}\")" if pr_info.get("title") else ""
+        print(f"  • Pull Request:{Colors.GREEN} {pr_info['url']}{Colors.RESET}{title_str}")
 
     src = data.get("sourceContext", {}).get("source", "")
     if src:
