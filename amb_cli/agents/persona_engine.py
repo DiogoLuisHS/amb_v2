@@ -33,16 +33,25 @@ class PersonaEngine:
         # A issue pede: "recorrer aos fallbacks padrão de engenharia sem quebrar o fluxo".
 
         fallback_dir = os.path.join(amb_pkg_dir)
-        # Se tentarmos encontrar nas skills
         if os.path.exists(fallback_dir):
+            clean_name = name.replace(".md", "")
             for skill_dir in os.listdir(fallback_dir):
-                if name.replace(".md", "") in skill_dir:
-                    skill_file = os.path.join(fallback_dir, skill_dir, "SKILL.md")
+                target_skill = os.path.join(fallback_dir, skill_dir)
+                if not os.path.isdir(target_skill):
+                    continue
+                if clean_name in skill_dir:
+                    skill_file = os.path.join(target_skill, "SKILL.md")
                     if os.path.exists(skill_file):
-                        with open(skill_file, "r", encoding="utf-8") as f:
+                        with open(skill_file, "r", encoding="utf-8", errors="replace") as f:
                             return f.read()
+                subskills_dir = os.path.join(target_skill, "subskills")
+                if os.path.exists(subskills_dir) and os.path.isdir(subskills_dir):
+                    for subfile in os.listdir(subskills_dir):
+                        if clean_name in subfile.replace(".md", ""):
+                            sub_path = os.path.join(subskills_dir, subfile)
+                            with open(sub_path, "r", encoding="utf-8", errors="replace") as f:
+                                return f.read()
 
-        # Se não encontrar nada, retorna None silenciosamente ou uma string genérica
         return None
 
     def render_persona_template(self, content: str, context_vars: Optional[Dict[str, Any]] = None) -> str:
