@@ -12,22 +12,31 @@ def normalize_session_id(session_id: str) -> str:
         raw = raw.split("sessions/")[-1].split("/")[0].split("?")[0]
     return raw.strip()
 
+def _normalize_pr_info(pr_info: Dict[str, Any]) -> Dict[str, Any]:
+    """Garante que o campo 'number' esteja presente no dicionário de PR."""
+    pr_copy = dict(pr_info)
+    if "number" not in pr_copy and "url" in pr_copy:
+        match = re.search(r"/pull/(\d+)", pr_copy["url"])
+        if match:
+            pr_copy["number"] = int(match.group(1))
+    return pr_copy
+
 def extract_pull_request(
     session_dict: Dict[str, Any],
     activities: Optional[List[Dict[str, Any]]] = None
 ) -> Optional[Dict[str, Any]]:
-    """Extrai metadados do Pull Request."""
+    """Extrai metadados do Pull Request e normaliza a presença do número."""
     outputs = session_dict.get("outputs", [])
     if isinstance(outputs, list):
         for item in outputs:
             if isinstance(item, dict) and "pullRequest" in item:
                 pr_info = item["pullRequest"]
                 if isinstance(pr_info, dict) and pr_info.get("url"):
-                    return pr_info
+                    return _normalize_pr_info(pr_info)
     elif isinstance(outputs, dict) and "pullRequest" in outputs:
         pr_info = outputs["pullRequest"]
         if isinstance(pr_info, dict) and pr_info.get("url"):
-            return pr_info
+            return _normalize_pr_info(pr_info)
 
     if activities and isinstance(activities, list):
         for act in activities:
