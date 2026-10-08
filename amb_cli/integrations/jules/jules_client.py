@@ -218,6 +218,12 @@ class JulesClient(BaseGoogleClient):
                 "error": str(e)
             }
 
+    def get_activity(self, session_id: str, activity_id: str) -> Dict[str, Any]:
+        """Obtém detalhes de uma atividade específica de uma sessão."""
+        clean_id = self.normalize_session_id(session_id)
+        clean_act = activity_id.split("/")[-1]
+        return self._request("GET", f"sessions/{clean_id}/activities/{clean_act}")
+
     def list_activities(self, session_id: str, page_size: int = 50, fetch_all: bool = True) -> Dict[str, Any]:
         """Lista atividades da sessão. Se fetch_all=True, percorre todas as páginas para capturar as atividades mais recentes."""
         clean_id = self.normalize_session_id(session_id)
