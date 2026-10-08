@@ -14,14 +14,14 @@ def mock_repo_root(tmp_path):
 
     # Setup amb_project.json
     project_json = repo_root / "amb_project.json"
-    project_json.write_text('{"stack": "python", "qa_command": "pytest"}')
+    project_json.write_text('{"stack": "python", "qa_command": "pytest"}', encoding="utf-8")
 
     # Setup some personas
     valid_persona = personas_dir / "valid.md"
-    valid_persona.write_text("# Missão\n## Arquivos\n## Regras\n{repo_name} {stack} {qa_command}")
+    valid_persona.write_text("# Missão\n## Arquivos\n## Regras\n{repo_name} {stack} {qa_command}", encoding="utf-8")
 
     invalid_persona = personas_dir / "invalid.md"
-    invalid_persona.write_text("Hello World")
+    invalid_persona.write_text("Hello World", encoding="utf-8")
 
     return str(repo_root)
 

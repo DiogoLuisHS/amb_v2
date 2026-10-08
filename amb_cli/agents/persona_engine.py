@@ -23,7 +23,7 @@ class PersonaEngine:
 
         filepath = os.path.join(self.personas_dir, name)
         if os.path.exists(filepath):
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 return f.read()
 
         # Fallback para o diretório de agentes do próprio AMB
@@ -76,7 +76,7 @@ class PersonaEngine:
             errors.append(f"Arquivo não encontrado: {filepath}")
             return errors
 
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
 
         if not re.search(r"^#\s+.*", content, re.MULTILINE):
