@@ -99,11 +99,31 @@ amb agent --role engineer --loop --no-auto-merge
 
 ---
 
-## 🛡️ 5. Boas Práticas e Segurança no Pipeline
+## 🛑 5. Controle de Ciclo de Vida e Resiliência (`amb loop`)
+
+O pipeline conta com máquina de estados finita persistida em `.amb/loop_state.json`. Se o terminal fechar ou a conexão oscilar, o progresso não é perdido:
+
+```bash
+# Inspecionar o estado da máquina finita, ciclo ativo e sessão Jules:
+amb loop status
+
+# Pausar o ciclo com segurança entre etapas:
+amb loop pause
+
+# Retomar a execução exatamente do ponto onde foi pausada ou interrompida:
+amb loop resume
+```
+
+> **Sandbox de Logs de QA:** Todo log de compilação e teste executado pelo pipeline é salvo automaticamente em `.amb/logs/qa/qa_<timestamp>.log`. Em caso de falha, o AMB isola as 30 linhas essenciais do stacktrace para direcionar o agente sem estourar limites de contexto.
+
+---
+
+## 🛡️ 6. Boas Práticas e Segurança no Pipeline
 
 1. **Evite Comandos Bloqueantes no QA:**
-   - No `.amb/amb_project.json`, use comandos que rodam em modo single-run (ex: `jest --watchAll=false` ou `vitest run`, nunca modos de watch interativos).
+   - No `.amb/amb_project.json`, use comandos que rodam em modo single-run (ex: `pytest`, `jest --watchAll=false` ou `vitest run`, nunca modos de watch interativos).
 2. **Preservação de Branches:**
    - Sempre execute o loop a partir de uma branch limpa (`main`, `develop` ou feature branch dedicada). O AMB executa `git pull` automático a cada merge para manter o código sincronizado.
 3. **Controle de Cota de VM:**
    - Use `--max-cycles <N>` para definir limites controlados ao rodar tarefas não supervisionadas (ex: durante a noite).
+

@@ -221,3 +221,26 @@ def test_cmd_agent_loop_parameters():
             branch="main",
             no_auto_merge=True
         )
+
+
+def test_parser_new_core_commands(parser):
+    args_loop = parser.parse_args(["loop", "status"])
+    assert args_loop.command == "loop"
+    assert args_loop.loop_cmd == "status"
+
+    args_hooks = parser.parse_args(["hooks", "install"])
+    assert args_hooks.command == "hooks"
+    assert args_hooks.hooks_cmd == "install"
+
+    args_stats = parser.parse_args(["stats", "--json"])
+    assert args_stats.command == "stats"
+    assert args_stats.json is True
+
+    args_persona = parser.parse_args(["persona", "validate"])
+    assert args_persona.command == "persona"
+    assert args_persona.persona_cmd == "validate"
+
+    args_val = parser.parse_args(["validate", "--staged"])
+    assert args_val.command == "validate"
+    assert args_val.staged is True
+

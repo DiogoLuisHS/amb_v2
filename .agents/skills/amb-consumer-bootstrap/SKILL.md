@@ -136,18 +136,40 @@ O comando emitirá um diagnóstico completo confirmando:
 
 ---
 
-## 🛡️ 6. Boas Práticas de Versionamento Git no Consumidor
+## 🪝 6. Automação de Pré-Commit e Métricas Locais (`amb hooks`, `amb stats`)
+
+Garanta a qualidade contínua e observabilidade do seu repositório consumidor:
+
+```bash
+# Instalar hook de pré-commit automático (.git/hooks/pre-commit):
+amb hooks install
+
+# Auditar regras apenas nos arquivos staged antes do commit:
+amb validate --staged
+
+# Consultar métricas de produtividade, taxa de QA e histórico de PRs:
+amb stats
+amb stats --json
+```
+
+---
+
+## 🛡️ 7. Boas Práticas de Versionamento Git no Consumidor
 
 Adicione ao `.gitignore` do seu repositório:
 ```gitignore
 # Credenciais sensíveis
 .env
 
-# Logs e diários cognitivos temporários
+# Logs, telemetria e estado transitório de loop
 .amb/diarios/
+.amb/logs/
+.amb/telemetry.jsonl
+.amb/loop_state.json
 ```
 
 **Mantenha no Git:**
 - `.amb/amb_project.json` (para que toda a equipe use os mesmos comandos de QA).
 - `.amb/personas/` (para compartilhar personas e regras com outros desenvolvedores e agentes).
 - `.amb/prompts/` (para histórico de especificações e features).
+

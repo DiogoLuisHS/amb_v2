@@ -48,14 +48,20 @@ Construir e refatorar componentes de interface garantindo fidelidade ao Design S
 4. Executar `npm run lint --prefix apps/web` antes de concluir.
 ```
 
-### Comandos de Persona:
+### Comandos de Persona & PersonaEngine:
 ```bash
 # Listar todas as personas do projeto:
 amb agent --list
 
+# Auditar conformidade estrutural das personas em .amb/personas/ (PersonaEngine):
+amb persona validate
+
 # Executar a persona localmente com uma instrução adicional:
 amb agent --role frontend --agy -t "Refatorar modal de login para suportar OAuth"
 ```
+
+> **💡 Interpolação Dinâmica de Variáveis:** O `PersonaEngine` interpola automaticamente variáveis contextuais presentes nas personas, como `{repo_name}`, `{stack}`, `{qa_command}` e `{rules}`, garantindo especificações vivas e alinhadas ao projeto.
+
 
 ---
 
@@ -72,6 +78,12 @@ amb agy rules --content
 
 # Auditar conformidade arquitetural de um arquivo específico:
 amb validate apps/web/src/components/Modal.tsx
+
+# Auditar conformidade exclusivamente nos arquivos no stage do Git:
+amb validate --staged
+
+# Instalar Git Hook automático (.git/hooks/pre-commit) rodando amb validate --staged:
+amb hooks install
 
 # Diagnóstico de saúde do runtime Antigravity no projeto:
 amb agy status

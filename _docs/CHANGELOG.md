@@ -4,6 +4,34 @@ Todas as alterações notáveis, novas funcionalidades, refatorações e correç
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.5.0] — 2026-10-08
+
+### 🚀 Resiliência de Loop, Observabilidade & Governança de Qualidade
+- **Máquina de Estados Finita e Persistência do Loop (`LoopStateMachine`):**
+  - Implementada máquina de estados com persistência local em `.amb/loop_state.json` e recuperação graciosa de falhas/interrupções acidentais.
+  - Novos comandos na CLI: `amb loop status`, `amb loop pause` e `amb loop resume`.
+- **Unificação de Estados e Monitoramento (`SessionState` / `SessionMonitor`):**
+  - Enum canônico `SessionState` com helpers (`is_terminal()`, `is_awaiting_feedback()`, `is_success()`).
+  - Classe reutilizável `SessionMonitor` para polling limpo do Google Jules, substituindo verificações duplicadas de strings literais no watcher, sentinelas e loop.
+- **Validação Pré-Commit & Gerador de Git Hook:**
+  - Adicionada flag `--staged` ao comando `amb validate` para auditar conformidade arquitetural apenas nos arquivos preparados para commit.
+  - Novo comando `amb hooks install` para gerar e configurar automaticamente o `.git/hooks/pre-commit`.
+- **Gerenciador Singleton de Configurações (`ConfigManager`):**
+  - Carregamento atômico em memória e cache singleton thread-safe de variáveis `.env` e `amb_project.json`.
+  - Novo subcomando `amb config reload` para limpar cache e reler configurações sob demanda.
+- **Telemetria Local Estruturada & Métricas (`LocalTelemetry` / `amb stats`):**
+  - Registrador append-only em `.amb/telemetry.jsonl` (100% local, zero chamadas à internet).
+  - Novo comando `amb stats [--json]` exibindo taxa de sucesso no QA pós-merge, contagem de PRs integrados e duração média por ciclo.
+- **Engine Unificada de Personas (`PersonaEngine`):**
+  - Descoberta centralizada com fallbacks elegantes e suporte a interpolação dinâmica (`{repo_name}`, `{stack}`, `{qa_command}`).
+  - Novo comando `amb persona validate` para verificar estrutura obrigatória de arquivos em `.amb/personas/`.
+- **Apresentação Centralizada & Sandbox de Logs de QA:**
+  - `ConsolePresenter` com suporte universal e consistente a `--json` e `--quiet`.
+  - `LocalQASandbox` persistindo saídas em `.amb/logs/qa/` com extrator sanitizado das 30 linhas essenciais de stacktrace para os agentes cognitivos.
+- **197 Testes Unitários Verificados:** Suíte completa passando com 100% de sucesso.
+
+---
+
 ## [2.4.1] — 2026-09-23
 
 ### 🤖 Agentes, Regras & Governança Cognitiva (/learn)

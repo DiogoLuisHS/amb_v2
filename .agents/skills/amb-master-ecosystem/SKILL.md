@@ -38,15 +38,21 @@ amb gui
 | `amb check [--json]` | Diagnóstico de saúde do projeto: valida API keys, Git, GitHub CLI (`gh`), binários de QA e proteção no `.gitignore`. |
 | `amb setup [--auto] [-f]` | Detecta a stack do projeto, infere comandos de teste/build e cria a pasta `.amb/`. |
 | `amb prompt [-s "<ideia>"]` | Imprime o prompt mestre ou sintetiza uma ideia informal em prompt arquitetural formal via Gemini. |
+| `amb config reload` | Limpa o cache em memória do Singleton `ConfigManager` e recarrega `.env` e `amb_project.json`. |
 | `amb config --gemini-confirm <on\|off>` | Habilita ou desabilita a confirmação prévia para chamadas autônomas ao Gemini. |
+| `amb stats [--json]` | Relatório analítico de telemetria local: taxa de sucesso de QA, tempo médio de ciclo e PRs integrados. |
 | `amb gui` (ou `amb ui`) | Abre a interface gráfica interativa (Tkinter) para montar comandos e editar variáveis do `.env`. |
 
-### 🤖 Agentes Autônomos & Personas (`amb agent`)
+### 🤖 Agentes Autônomos, Personas & Controle de Loop (`amb agent`, `amb loop`)
 | Comando | Descrição & Uso no Projeto |
 | :--- | :--- |
 | `amb agent -p <pasta_ou_arquivo>` | **Desenvolvimento em Lote:** Executa uma pasta inteira de prompts numerados (ex: `-p .amb/prompts/`) sequencialmente com auto-reply e auto-merge. |
 | `amb agent -p <pasta> --loop` | Ciclo infinito iterando sobre os prompts da pasta. |
 | `amb agent --list` (`-l`) | Lista as personas cadastradas no projeto (`.amb/personas/`). |
+| `amb persona validate` | Audita conformidade das personas (`# Missão`, `## Arquivos`, `## Regras`) com interpolação de contexto. |
+| `amb loop status` | Exibe o status da máquina de estados (`.amb/loop_state.json`), ciclo ativo e sessão Jules associada. |
+| `amb loop pause` | Pausa graciosamente o loop autônomo contínuo. |
+| `amb loop resume` | Retoma o ciclo do ponto exato onde foi interrompido. |
 | `amb agent --role <nome>` | Despacha persona para o Google Jules na nuvem (cria VM, branch dedicada e abre PR). |
 | `amb agent --role <nome> --agy` | Executa a persona **localmente** via Antigravity SDK (`agy` CLI) sem consumir cota Jules. |
 | `amb agent --all --loop` | Loop contínuo infinito iterando por todas as personas do projeto. |
@@ -97,6 +103,8 @@ amb gui
 | `amb context [modulo] [--json]` | Mapeia as camadas do projeto (Database ➔ Services ➔ API ➔ UI) para acelerar IAs. |
 | `amb schema [filtro]` | Inspeciona schemas e tabelas do banco de dados do projeto (Drizzle, Prisma, etc.). |
 | `amb validate <arquivo>` (ou `amb agy validate`) | Audita conformidade arquitetural do código contra as regras do repositório. |
+| `amb validate --staged` | Audita conformidade arquitetural **exclusivamente dos arquivos preparados para commit** no Git. |
+| `amb hooks install` | Gera e instala o Git Hook de pré-commit (`.git/hooks/pre-commit`) executando `amb validate --staged`. |
 | `amb agy rules [--content]` | Lista e inspeciona as regras arquiteturais ativas no repositório. |
 | `amb agy run "<prompt>" [-m <modelo>]` | Executa inferência cognitiva arbitrária via Gemini REST. |
 

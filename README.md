@@ -42,12 +42,17 @@ Gerencia o provisionamento, checklist de credenciais e geração de prompts para
 | `amb prompt --synthesize "<ideia>"` | `-s` | Converte uma ideia informal em prompt arquitetural estruturado com Gemini (`-o` para salvar). |
 | `amb prompt --role <especialidade>` | `-r` | Define a especialidade da IA para a síntese do prompt (ex: `frontend`, `security`). |
 | `amb config` | `settings`, `pref` | Exibe o status da autorização prévia para chamadas ao Gemini. |
+| `amb config reload` | — | Limpa o cache em memória do Singleton `ConfigManager` e recarrega `.env` e `amb_project.json`. |
 | `amb config --gemini-confirm <on/off>` | — | Ativa (`on`) ou desativa (`off`) a exigência de confirmação interativa antes de requisições ao Gemini. |
+| `amb stats` | — | Relatório consolidado de telemetria local: taxa de sucesso de QA, duração e PRs integrados (`--json`). |
 
 ```bash
 # Exemplos:
 amb check
 amb check --json
+amb stats                                         # Métricas analíticas locais de produtividade
+amb stats --json                                  # Saída estruturada de telemetria
+amb config reload                                 # Recarregar configurações e cache em memória
 amb setup --auto
 amb setup --path ../meu-outro-projeto --auto
 amb prompt --synthesize "Criar painel de métricas financeiras" --role frontend -o prompt.md
@@ -101,11 +106,19 @@ Descobre dinamicamente e executa as personas da pasta `.amb/personas/` (ou `.jul
 | `amb agent --loop --modules <m1,m2>` | `-m` | Rotaciona o foco entre módulos do repositório a cada ciclo. |
 | `amb agent --loop --no-auto-merge` | — | Desabilita o merge automático do Pull Request ao concluir o ciclo com sucesso. |
 | `amb agent --personas-dir <pasta>` | — | Define um diretório customizado de personas. |
+| `amb loop status` | — | Inspeciona o estado da máquina finita (`.amb/loop_state.json`), ciclo ativo e sessão Jules. |
+| `amb loop pause` | — | Pausa graciosamente o loop autônomo contínuo. |
+| `amb loop resume` | — | Retoma o ciclo do ponto exato onde foi interrompido ou pausado. |
+| `amb persona validate` | — | Audita conformidade estrutural das personas em `.amb/personas/` (missão, arquivos de foco, regras). |
 
 > **💡 `amb context` automático no loop:** ao despachar cada sessão, o `autonomous_loop` roda automaticamente `amb context <modulo>` e **anexa o roteiro arquitetural completo** (DB → Services → UI) ao prompt enviado ao Jules, reduzindo em 20-30min o tempo de exploração inicial por sessão.
 
 ```bash
 # Exemplos:
+amb loop status                                             # Checar estado persistido do ciclo
+amb loop pause                                              # Pausar loop em execução
+amb loop resume                                             # Retomar ciclo pausado
+amb persona validate                                        # Auditar integridade das personas locais
 amb agent -p .amb/prompts/                               # Desenvolvimento em lote: executa todos os prompts da pasta
 amb agent -p .amb/prompts/ --branch feature/nova-ui      # Executar pasta de prompts na branch alvo
 amb agent -p .amb/prompts/ --loop                        # Loop contínuo sobre a pasta de prompts
@@ -211,6 +224,8 @@ Ferramentas avançadas para governança de código, orquestração Design-to-Dep
 | `amb pipeline --resume-session <id>` | `-r` | Retoma o monitoramento ao vivo e QA de uma sessão Jules já iniciada. |
 | `amb pipeline --no-qa` | — | Desabilita o teste QA local automático no final da execução. |
 | `amb validate <arquivo>` | `lint`, `audit` | Audita o código contra as diretrizes e regras de `.agents/rules/` (`--json`). |
+| `amb validate --staged` | — | Audita conformidade arquitetural **exclusivamente dos arquivos preparados para commit** no Git. |
+| `amb hooks install` | — | Gera e instala o Git Hook de pré-commit (`.git/hooks/pre-commit`) executando `amb validate --staged`. |
 | `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
 | `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
 | `amb context <modulo> --json` | — | Retorna o grafo de dependências e arquivos em formato JSON estruturado. |
@@ -222,10 +237,12 @@ amb pipeline -j specs/fix_api.md --skip-stitch                 # Tarefa de backe
 amb pipeline -s specs/painel.md -j specs/painel_eng.md -y      # Pipeline autônomo sem pausas de aprovação
 amb pipeline --resume-session 538227422414712240               # Reconectar a uma sessão remota do Jules
 
-# Demais ferramentas:
-amb validate src/components/Header.tsx             # Auditoria de regras arquiteturais
-amb schema kanban                                  # Inspecionar tabelas relacionadas ao kanban
-amb context agenda                                 # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
+# Demais ferramentas & Governança:
+amb validate --staged                                  # Validar apenas arquivos no stage antes de commitar
+amb hooks install                                      # Instalar hook pre-commit automático
+amb validate src/components/Header.tsx                 # Auditoria de regras arquiteturais
+amb schema kanban                                      # Inspecionar tabelas relacionadas ao kanban
+amb context agenda                                     # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
 ```
 
 ---
