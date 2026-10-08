@@ -25,22 +25,17 @@ O **AMB_V2** é um ecossistema global de automação de engenharia, orquestraç�
 
 ## 📐 2. Regras Rígidas de Engenharia de Software
 
-Todo agente de IA (incluindo o Jules) deve obedecer estritamente aos seguintes invariantes:
+Todo agente de IA (incluindo o Jules) deve obedecer estritamente às regras canônicas do repositório catalogadas em [`.agents/rules/`](./.agents/rules/):
 
-### 1. Limite de Linhas e Atomização (Regra 02)
-- **Teto Recomendado:** Arquivos entre **100 e 250 linhas**.
-- **Teto Máximo:** Nenhum arquivo deve ultrapassar **300 linhas**. Se atingir esse limite, decomponha o módulo em um subpacote atômico com submódulos de responsabilidade única.
+1. **[Regra 01: SRP e Separação de Camadas](./.agents/rules/01_single_responsibility.md)** — Cada módulo tem uma única responsabilidade; sem catch-alls ou utils genéricos.
+2. **[Regra 02: Atomização e Limite de 300 Linhas](./.agents/rules/02_atomization_and_ai_context.md)** — Arquivos entre 100 e 250 linhas, teto máximo rígido de 300 linhas.
+3. **[Regra 03: Zero Redundância (DRY)](./.agents/rules/03_dry_and_zero_redundancy.md)** — Sem código duplicado; use abstrações e enums canônicos.
+4. **[Regra 04: Tipagem Estrita e Exceções AmbError](./.agents/rules/04_code_quality_and_typing.md)** — Tipagem explícita com `typing` e tratamento robusto de erros.
+5. **[Regra 05: Documentação e Docstrings Concisas](./.agents/rules/05_concise_documentation.md)** — Documentação clara e enxuta, sem prolixidade.
+6. **[Regra 06: Segurança Git e Retrocompatibilidade](./.agents/rules/06_git_safety_and_compatibility.md)** — Operações seguras no Git e preservação da branch base.
+7. **[Manifesto Completo AMB Standards](./.agents/rules/amb_standards.md)** — Padrões globais de arquitetura e qualidade.
 
-### 2. Responsabilidade Única (SRP) e Zero Redundância (DRY)
-- Cada classe ou função deve fazer apenas uma coisa e fazê-la bem.
-- Nunca crie arquivos genéricos do tipo `utils.py` ou `helpers.py`. Crie submódulos especializados e descritivos.
-
-### 3. Tipagem Estrita e Qualidade de Código
-- Todo método e função deve possuir `type hints` completos (`typing.Optional`, `List`, `Dict`, `Union`, etc.).
-- Não utilize `from modulo import *`. Todo import deve ser explícito no topo do arquivo.
-
-### 4. Compatibilidade Multiplataforma e Tolerância a Encodings
-- Sempre especifique `encoding="utf-8", errors="replace"` em operações de leitura e escrita de arquivos (`open()`, `Path.write_text()`) para compatibilidade perfeita com Windows, Linux e macOS.
+> **Tolerância a Encodings (Windows/Multiplataforma):** Sempre utilize `encoding="utf-8", errors="replace"` em operações de leitura e escrita de arquivos (`open()`, `Path.write_text()`).
 
 ---
 
@@ -52,8 +47,8 @@ Antes de concluir qualquer tarefa ou abrir Pull Request, o Jules deve garantir q
 # 1. Executar a suíte de testes unitários (obrigatório manter 100% verde):
 pytest -q
 
-# 2. Checagem de sintaxe e compilação rápida:
-python -m py_compile cli.py
+# 2. Checagem de sintaxe e compilação do core:
+python -m py_compile amb_cli/cli.py cli.py
 
 # 3. Auditar conformidade arquitetural contra as regras do repositório:
 python -m amb_cli.cli validate <arquivo_modificado>
@@ -65,4 +60,4 @@ python -m amb_cli.cli validate <arquivo_modificado>
 
 - **Commits Convencionais:** Prefixar mensagens com tipo semântico: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
 - **Testes Dedicados:** Toda nova funcionalidade deve obrigatoriamente incluir um arquivo de teste unitário correspondente em `tests/test_<modulo>.py`.
-- **Atomização de PRs:** Mantenha os Pull Requests cirúrgicos e focados em estritamente um objetivo para permitir auto-merge seguro.
+- **Atomização de PRs:** Mantenha os Pull Requests cirúrgicos e focados em estritamente um objetivo para permitir auto-merge seguro via `amb jules merge`.
