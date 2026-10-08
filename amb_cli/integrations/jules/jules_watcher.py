@@ -217,12 +217,11 @@ def stream_session_activities(session_id: str, poll_interval: int = 4, client: O
 
                 # 3. Plano de Ação Gerado
                 if "planGenerated" in act:
-                    plan = act["planGenerated"]
-                    steps = plan.get("steps", []) if isinstance(plan, dict) else []
+                    from integrations.jules.jules_core.session_helpers import extract_plan_steps, format_plan_step
+                    steps = extract_plan_steps(act.get("planGenerated"))
                     print(f"{Colors.BOLD}{Colors.YELLOW}[{ctime}] 📋 PLANO GERADO PELO AGENTE ({len(steps)} passos):{Colors.RESET}")
                     for idx, step in enumerate(steps, 1):
-                        desc = step.get("description") or str(step)
-                        print(f"    {idx}. {desc}")
+                        print(f"    {idx}. {format_plan_step(step)}")
                     continue
 
                 # 4. Ação genérica ou bash command

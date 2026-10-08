@@ -83,3 +83,26 @@ def compute_status(sources: List[Dict[str, Any]], sessions: List[Dict[str, Any]]
             status["sessions_failed"] += 1
 
     return status
+
+
+def extract_plan_steps(plan_generated: Any) -> List[Dict[str, Any]]:
+    """Extrai a lista de passos de um evento planGenerated suportando formato aninhado oficial ou direto legado."""
+    if not isinstance(plan_generated, dict):
+        return []
+    actual_plan = plan_generated.get("plan", plan_generated)
+    if isinstance(actual_plan, dict):
+        steps = actual_plan.get("steps", [])
+        return steps if isinstance(steps, list) else []
+    return []
+
+
+def format_plan_step(step: Any) -> str:
+    """Formata a exibição textual de um passo de plano combinando título e descrição."""
+    if isinstance(step, dict):
+        title = (step.get("title") or "").strip()
+        desc = (step.get("description") or "").strip()
+        if title and desc:
+            return f"{title}: {desc}"
+        return title or desc or "Passo sem descrição"
+    return str(step)
+
