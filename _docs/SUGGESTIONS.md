@@ -79,6 +79,11 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 * **Conceito:** Varredura proativa de marcações `# TODO:`, `// TODO:`, `# FIXME:` e pendências técnicas na árvore do projeto.
 * **Funcionalidade:** Extração de contexto e rationale ao redor da marcação, listagem no terminal e conversão direta em issues/prompts para resolução autônoma via Google Jules (`amb suggest [--sync-issues] [--dispatch <id>]`).
 
+### 3.7. Painel de Visão de Repositório Categorizado (`amb jules repo` ou `amb jules list --grouped`)
+* **Status:** ⏳ *Em Backlog (Inspirado em Jules Repo View)*.
+* **Origem:** Documentação oficial do Google Jules (`https://jules.google/docs/repo/`).
+* **Conceito:** Dashboard no terminal agrupando sessões do repositório ativo em seções categorizadas: 🔄 Em Execução (`Running`), ⏳ Aguardando Atenção (`Waiting Feedback/Plan`), ✅ Concluídas com PR (`Completed`) e ❌ Falhas (`Failed`).
+
 ---
 
 ## 🔵 4. WON'T HAVE — Fora de Escopo Desta Fase
