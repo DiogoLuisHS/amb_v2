@@ -1,10 +1,20 @@
 import subprocess
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 from core.exceptions import AmbError
 
 class SessionExtractor:
     """Extrai e aplica patches gerados em sessões do Jules."""
+
+    @staticmethod
+    def extract_commit_message(session_data: dict) -> Optional[str]:
+        """Extrai a suggestedCommitMessage do gitPatch se presente nos outputs."""
+        outputs = session_data.get("outputs", [])
+        for out in outputs:
+            msg = out.get("changeSet", {}).get("gitPatch", {}).get("suggestedCommitMessage")
+            if msg:
+                return str(msg).strip()
+        return None
 
     @staticmethod
     def extract_patch(session_data: dict) -> str:

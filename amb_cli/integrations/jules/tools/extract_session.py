@@ -22,6 +22,10 @@ def run_extract_session(session_id: str, dest: str = None, apply: bool = False):
         print(f"📁 Destino: {dest_path.absolute()}")
         print(f"📄 Tamanho: {lines} linhas")
 
+        suggested_msg = SessionExtractor.extract_commit_message(session_data)
+        if suggested_msg:
+            print(f"  • Commit sugerido: \"{suggested_msg}\"")
+
         if apply:
             print(f"\n{Colors.YELLOW}Aplicando patch no workspace local...{Colors.RESET}")
             success, msg = SessionExtractor.apply_patch(patch, Path.cwd())
