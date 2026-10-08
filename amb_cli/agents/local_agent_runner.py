@@ -158,13 +158,13 @@ def execute_single_persona(
                     diario_content = df.read().strip()
                     if diario_content:
                         rel_path = os.path.relpath(dpath, root).replace("\\", "/")
-                        full_prompt = f"{full_prompt}\n\n---\n\n🧠 HISTÓRICO & APRENDIZADOS PRÉVIOS DO REPOSITÓRIO ({rel_path}):\n{diario_content}"
+                        full_prompt = f"{full_prompt}\n\n---\n\n## 🧠 Histórico do Repositório ({rel_path})\n{diario_content}"
                         break
             except (OSError, IOError) as e:
                 log_error("AGENT", f"Erro ao ler diário '{dpath}': {e}")
 
     if task:
-        full_prompt = f"{full_prompt}\n\n---\n\n🎯 ESCOPO ESPECÍFICO ADICIONAL SOLICITADO:\n{task}"
+        full_prompt = f"{full_prompt}\n\n---\n\n## 🎯 Instrução Específica Adicional\n{task}"
 
     print("\n" + "=" * 75)
     print(f"🤖 {Colors.BOLD}EXECUTANDO PERSONA:{Colors.RESET} {title}")

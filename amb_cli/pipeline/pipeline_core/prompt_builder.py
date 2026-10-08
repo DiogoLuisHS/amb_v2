@@ -104,63 +104,57 @@ def build_executive_prompt(
     rules_summary: Optional[str],
     skip_stitch: bool
 ) -> str:
-    """Montagem do Prompt Executivo Consolidado"""
+    """Montagem do Prompt Executivo Consolidado - Assertivo e Sem Redundâncias"""
     prompt_sections = [
-        "# 🚀 ESPECIFICAÇÃO DE ENGENHARIA DE SOFTWARE FULLSTACK (DESIGN-TO-DEPLOY)",
-        f"**Repositório**: `{repo_name}`",
-        f"**Branch de Trabalho**: `{starting_branch}`",
-        f"**Arquivo de Especificação**: `{file_label.strip()}`",
+        f"# 🎯 Especificação de Engenharia: {file_label.strip()}",
+        f"- **Repositório**: `{repo_name}` | **Branch**: `{starting_branch}`",
         "",
-        "---",
-        "",
-        "## 🎯 1. REQUISITOS DE ENGENHARIA & BACKEND (INTEGRAL)",
+        "## 📋 Requisitos de Implementação",
         jules_prompt if jules_prompt else "Implementar funcionalidade conforme padrões do repositório.",
         "",
     ]
 
     if not skip_stitch and (current_screen_id or stitch_summary or screenshot_url or stitch_prompt):
-        meta_items = []
-        if current_screen_id:
-            meta_items.append(f"- **Screen ID (Stitch)**: `{current_screen_id}`")
-        if screen_title:
-            meta_items.append(f"- **Título da Tela**: {screen_title}")
-        if screenshot_url:
-            meta_items.append(f"- **Screenshot de Referência Visual**: {screenshot_url}")
-
-        stitch_section_parts = [
+        stitch_parts = [
             "---",
             "",
-            "## 🎨 2. ESPECIFICAÇÃO DE INTERFACE, UI & FRONTEND (STITCH SPEC)",
-            "> ⚠️ **DIRETRIZ FULLSTACK OBRIGATÓRIA PARA O PLANO DO JULES**:",
-            "> Você DEVE planejar e implementar TANTO a camada de backend/dados (Seção 1) QUANTO os componentes de interface no frontend descritos nesta seção.",
-            "> Crie ou atualize todos os arquivos de componentes de UI (páginas, abas, modais, formulários, rotas frontend) necessários para refletir fielmente o design.",
-            "",
+            "## 🎨 Especificação de Interface & UI (Stitch)",
         ]
-
+        meta_items = []
+        if current_screen_id:
+            meta_items.append(f"- **Screen ID**: `{current_screen_id}`")
+        if screen_title:
+            meta_items.append(f"- **Título**: {screen_title}")
+        if screenshot_url:
+            meta_items.append(f"- **Screenshot**: {screenshot_url}")
         if meta_items:
-            stitch_section_parts.append("### Metadados do Mockup Stitch:\n" + "\n".join(meta_items) + "\n")
+            stitch_parts.append("\n".join(meta_items) + "\n")
 
         if stitch_summary:
-            stitch_section_parts.append(
-                "### 🏛️ Arquitetura Visual Sintetizada (Layout & Componentes):\n" + stitch_summary.strip() + "\n"
+            stitch_parts.append(
+                "### 🏛️ Arquitetura Visual (Layout & Componentes):\n" + stitch_summary.strip() + "\n"
             )
 
         if stitch_prompt:
-            stitch_section_parts.append(
-                "### 📐 Especificação Detalhada da UI & Wireframe (Integral):\n" + stitch_prompt.strip() + "\n"
+            stitch_parts.append(
+                "### 📐 Especificação Detalhada da UI:\n" + stitch_prompt.strip() + "\n"
             )
 
-        prompt_sections.extend(stitch_section_parts)
+        prompt_sections.extend(stitch_parts)
 
-    prompt_sections.extend([
+    governance_parts = [
         "---",
         "",
-        "## 🛡️ 3. DIRETRIZES ARQUITETURAIS MANDATÓRIAS",
-        "- **Separação Estrita de Responsabilidades (SRP)**: Cada módulo, serviço e componente deve possuir responsabilidade única.",
-        "- **Tipagem Estrita**: Tipagem rigorosa da stack do projeto, contratos explícitos e sem tipos genéricos opacos.",
-        "- **Integridade Local**: Todo o código implementado deve passar no typecheck e no build sem erros.",
+        "## 🛡️ Governança, QA & Pull Request",
+        "- **Padrões**: Respeitar limites de linhas (Regra 02), separação de responsabilidades (SRP) e tipagem estrita.",
+    ]
+    if rules_summary:
+        governance_parts.append(rules_summary)
+    governance_parts.extend([
         "",
-        rules_summary if rules_summary else "",
+        "- **Validação Obrigatória**: Execute e valide a suíte de testes unitários antes de submeter.",
+        "- **Finalização**: Abra e confirme o Pull Request diretamente no GitHub.",
     ])
+    prompt_sections.extend(governance_parts)
 
     return "\n".join(filter(lambda s: s is not None, prompt_sections)).strip()

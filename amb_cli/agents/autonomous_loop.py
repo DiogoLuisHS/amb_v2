@@ -122,12 +122,11 @@ def run_autonomous_loop(
                 iss_num = item["issue_number"]
                 iss_title = item["title"]
                 task_content = (
-                    f"## 🎯 GitHub Issue #{iss_num}: {iss_title}\n"
-                    f"URL da Tarefa: {item.get('url', '')}\n\n"
+                    f"# 🎯 GitHub Issue #{iss_num}: {iss_title}\n"
+                    f"- URL: {item.get('url', '')}\n\n"
                     f"{item['content']}\n\n"
                     f"---\n"
-                    f"### 📌 Fechamento Obrigatório:\n"
-                    f"Ao submeter o Pull Request no GitHub, inclua no corpo do PR: `Closes #{iss_num}`.\n"
+                    f"- **Fechamento**: Inclua `Closes #{iss_num}` no corpo do Pull Request.\n"
                 )
                 session_title = f"[Issue #{iss_num}] {iss_title} - Ciclo #{completed_cycles}" if iss_num > 0 else f"{iss_title} - Ciclo #{completed_cycles}"
                 stem_name = item.get("path").stem if item.get("path") else f"issue_{iss_num}"
@@ -142,8 +141,8 @@ def run_autonomous_loop(
                 title, base_prompt = load_persona_content(item_name)
                 if current_module:
                     full_prompt = (
-                        f"{base_prompt}\n\n---\n\n🎯 ESCOPO DESTA ITERAÇÃO:\n"
-                        f"Concentre a auditoria e alinhamento estritamente no módulo: `{current_module}`."
+                        f"{base_prompt}\n\n---\n\n"
+                        f"**Foco Modular**: Concentre auditoria e alterações estritamente no módulo `{current_module}`."
                     )
                     session_title = f"{title} [{current_module}] - Ciclo #{completed_cycles}"
                 else:

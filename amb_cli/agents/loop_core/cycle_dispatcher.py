@@ -43,9 +43,8 @@ def build_ai_context(
             full_prompt = (
                 f"{full_prompt}\n\n"
                 f"---\n\n"
-                f"## 📂 ROTEIRO DE LEITURA ARQUITETURAL (gerado por `amb context {_ctx_query}`)\n\n"
-                f"**Use este roteiro para iniciar sua análise sem precisar explorar o repositório do zero.**\n"
-                f"Leia os arquivos na ordem apresentada (DB → Repositórios → Services → Controllers → UI):\n\n"
+                f"## 📂 Fluxo Arquitetural de Arquivos (`amb context {_ctx_query}`)\n\n"
+                f"Ordem de leitura e impacto (DB ➔ Services ➔ Controllers ➔ UI):\n\n"
                 f"{_ctx_md}"
             )
             log(
@@ -71,12 +70,11 @@ def dispatch_jules_session(
     """Cria a sessão no Jules e retorna o ID."""
     pr_mandate = (
         "\n\n---\n\n"
-        "## 🚀 Ação Final Obrigatória: Abertura do Pull Request\n"
+        "## 🚀 Finalização Obrigatória: Pull Request\n"
         "Ao concluir as alterações e validar os testes com sucesso (100% green):\n"
-        "1. Você DEVE submeter/abrir o Pull Request no GitHub imediatamente.\n"
-        "2. Não finalize a sessão apenas no estado 'Ready for submission'; confirme a criação do PR diretamente no GitHub.\n"
+        "1. Submeta e confirme a abertura do Pull Request diretamente no GitHub antes de encerrar.\n"
     )
-    if "Abertura do Pull Request" not in full_prompt:
+    if "Pull Request" not in full_prompt and "Abertura do Pull Request" not in full_prompt:
         full_prompt = f"{full_prompt}{pr_mandate}"
 
     log("LOOP", "Criando sessão para persona no Google Jules...", Colors.CYAN)
