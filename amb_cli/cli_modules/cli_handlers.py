@@ -218,3 +218,8 @@ def cmd_stats(args: Any) -> None:
 def cmd_persona(args: Any) -> None:
     from cli_modules.handlers_core.persona_handler import cmd_persona as handler
     handler(args)
+
+def cmd_workflow(args: Any) -> None:
+    """Gerador de automação CI/CD para GitHub Actions."""
+    from cli_modules.handlers_core.workflow_handler import handle_cmd_workflow
+    handle_cmd_workflow(args)

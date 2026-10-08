@@ -3,7 +3,8 @@ import argparse
 from cli_modules.cli_handlers import (
     cmd_setup, cmd_prompt, cmd_check, cmd_monitor, cmd_advisor, cmd_gui,
     cmd_config, cmd_agent, cmd_jules, cmd_stitch, cmd_validate, cmd_hooks,
-    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats, cmd_persona
+    cmd_pipeline, cmd_schema, cmd_context, cmd_antigravity, cmd_git, cmd_loop, cmd_stats, cmd_persona,
+    cmd_workflow
 )
 
 def create_parser() -> argparse.ArgumentParser:
@@ -229,6 +230,13 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("persona", "Engine unificada de personas com descoberta, interpolação e validação.", cmd_persona)
     ps = p.add_subparsers(dest="persona_cmd", help="Subcomandos de persona")
     _sc(ps, "validate", "Audita conformidade arquitetural de personas.")
+
+    p = _c("workflow", "Gerador de automação CI/CD para GitHub Actions.", cmd_workflow)
+    ws = p.add_subparsers(dest="workflow_cmd", help="Subcomandos de workflow")
+    w = _sc(ws, "schedule", "Gera workflow de tarefas agendadas (cron).")
+    w.add_argument("--cron", "-c", default="0 3 * * *", help="Expressão cron de agendamento (Padrão: '0 3 * * *').")
+    w.add_argument("--role", "-r", action="append", help="Persona opcional a ser executada (pode ser usado múltiplas vezes).")
+    w.add_argument("--output", "-o", help="Caminho customizado para salvar o arquivo yaml.")
 
     p = _c("loop", "Controle da Máquina de Estados do Autonomous Loop.", cmd_loop)
     ls = p.add_subparsers(dest="loop_cmd", help="Subcomandos do Loop")
