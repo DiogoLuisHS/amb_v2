@@ -86,18 +86,24 @@ class BaseGoogleClient:
         if status_code is not None:
             clean_body = error_body or ""
             detail = ""
+            err_status = None
             try:
                 err_json = json.loads(clean_body)
                 if "error" in err_json:
                     err_obj = err_json["error"]
                     if isinstance(err_obj, dict):
                         detail = err_obj.get("message") or clean_body
+                        err_status = err_obj.get("status")
                     elif isinstance(err_obj, str):
                         detail = err_obj
             except Exception:
                 detail = clean_body.strip()
 
-            msg = f"HTTP {status_code} na API {self.service_name}"
+            if err_status:
+                msg = f"HTTP {status_code} [{err_status}] na API {self.service_name}"
+            else:
+                msg = f"HTTP {status_code} na API {self.service_name}"
+
             if detail:
                 msg = f"{msg} - {detail}"
 
