@@ -26,7 +26,8 @@ def run_create_session(
     source_name: Optional[str] = None,
     as_json: bool = False,
     client: Optional[JulesClient] = None,
-    auto_pr: bool = True
+    auto_pr: bool = True,
+    require_plan_approval: Optional[bool] = None
 ) -> Dict[str, Any]:
     """Cria uma nova sessão no Google Jules a partir de prompt ou arquivo markdown."""
     c = client or JulesClient()
@@ -36,7 +37,8 @@ def run_create_session(
         title=title,
         source_name=source_name,
         base_branch=base_branch,
-        automation_mode=automation_mode
+        automation_mode=automation_mode,
+        require_plan_approval=require_plan_approval
     )
 
     sid = res.get("name", "").split("/")[-1] or res.get("id")
@@ -50,6 +52,8 @@ def run_create_session(
         print(f"  • Título:     {title}")
     if auto_pr:
         print(f"  • Modo:       Automático (PR será aberto ao concluir)")
+    if require_plan_approval:
+        print(f"  • Aprovação:  Exige aprovação manual do plano de execução")
     print(f"  • Painel Web: https://jules.google.com/session/{sid}")
     print(f"👉 Para monitorar ao vivo: amb jules get {sid} --watch\n")
     return res
@@ -66,6 +70,7 @@ def main():
     p.add_argument("--branch", "-b", help="Branch base de início no repositório (padrão: branch ativa do Git).")
     p.add_argument("--source", "-s", help="Nome da fonte conectada (ex: sources/github/owner/repo).")
     p.add_argument("--no-auto-pr", action="store_true", help="Desabilita a abertura automática de Pull Request pelo Jules.")
+    p.add_argument("--require-approval", action="store_true", help="Exige aprovação explícita do plano antes de codificar.")
     p.add_argument("--json", action="store_true", help="Exibe a resposta em formato JSON puro.")
     args = p.parse_args()
 
@@ -76,7 +81,8 @@ def main():
             base_branch=args.branch,
             source_name=args.source,
             as_json=args.json,
-            auto_pr=not args.no_auto_pr
+            auto_pr=not args.no_auto_pr,
+            require_plan_approval=True if args.require_approval else None
         )
     except Exception as e:
         log_error("JULES", str(e))

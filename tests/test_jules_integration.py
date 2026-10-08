@@ -240,7 +240,8 @@ def test_jules_facade_tools():
         title="Test",
         source_name=None,
         base_branch=None,
-        automation_mode="AUTO_CREATE_PR"
+        automation_mode="AUTO_CREATE_PR",
+        require_plan_approval=None
     )
 
     # run_create_session with auto_pr=False
@@ -250,7 +251,19 @@ def test_jules_facade_tools():
         title="Test",
         source_name=None,
         base_branch=None,
-        automation_mode=None
+        automation_mode=None,
+        require_plan_approval=None
+    )
+
+    # run_create_session with require_plan_approval=True
+    run_create_session(prompt="Test prompt", title="Test", as_json=True, client=mock_client, require_plan_approval=True)
+    mock_client.create_session.assert_called_with(
+        prompt="Test prompt",
+        title="Test",
+        source_name=None,
+        base_branch=None,
+        automation_mode="AUTO_CREATE_PR",
+        require_plan_approval=True
     )
 
 

@@ -68,7 +68,8 @@ class JulesClient(BaseGoogleClient):
         source_name: Optional[str] = None,
         title: Optional[str] = None,
         base_branch: Optional[str] = None,
-        automation_mode: Optional[str] = "AUTO_CREATE_PR"
+        automation_mode: Optional[str] = "AUTO_CREATE_PR",
+        require_plan_approval: Optional[bool] = None
     ) -> Dict[str, Any]:
         if os.path.isfile(prompt):
             try:
@@ -100,6 +101,8 @@ class JulesClient(BaseGoogleClient):
             payload["automationMode"] = automation_mode
         if title:
             payload["title"] = title
+        if require_plan_approval is not None:
+            payload["requirePlanApproval"] = require_plan_approval
         return self._request("POST", "sessions", data=payload)
 
     def get_session(self, session_id: str) -> Dict[str, Any]:
