@@ -17,6 +17,7 @@ ensure_amb_env()
 
 from core import Colors, log, log_error
 from integrations.jules.jules_client import JulesClient
+from integrations.jules.jules_core.session_extractor import SessionExtractor
 
 
 def run_get_session(
@@ -78,6 +79,15 @@ def run_get_session(
     update_time = data.get("updateTime")
     if update_time:
         print(f"  • Atualizada em: {update_time}")
+
+    if "FAIL" in state:
+        try:
+            activities = c.list_activities(clean_id)
+            reason = SessionExtractor.extract_failure_reason(activities)
+            if reason:
+                print(f"  • Motivo da Falha: {Colors.RED}{reason}{Colors.RESET}")
+        except Exception as e:
+            log_error("GET-SESSION", f"Falha ao extrair motivo da falha: {e}")
 
     print(f"  • Painel Web:  https://jules.google.com/session/{sid}\n")
     return data

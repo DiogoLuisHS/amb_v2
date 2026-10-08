@@ -68,6 +68,17 @@ class SessionMonitor:
 
                 # 6. Checar Terminação
                 if current_state.is_terminal():
+                    if current_state == SessionState.FAILED:
+                        try:
+                            clean_id = self.session_id.split("/")[-1]
+                            activities = self.client.list_activities(clean_id)
+                            from integrations.jules.jules_core.session_extractor import SessionExtractor
+                            reason = SessionExtractor.extract_failure_reason(activities)
+                            if reason:
+                                log_error("SESSION-MONITOR", f"❌ Sessão {self.session_id} falhou. Motivo: \"{reason}\"")
+                        except Exception as fail_err:
+                            log_error("SESSION-MONITOR", f"Erro ao extrair motivo da falha: {fail_err}")
+
                     runtime = time.time() - start_time
                     metrics = SessionState.extract_metrics(session_data, duration_seconds=runtime)
                     try:
