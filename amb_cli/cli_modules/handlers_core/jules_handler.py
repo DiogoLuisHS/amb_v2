@@ -64,7 +64,8 @@ def handle_cmd_jules(args: Any) -> None:
             source_name=getattr(args, "source", None),
             as_json=getattr(args, "json", False),
             auto_pr=not getattr(args, "no_auto_pr", False),
-            require_plan_approval=True if req_appr else None
+            require_plan_approval=True if req_appr else None,
+            repoless=getattr(args, "no_repo", False)
         )
 
     elif sub == "extract":

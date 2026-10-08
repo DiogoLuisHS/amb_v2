@@ -28,7 +28,8 @@ def test_jules_create_with_require_approval(mock_run_create_session):
         source_name=None,
         as_json=False,
         auto_pr=True,
-        require_plan_approval=True
+        require_plan_approval=True,
+        repoless=False
     )
 
 
@@ -48,5 +49,6 @@ def test_jules_create_without_require_approval(mock_run_create_session):
         source_name=None,
         as_json=False,
         auto_pr=True,
-        require_plan_approval=None
+        require_plan_approval=None,
+        repoless=False
     )
