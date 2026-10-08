@@ -52,8 +52,11 @@ class JulesClient(BaseGoogleClient):
     ) -> Optional[Dict[str, Any]]:
         return extract_pull_request(session_dict, activities)
 
-    def list_sources(self, page_size: int = 50) -> List[Dict[str, Any]]:
-        res = self._request("GET", "sources", params={"pageSize": page_size})
+    def list_sources(self, page_size: int = 50, filter_expr: Optional[str] = None) -> List[Dict[str, Any]]:
+        params = {"pageSize": page_size}
+        if filter_expr and filter_expr.strip():
+            params["filter"] = filter_expr.strip()
+        res = self._request("GET", "sources", params=params)
         return res.get("sources", [])
 
     def get_source(self, source_name: str) -> Dict[str, Any]:

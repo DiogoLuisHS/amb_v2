@@ -74,6 +74,7 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--repo", "-r", help="Filtra o diagnóstico por repositório específico.")
     _j(j)
     j = _sc(js, "sources", "Lista fontes e repositórios conectados à conta Google Jules.", ["source"])
+    j.add_argument("--filter", "-f", help="Filtro AIP-160 para consultar fontes específicas no Jules.")
     _j(j)
     j = _sc(js, "list", "Lista sessões recentes do repositório ou de toda a conta.")
     j.add_argument("--limit", "-n", type=int, default=10, help="Limite de sessões exibidas (padrão: 10).")
