@@ -75,7 +75,8 @@ def handle_cmd_jules(args: Any) -> None:
         run_extract_session(
             session_id=args.session_id,
             dest=getattr(args, "dest", None),
-            apply=getattr(args, "apply", False)
+            apply=getattr(args, "apply", False),
+            show_bash=getattr(args, "bash", False)
         )
 
     elif sub in ["reply", "advisor", "ask"]:
