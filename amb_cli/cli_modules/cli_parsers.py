@@ -94,6 +94,7 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--no-auto-pr", action="store_true", help="Desabilita a criação automática de Pull Request pelo Jules ao concluir.")
     j.add_argument("--require-approval", action="store_true", help="Exige aprovação explícita do plano antes de codificar.")
     j.add_argument("--no-repo", "--repoless", action="store_true", help="Cria sessão avulsa no Jules sem vincular repositório Git.")
+    j.add_argument("--skip-branch-check", action="store_true", help="Ignora a validação preventiva de existência da branch na fonte do Jules.")
     _j(j)
     j = _sc(js, "reply", "Responde uma dúvida com IA (ou envia mensagem direta se --message).", ["advisor", "ask"])
     _sid(j, "ID ou URL da sessão do Jules (opcional).", "ID ou URL da sessão (opcional; se omitido, lista todas as sessões pendentes).")

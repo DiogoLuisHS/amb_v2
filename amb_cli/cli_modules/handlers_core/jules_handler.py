@@ -66,7 +66,8 @@ def handle_cmd_jules(args: Any) -> None:
             as_json=getattr(args, "json", False),
             auto_pr=not getattr(args, "no_auto_pr", False),
             require_plan_approval=True if req_appr else None,
-            repoless=getattr(args, "no_repo", False)
+            repoless=getattr(args, "no_repo", False),
+            skip_branch_check=getattr(args, "skip_branch_check", False)
         )
 
     elif sub == "extract":

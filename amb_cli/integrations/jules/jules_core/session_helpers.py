@@ -1,5 +1,25 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import re
+
+def check_branch_exists_in_source(
+    source_data: Dict[str, Any],
+    branch_name: str
+) -> Tuple[bool, Optional[str]]:
+    """
+    Verifica se a branch informada está presente nas branches da fonte.
+    Retorna (existe, default_branch_name).
+    Se a lista de branches estiver vazia ou ausente, retorna (True, default_branch)
+    para não bloquear de forma restritiva.
+    """
+    github_repo = source_data.get("githubRepo", {})
+    branches = github_repo.get("branches", [])
+    default_branch = github_repo.get("defaultBranch", {}).get("displayName")
+
+    if not branches:
+        return True, default_branch
+
+    exists = any(b.get("displayName") == branch_name for b in branches)
+    return exists, default_branch
 
 def normalize_session_id(session_id: str) -> str:
     """Normaliza strings de ID de sessão."""
