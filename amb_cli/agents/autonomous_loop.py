@@ -15,7 +15,7 @@ from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
 from core import Colors, log, log_error, AmbError
-from workspace import find_repo_root, get_repo_name
+from workspace import find_repo_root, get_repo_name, IssueSynchronizer
 from integrations.git.git_service import GitService
 from integrations.jules.jules_client import JulesClient
 from agents.local_agent_runner import get_personas_directory, discover_personas
@@ -59,8 +59,9 @@ def run_autonomous_loop(
     delay_between_cycles: int = 0,
     branch: Optional[str] = None,
     no_auto_merge: bool = False,
+    use_issues: bool = False,
 ) -> None:
-    """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para uma ou todas as personas."""
+    """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para personas, prompts ou issues."""
     repo_name = get_repo_name()
     repo_root = find_repo_root()
     client = JulesClient()
@@ -73,42 +74,29 @@ def run_autonomous_loop(
     personas_dir = get_personas_directory()
     discovered = discover_personas(personas_dir)
 
-    # Resolução de Prompts (arquivo único ou diretório) vs Personas
-    prompts_to_run: List[Path] = []
-    if prompt_file:
-        p_target = Path(prompt_file)
-        if not p_target.exists():
-            log_error("AGENT", f"Caminho de prompts '{prompt_file}' não encontrado.", hint="Verifique se o arquivo ou diretório existe.")
-            return
-        if p_target.is_dir():
-            prompts_to_run = sorted(
-                [
-                    p
-                    for p in p_target.glob("*.md")
-                    if p.name.lower() != "readme.md" and not p.name.startswith(("_", "."))
-                ]
-            )
-            if not prompts_to_run:
-                log_error("AGENT", f"Nenhum arquivo markdown (.md) encontrado na pasta '{prompt_file}'.", hint="Adicione arquivos .md na pasta ou especifique um arquivo .md diretamente.")
-                return
-        elif p_target.is_file():
-            prompts_to_run = [p_target]
+    syncer = IssueSynchronizer(repo_root=repo_root)
+    items_to_run = syncer.resolve_items_queue(prompt_file, use_issues=use_issues)
 
-    if prompts_to_run:
-        items_to_run = [{"type": "prompt", "path": p, "name": p.stem} for p in prompts_to_run]
-    elif all_personas:
-        items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
-    elif role:
-        items_to_run = [{"type": "persona", "name": role}]
-    else:
-        items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
+    if not items_to_run:
+        if prompt_file or use_issues:
+            log_error("AGENT", "Nenhum item válido encontrado na fila para processamento.")
+            return
+        if all_personas:
+            items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
+        elif role:
+            items_to_run = [{"type": "persona", "name": role}]
+        else:
+            items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
 
     modules_list = modules or [""]
 
     print(f"\n{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}")
     print(f"📁 Repositório: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {branch})")
-    if prompts_to_run:
-        print(f"📄 Prompts no Lote ({len(prompts_to_run)}): {Colors.BOLD}{', '.join([p.name for p in prompts_to_run])}{Colors.RESET}")
+    if items_to_run and items_to_run[0]["type"] == "issue":
+        issues_summary = ", ".join(f"#{it.get('issue_number')}" for it in items_to_run)
+        print(f"📋 Fila de Issues ({len(items_to_run)}): {Colors.BOLD}{issues_summary}{Colors.RESET}")
+    elif items_to_run and items_to_run[0]["type"] == "prompt":
+        print(f"📄 Prompts no Lote ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}")
     else:
         print(f"🤖 Personas no Ciclo ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}")
     if modules and modules != [""]:
@@ -126,12 +114,27 @@ def run_autonomous_loop(
             current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
             item_name = item["name"]
 
-            if item["type"] == "prompt":
+            if item["type"] == "issue":
+                iss_num = item["issue_number"]
+                iss_title = item["title"]
+                print(f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Issue #{iss_num}: {Colors.BOLD}{iss_title}{Colors.RESET}")
+                task_content = (
+                    f"## 🎯 GitHub Issue #{iss_num}: {iss_title}\n"
+                    f"URL da Tarefa: {item.get('url', '')}\n\n"
+                    f"{item['content']}\n\n"
+                    f"---\n"
+                    f"### 📌 Fechamento Obrigatório:\n"
+                    f"Ao submeter o Pull Request no GitHub, inclua no corpo do PR: `Closes #{iss_num}`.\n"
+                )
+                session_title = f"[Issue #{iss_num}] {iss_title} - Ciclo #{completed_cycles}" if iss_num > 0 else f"{iss_title} - Ciclo #{completed_cycles}"
+                stem_name = item.get("path").stem if item.get("path") else f"issue_{iss_num}"
+                full_prompt = build_ai_context(task_content, None, stem_name)
+            elif item["type"] == "prompt":
                 p_path: Path = item["path"]
                 print(
                     f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Prompt: {Colors.BOLD}{item_name}{Colors.RESET}"
                 )
-                base_prompt = p_path.read_text(encoding="utf-8", errors="replace")
+                base_prompt = item.get("content") or p_path.read_text(encoding="utf-8", errors="replace")
                 title = f"Task: {p_path.stem.replace('_', ' ').title()}"
                 session_title = f"{title} - Ciclo #{completed_cycles}"
                 full_prompt = build_ai_context(base_prompt, None, p_path.stem)
@@ -173,6 +176,12 @@ def run_autonomous_loop(
                             f"Interrompendo a esteira para garantir a integridade da branch principal.",
                         )
                         return
+                    if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
+                        syncer.close_issue(
+                            item["issue_number"],
+                            comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles})."
+                        )
+                        log("ISSUE", f"✔ GitHub Issue #{item['issue_number']} encerrada com sucesso!", Colors.GREEN)
                 elif state not in ["COMPLETED", "SUCCEEDED"]:
                     log_error(
                         "LOOP",
@@ -211,6 +220,7 @@ def main() -> None:
     parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
     parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou PASTA INTEIRA de prompts em lote (ex: .amb/prompts/).")
+    parser.add_argument("--sync-issues", "--issues", action="store_true", help="Sincroniza os prompts com o GitHub Issues e executa rastreando a fila.")
     parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
     parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
     parser.add_argument("--delay", "-d", type=int, default=0, help="Pausa opcional em segundos entre itens/ciclos (Padrão: 0, sem espera).")
@@ -235,6 +245,7 @@ def main() -> None:
             delay_between_cycles=args.delay,
             branch=args.branch,
             no_auto_merge=args.no_auto_merge,
+            use_issues=getattr(args, "sync_issues", False),
         )
     except AmbError as e:
         log_error("LOOP", e.message, hint=e.hint)

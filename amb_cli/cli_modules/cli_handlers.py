@@ -81,23 +81,26 @@ def cmd_config(args: Any) -> None:
 # -------------------------------------------------------------
 def cmd_agent(args: Any) -> None:
     """Executa personas dinâmicas localmente, em loop contínuo ou na nuvem."""
-    if getattr(args, "loop", False) or getattr(args, "prompt", None):
+    if getattr(args, "loop", False) or getattr(args, "prompt", None) or getattr(args, "sync_issues", False):
         from agents.autonomous_loop import run_autonomous_loop
         prompt_file = getattr(args, "prompt", None) or (args.task if (getattr(args, "task", None) and os.path.exists(args.task)) else None)
         max_c = getattr(args, "max_cycles", None)
-        if max_c is None and getattr(args, "prompt", None) and not getattr(args, "loop", False):
+        if max_c is None and (getattr(args, "prompt", None) or getattr(args, "sync_issues", False)) and not getattr(args, "loop", False):
             max_c = 1
         raw_modules = getattr(args, "modules", None)
         mod_list = [m.strip() for m in raw_modules.split(",")] if raw_modules else None
-        run_autonomous_loop(
-            role=args.role,
-            all_personas=getattr(args, "all", False),
-            prompt_file=prompt_file,
-            modules=mod_list,
-            max_cycles=max_c,
-            branch=getattr(args, "branch", None),
-            no_auto_merge=getattr(args, "no_auto_merge", False)
-        )
+        loop_kwargs: dict[str, Any] = {
+            "role": args.role,
+            "all_personas": getattr(args, "all", False),
+            "prompt_file": prompt_file,
+            "modules": mod_list,
+            "max_cycles": max_c,
+            "branch": getattr(args, "branch", None),
+            "no_auto_merge": getattr(args, "no_auto_merge", False),
+        }
+        if getattr(args, "sync_issues", False):
+            loop_kwargs["use_issues"] = True
+        run_autonomous_loop(**loop_kwargs)
         return
 
     from agents import local_agent_runner as runner

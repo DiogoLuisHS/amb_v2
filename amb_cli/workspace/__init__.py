@@ -14,6 +14,9 @@ from .design_tokens import (
     parse_design_tokens_from_text,
     get_design_system_config,
 )
+from .issue_synchronizer import (
+    IssueSynchronizer,
+)
 
 __all__ = [
     "find_repo_root",
@@ -26,5 +29,6 @@ __all__ = [
     "load_project_rules",
     "parse_design_tokens_from_text",
     "get_design_system_config",
+    "IssueSynchronizer",
 ]
 

@@ -224,6 +224,33 @@ def test_cmd_agent_loop_parameters():
         )
 
 
+def test_cmd_agent_sync_issues_parameters():
+    with patch("agents.autonomous_loop.run_autonomous_loop") as mock_loop, \
+         patch("amb_cli.agents.autonomous_loop.run_autonomous_loop", mock_loop):
+        args = argparse.Namespace(
+            loop=False,
+            role=None,
+            prompt=".amb/prompts",
+            task=None,
+            max_cycles=1,
+            branch="develop",
+            modules=None,
+            no_auto_merge=False,
+            sync_issues=True
+        )
+        cmd_agent(args)
+        mock_loop.assert_called_once_with(
+            role=None,
+            all_personas=False,
+            prompt_file=".amb/prompts",
+            modules=None,
+            max_cycles=1,
+            branch="develop",
+            no_auto_merge=False,
+            use_issues=True
+        )
+
+
 def test_parser_new_core_commands(parser):
     args_loop = parser.parse_args(["loop", "status"])
     assert args_loop.command == "loop"

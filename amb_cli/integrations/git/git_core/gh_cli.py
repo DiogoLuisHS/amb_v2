@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 from core import ApiExecutionError
-from workspace import get_repo_name, find_repo_root
+from workspace.project_context import get_repo_name, find_repo_root
 
 def _run_gh(cmd: List[str], cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -197,3 +197,89 @@ def close_pr(pr_number: int, comment: Optional[str] = None, delete_branch: bool 
         cmd.append("--delete-branch")
     res = _run_gh(cmd)
     return res.returncode == 0
+
+
+def list_issues(
+    state: str = "open",
+    labels: Optional[List[str]] = None,
+    limit: int = 50,
+    repo_name: Optional[str] = None,
+    cwd: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Lista issues do repositório via GitHub CLI."""
+    cmd = ["gh", "issue", "list", "--state", state, "--limit", str(limit), "--json", "number,title,body,state,url,labels"]
+    if repo_name:
+        cmd.extend(["--repo", repo_name])
+    if labels:
+        for lbl in labels:
+            cmd.extend(["--label", lbl])
+    res = _run_gh(cmd, cwd=cwd)
+    if res.returncode == 0 and res.stdout.strip():
+        try:
+            return json.loads(res.stdout)
+        except Exception:
+            pass
+    return []
+
+
+def get_issue(issue_number: int, repo_name: Optional[str] = None, cwd: Optional[str] = None) -> Dict[str, Any]:
+    """Obtém detalhes de uma issue específica via GitHub CLI."""
+    cmd = ["gh", "issue", "view", str(issue_number), "--json", "number,title,body,state,url,labels"]
+    if repo_name:
+        cmd.extend(["--repo", repo_name])
+    res = _run_gh(cmd, cwd=cwd)
+    if res.returncode == 0 and res.stdout.strip():
+        try:
+            return json.loads(res.stdout)
+        except Exception:
+            pass
+    return {}
+
+
+def create_issue(
+    title: str,
+    body: str,
+    labels: Optional[List[str]] = None,
+    repo_name: Optional[str] = None,
+    cwd: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Cria uma nova issue no GitHub via GitHub CLI com fallback para labels."""
+    cmd = ["gh", "issue", "create", "--title", title, "--body", body]
+    if repo_name:
+        cmd.extend(["--repo", repo_name])
+    if labels:
+        for lbl in labels:
+            cmd.extend(["--label", lbl])
+    res = _run_gh(cmd, cwd=cwd)
+    if res.returncode != 0 and labels and "label" in res.stderr.lower():
+        fallback_cmd = ["gh", "issue", "create", "--title", title, "--body", body]
+        if repo_name:
+            fallback_cmd.extend(["--repo", repo_name])
+        res = _run_gh(fallback_cmd, cwd=cwd)
+    if res.returncode != 0:
+        raise ApiExecutionError(f"Falha ao criar issue: {res.stderr.strip() or res.stdout.strip()}")
+    issue_url = res.stdout.strip()
+    match = re.search(r"/issues/(\d+)", issue_url)
+    return {
+        "success": True,
+        "url": issue_url,
+        "number": int(match.group(1)) if match else None,
+        "title": title,
+    }
+
+
+def close_issue(
+    issue_number: int,
+    comment: Optional[str] = None,
+    repo_name: Optional[str] = None,
+    cwd: Optional[str] = None,
+) -> bool:
+    """Fecha uma issue no GitHub via GitHub CLI."""
+    cmd = ["gh", "issue", "close", str(issue_number)]
+    if repo_name:
+        cmd.extend(["--repo", repo_name])
+    if comment:
+        cmd.extend(["--comment", comment])
+    res = _run_gh(cmd, cwd=cwd)
+    return res.returncode == 0
+

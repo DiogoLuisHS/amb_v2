@@ -78,6 +78,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--branch", "-b", help="Branch de início para o Jules (se omitido, auto-detecta a branch ativa do Git).")
     p.add_argument("--modules", "-m", help="Lista de módulos para rotacionar no loop (separados por vírgula).")
     p.add_argument("--no-auto-merge", action="store_true", help="Desabilita o merge automático de PR no modo loop.")
+    p.add_argument("--sync-issues", "--issues", dest="sync_issues", action="store_true", help="Sincroniza os prompts da pasta com o GitHub Issues e executa rastreando a fila.")
     p.add_argument("--personas-dir", help="Pasta customizada de personas.")
 
     p = _c("jules", "Comandos de integração com o Google Jules.", cmd_jules)
@@ -128,6 +129,10 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--id", help="Remove uma sessão específica por ID.")
     j = _sc(js, "env", "Diagnóstico de compatibilidade da stack local com a VM do Jules e script de snapshot.", ["environment"])
     j.add_argument("--dir", "-d", help="Diretório do projeto a ser analisado (padrão: diretório atual).")
+    _j(j)
+    j = _sc(js, "sync-issues", "Sincroniza arquivos de prompts com o GitHub Issues de forma idempotente.", ["issues", "sync"])
+    j.add_argument("path", nargs="?", default=".amb/prompts", help="Diretório de prompts a sincronizar (padrão: .amb/prompts).")
+    j.add_argument("--dry-run", action="store_true", help="Simula a sincronização sem criar issues no GitHub.")
     _j(j)
 
     p = _c("stitch", "Comandos de integração com o Google Stitch SDK.", cmd_stitch)

@@ -12,11 +12,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.bootstrap import ensure_amb_env
 ensure_amb_env()
-from workspace import find_repo_root
+from workspace.project_context import find_repo_root
 from integrations.git.git_core.gh_cli import (
     is_gh_installed, check_gh_auth, list_open_prs, get_latest_open_pr,
     get_pr_legacy, create_pr_legacy, mark_pr_ready, approve_pr,
-    merge_pr_legacy, close_pr
+    merge_pr_legacy, close_pr, list_issues, get_issue, create_issue, close_issue
 )
 
 class GitService:
@@ -240,3 +240,20 @@ class GitService:
     def close_pr(self, pr_number: int, comment: Optional[str] = None, delete_branch: bool = False, repo_name: Optional[str] = None) -> bool:
         """Close pr method."""
         return close_pr(pr_number, comment, delete_branch, repo_name)
+
+    def list_issues(self, state: str = "open", labels: Optional[List[str]] = None, limit: int = 50, repo_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List issues via GitHub CLI."""
+        return list_issues(state=state, labels=labels, limit=limit, repo_name=repo_name or self.detect_github_repo(), cwd=self.repo_root)
+
+    def get_issue(self, issue_number: int, repo_name: Optional[str] = None) -> Dict[str, Any]:
+        """Get issue details via GitHub CLI."""
+        return get_issue(issue_number=issue_number, repo_name=repo_name or self.detect_github_repo(), cwd=self.repo_root)
+
+    def create_issue(self, title: str, body: str, labels: Optional[List[str]] = None, repo_name: Optional[str] = None) -> Dict[str, Any]:
+        """Create issue via GitHub CLI."""
+        return create_issue(title=title, body=body, labels=labels, repo_name=repo_name or self.detect_github_repo(), cwd=self.repo_root)
+
+    def close_issue(self, issue_number: int, comment: Optional[str] = None, repo_name: Optional[str] = None) -> bool:
+        """Close issue via GitHub CLI."""
+        return close_issue(issue_number=issue_number, comment=comment, repo_name=repo_name or self.detect_github_repo(), cwd=self.repo_root)
+

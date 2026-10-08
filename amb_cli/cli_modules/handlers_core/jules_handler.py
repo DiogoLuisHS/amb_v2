@@ -134,6 +134,26 @@ def handle_cmd_jules(args: Any) -> None:
             as_json=getattr(args, "json", False)
         )
 
+    elif sub in ["sync-issues", "issues", "sync"]:
+        from workspace.issue_synchronizer import IssueSynchronizer
+        target_path = getattr(args, "path", ".amb/prompts")
+        syncer = IssueSynchronizer()
+        dry_run = getattr(args, "dry_run", False)
+        print(f"\n{Colors.BOLD}{Colors.CYAN}📋 SINCRONIZAÇÃO DE PROMPTS COM GITHUB ISSUES{Colors.RESET}")
+        print(f"📁 Diretório: {target_path} {'[DRY RUN]' if dry_run else ''}\n")
+        queue = syncer.sync_prompts(target_path, dry_run=dry_run)
+        if getattr(args, "json", False):
+            print(json.dumps(queue, indent=2, ensure_ascii=False, default=str))
+        else:
+            if not queue:
+                log_error("SYNC", f"Nenhum arquivo markdown encontrado em '{target_path}'.")
+                return
+            for s in queue:
+                st = f"{Colors.GREEN}[Criada]#{s['issue_number']}{Colors.RESET}" if s.get("is_new") else f"{Colors.YELLOW}[Reaproveitada]#{s['issue_number']}{Colors.RESET}"
+                print(f"  ✔ {st} {s['title']} ({s['file_name']})")
+            print(f"\nTotal: {Colors.BOLD}{len(queue)}{Colors.RESET} prompts sincronizados.")
+
     else:
         print("Subcomando do Jules inválido. Use 'amb jules --help'.")
+
 
