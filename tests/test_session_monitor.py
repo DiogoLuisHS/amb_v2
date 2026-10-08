@@ -92,3 +92,46 @@ def test_poll_until_terminal_transient_error(mock_client):
 
     assert final_state == SessionState.COMPLETED
     assert mock_client.get_session.call_count == 3
+
+
+def test_session_state_extract_metrics():
+    sess_data = {
+        "id": "12345",
+        "state": "COMPLETED",
+        "outputs": [
+            {
+                "pullRequest": {"url": "https://github.com/org/repo/pull/10", "number": 10},
+                "changeSet": {
+                    "filesChanged": ["app.py", "test_app.py"],
+                    "gitPatch": {
+                        "unidiffPatch": "--- a/app.py\n+++ b/app.py\n+line1\n+line2\n-old_line\n"
+                    }
+                }
+            }
+        ]
+    }
+    metrics = SessionState.extract_metrics(sess_data, duration_seconds=42.5)
+    assert metrics["session_id"] == "12345"
+    assert metrics["state"] == "COMPLETED"
+    assert metrics["runtime"] == 42.5
+    assert metrics["files_changed"] == 2
+    assert metrics["lines_added"] == 2
+    assert metrics["lines_removed"] == 1
+    assert metrics["pr_url"] == "https://github.com/org/repo/pull/10"
+
+
+def test_poll_until_terminal_records_telemetry(mock_client):
+    mock_client.get_session.side_effect = [
+        {"state": "IN_PROGRESS"},
+        {"state": "COMPLETED", "id": "sess_99", "outputs": [{"changeSet": {"filesChanged": ["a.py"]}}]}
+    ]
+    monitor = SessionMonitor(client=mock_client, session_id="session/sess_99")
+    with patch("time.sleep", return_value=None), \
+         patch("core.local_telemetry.LocalTelemetry.record_session_metrics") as mock_record:
+        final_state, data = monitor.poll_until_terminal(interval_seconds=0)
+        assert final_state == SessionState.COMPLETED
+        mock_record.assert_called_once()
+        call_kwargs = mock_record.call_args.kwargs
+        assert call_kwargs["session_id"] == "session/sess_99"
+        assert call_kwargs["files_changed"] == 1
+

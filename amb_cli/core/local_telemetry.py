@@ -41,6 +41,26 @@ class LocalTelemetry:
         cls.record_event("SESSION_COMPLETED", {"duration": duration_seconds})
 
     @classmethod
+    def record_session_metrics(
+        cls,
+        session_id: str,
+        runtime: float,
+        files_changed: int = 0,
+        lines_added: int = 0,
+        lines_removed: int = 0,
+        pr_url: Optional[str] = None
+    ) -> None:
+        """Registra métricas ricas de encerramento da sessão."""
+        cls.record_event("SESSION_COMPLETED", {
+            "session_id": session_id,
+            "duration": runtime,
+            "files_changed": files_changed,
+            "lines_added": lines_added,
+            "lines_removed": lines_removed,
+            "pr_url": pr_url,
+        })
+
+    @classmethod
     def record_qa(cls, success: bool) -> None:
         cls.record_event("QA_RUN", {"success": success})
 
@@ -60,6 +80,9 @@ class LocalTelemetry:
         qa_runs = 0
         qa_successes = 0
         total_prs = 0
+        total_files_changed = 0
+        total_lines_added = 0
+        total_lines_removed = 0
 
         with cls._lock:
             try:
@@ -76,6 +99,11 @@ class LocalTelemetry:
                             if etype == "SESSION_COMPLETED":
                                 total_sessions += 1
                                 total_duration += data.get("duration", 0.0)
+                                total_files_changed += data.get("files_changed", 0)
+                                total_lines_added += data.get("lines_added", 0)
+                                total_lines_removed += data.get("lines_removed", 0)
+                                if data.get("pr_url"):
+                                    total_prs += 1
                             elif etype == "QA_RUN":
                                 qa_runs += 1
                                 if data.get("success"):
@@ -94,7 +122,10 @@ class LocalTelemetry:
             "total_sessions": total_sessions,
             "qa_success_rate": round(qa_success_rate, 2),
             "total_prs": total_prs,
-            "avg_duration_seconds": round(avg_duration, 2)
+            "avg_duration_seconds": round(avg_duration, 2),
+            "total_files_changed": total_files_changed,
+            "total_lines_added": total_lines_added,
+            "total_lines_removed": total_lines_removed,
         }
 
     @staticmethod
@@ -103,5 +134,9 @@ class LocalTelemetry:
             "total_sessions": 0,
             "qa_success_rate": 0.0,
             "total_prs": 0,
-            "avg_duration_seconds": 0.0
+            "avg_duration_seconds": 0.0,
+            "total_files_changed": 0,
+            "total_lines_added": 0,
+            "total_lines_removed": 0,
         }
+

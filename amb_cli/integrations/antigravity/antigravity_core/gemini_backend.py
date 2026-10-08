@@ -15,7 +15,8 @@ class GeminiBackend:
         model: str,
         system_instruction: Optional[str] = None,
         temperature: float = 0.2,
-        max_output_tokens: int = 8192
+        max_output_tokens: int = 8192,
+        image_path: Optional[str] = None,
     ) -> str:
         """Executa chamada direta à REST API do Google Gemini com retry e fallback inteligente."""
         if not self.api_key:
@@ -27,13 +28,34 @@ class GeminiBackend:
             if fallback_m not in models_to_try:
                 models_to_try.append(fallback_m)
 
+        # Monta parts com texto e imagem multimodal se fornecida
+        parts = [{"text": prompt}]
+        if image_path:
+            import base64
+            import os
+            if os.path.exists(image_path):
+                ext = os.path.splitext(image_path)[1].lower()
+                mime = "image/png"
+                if ext in [".jpg", ".jpeg"]:
+                    mime = "image/jpeg"
+                elif ext == ".webp":
+                    mime = "image/webp"
+                with open(image_path, "rb") as f_img:
+                    b64_data = base64.b64encode(f_img.read()).decode("utf-8")
+                parts.append({
+                    "inlineData": {
+                        "mimeType": mime,
+                        "data": b64_data
+                    }
+                })
+
         last_err = None
         for current_m in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_m}:generateContent"
             payload = {
                 "contents": [
                     {
-                        "parts": [{"text": prompt}]
+                        "parts": parts
                     }
                 ],
                 "generationConfig": {

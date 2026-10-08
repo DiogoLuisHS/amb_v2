@@ -19,5 +19,7 @@ def handle_cmd_stats(args: Any) -> None:
     print(f"{Colors.BOLD}QA Success Rate:{Colors.RESET}          {Colors.GREEN}{metrics['qa_success_rate']}%{Colors.RESET}")
     print(f"{Colors.BOLD}Total PRs Integrated:{Colors.RESET}     {Colors.GREEN}{metrics['total_prs']}{Colors.RESET}")
     print(f"{Colors.BOLD}Avg Cycle Duration:{Colors.RESET}       {Colors.GREEN}{metrics['avg_duration_seconds']}s{Colors.RESET}")
+    print(f"{Colors.BOLD}Files Changed:{Colors.RESET}            {Colors.GREEN}{metrics.get('total_files_changed', 0)}{Colors.RESET}")
+    print(f"{Colors.BOLD}Lines (+ / -):{Colors.RESET}            {Colors.GREEN}+{metrics.get('total_lines_added', 0)}{Colors.RESET} / {Colors.RED}-{metrics.get('total_lines_removed', 0)}{Colors.RESET}")
 
     print(f"{Colors.BLUE}{'=' * 40}{Colors.RESET}\n")

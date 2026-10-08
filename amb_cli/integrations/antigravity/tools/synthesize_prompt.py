@@ -22,10 +22,11 @@ from integrations.antigravity.antigravity_client import synthesize_prompt
 def run_synthesize_prompt(
     raw_idea: str,
     role: str = "general",
-    output_file: Optional[str] = None
+    output_file: Optional[str] = None,
+    image_path: Optional[str] = None,
 ) -> str:
     """Executa a síntese de prompt e opcionalmente grava no arquivo de destino."""
-    res = synthesize_prompt(raw_idea=raw_idea, role=role)
+    res = synthesize_prompt(raw_idea=raw_idea, role=role, image_path=image_path)
     if output_file:
         out_abs = os.path.abspath(output_file)
         os.makedirs(os.path.dirname(out_abs), exist_ok=True)
@@ -39,6 +40,7 @@ def main():
     p = argparse.ArgumentParser(description="Sintetiza um prompt formal para execução autônoma via IA.")
     p.add_argument("--idea", "-i", required=True, help="Ideia informal ou requisito a sintetizar.")
     p.add_argument("--role", "-r", default="general", help="Especialidade ou papel do agente (padrão: general).")
+    p.add_argument("--image", "-m", help="Caminho do mockup visual (PNG/JPEG/WEBP) para síntese multimodal.")
     p.add_argument("--output", "-o", help="Caminho do arquivo markdown de saída.")
     args = p.parse_args()
 
@@ -46,7 +48,8 @@ def main():
         res = run_synthesize_prompt(
             raw_idea=args.idea,
             role=args.role,
-            output_file=args.output
+            output_file=args.output,
+            image_path=args.image,
         )
         if not args.output:
             print(res)

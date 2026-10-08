@@ -68,6 +68,20 @@ class SessionMonitor:
 
                 # 6. Checar Terminação
                 if current_state.is_terminal():
+                    runtime = time.time() - start_time
+                    metrics = SessionState.extract_metrics(session_data, duration_seconds=runtime)
+                    try:
+                        from core.local_telemetry import LocalTelemetry
+                        LocalTelemetry.record_session_metrics(
+                            session_id=self.session_id,
+                            runtime=metrics.get("runtime", runtime),
+                            files_changed=metrics.get("files_changed", 0),
+                            lines_added=metrics.get("lines_added", 0),
+                            lines_removed=metrics.get("lines_removed", 0),
+                            pr_url=metrics.get("pr_url"),
+                        )
+                    except Exception as tel_err:
+                        log_error("SESSION-MONITOR", f"Falha ao registrar telemetria da sessão: {tel_err}")
                     return current_state, session_data
 
             except Exception as e:

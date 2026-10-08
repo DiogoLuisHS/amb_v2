@@ -67,11 +67,20 @@ class AntigravityClient:
         except Exception: pass
         return None
 
-    def generate_text(self, prompt: str, system_instruction: Optional[str] = None, temperature: float = 0.2, max_output_tokens: int = 8192) -> str:
+    def generate_text(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.2,
+        max_output_tokens: int = 8192,
+        image_path: Optional[str] = None,
+    ) -> str:
         if self.api_key:
             self.backend.api_key = self.api_key
             try:
-                return self.backend._generate_via_gemini_api(prompt, self.model, system_instruction, temperature, max_output_tokens)
+                return self.backend._generate_via_gemini_api(
+                    prompt, self.model, system_instruction, temperature, max_output_tokens, image_path=image_path
+                )
             except Exception as e:
                 log("ANTIGRAVITY", f"Chamada REST indisponível ({e}). Tentando CLI agy...", Colors.YELLOW)
                 cli_out = self._generate_via_agy_cli(prompt, system_instruction)
@@ -80,21 +89,51 @@ class AntigravityClient:
         cli_out = self._generate_via_agy_cli(prompt, system_instruction)
         if cli_out: return cli_out
         self.backend.api_key = self.api_key
-        return self.backend._generate_via_gemini_api(prompt, self.model, system_instruction, temperature, max_output_tokens)
+        return self.backend._generate_via_gemini_api(
+            prompt, self.model, system_instruction, temperature, max_output_tokens, image_path=image_path
+        )
 
     def generate_content(self, prompt: str, system_instruction: Optional[str] = None, json_mode: bool = False) -> str:
         return self.generate_text(prompt=prompt, system_instruction=system_instruction, temperature=0.0 if json_mode else 0.2)
 
-    def synthesize_prompt(self, base_prompt: str = "", task_type: str = "feature", rules_dir: Optional[str] = None, include_context: bool = True, **kwargs) -> str:
-        raw_idea, role, rules_context = kwargs.get("raw_idea", base_prompt), kwargs.get("role", task_type), kwargs.get("rules_context", rules_dir)
+    def synthesize_prompt(
+        self,
+        base_prompt: str = "",
+        task_type: str = "feature",
+        rules_dir: Optional[str] = None,
+        include_context: bool = True,
+        image_path: Optional[str] = None,
+        **kwargs
+    ) -> str:
+        raw_idea = kwargs.get("raw_idea", base_prompt)
+        role = kwargs.get("role", task_type)
+        rules_context = kwargs.get("rules_context", rules_dir)
         active_rules = rules_context if rules_context is not None else get_rules_manager().load_rules()
-        sys_inst = "Você é o Arquiteto de Software Principal e Coordenador Técnico. Gere um prompt executivo rigoroso, definindo critérios de aceitação, SRP e stack."
-        prompt = f'Ideia:\n"{raw_idea}"\nPapel: {role}\nDiretrizes:\n{active_rules or "SRP, tipagem rigorosa, testes, 0 quebras."}\nGere o prompt final.'
+
+        if image_path:
+            sys_inst = (
+                "Você é o Arquiteto de Software Principal e Especialista em UI/UX do Google Jules. "
+                "Analise minuciosamente o mockup visual fornecido (componentes, hierarquia, paleta de cores, layout responsivo e interações) "
+                "e a descrição textual da funcionalidade. Gere um prompt executivo rigoroso detalhando a implementação da UI."
+            )
+            prompt = (
+                f'Ideia/Requisito Visual:\n"{raw_idea or "Implementar a interface conforme o mockup visual anexo."}"\n'
+                f'Papel: {role}\n'
+                f'Imagem de Referência: {image_path}\n'
+                f'Diretrizes Arquiteturais:\n{active_rules or "SRP, tipagem rigorosa, fidelidade visual, testes, design system."}\n'
+                'Gere o prompt executivo final para o Jules contendo: 1. Visão Geral; 2. Especificação de Componentes e Estilos; 3. Comportamento e Estados; 4. Critérios de Aceitação.'
+            )
+        else:
+            sys_inst = "Você é o Arquiteto de Software Principal e Coordenador Técnico. Gere um prompt executivo rigoroso, definindo critérios de aceitação, SRP e stack."
+            prompt = f'Ideia:\n"{raw_idea}"\nPapel: {role}\nDiretrizes:\n{active_rules or "SRP, tipagem rigorosa, testes, 0 quebras."}\nGere o prompt final.'
+
         try:
-            return self.generate_text(prompt=prompt, system_instruction=sys_inst)
+            return self.generate_text(prompt=prompt, system_instruction=sys_inst, image_path=image_path)
         except Exception as e:
             log("ANTIGRAVITY", f"Aviso: Síntese via IA indisponível ({e}). Usando template...", Colors.YELLOW)
-            return f"# 🎯 ESCOPO TÉCNICO EXECUTIVO\n\n## 📌 Contexto\n{raw_idea}\n\n## 📐 Diretrizes\n- SRP, Tipagem, Qualidade.\n\n{active_rules}\n"
+            img_sec = f"\n\n## 🖼️ Referência Visual\nMockup fornecido: `{image_path}`\n" if image_path else ""
+            return f"# 🎯 ESCOPO TÉCNICO EXECUTIVO\n\n## 📌 Contexto\n{raw_idea or 'Interface baseada em mockup visual'}{img_sec}\n\n## 📐 Diretrizes\n- SRP, Tipagem, Qualidade.\n\n{active_rules}\n"
+
 
     def validate_code(self, file_path: str, rules_context: Optional[str] = None) -> str:
         """Audita o código contra regras arquiteturais."""
@@ -158,8 +197,15 @@ class AntigravityClient:
             "rules_count": len(r_list), "rules": [r["name"] for r in r_list]
         }
 
-def synthesize_prompt(raw_idea: str, role: str = "general", rules_context: Optional[str] = None) -> str:
-    return AntigravityClient().synthesize_prompt(raw_idea, role=role, rules_context=rules_context)
+def synthesize_prompt(
+    raw_idea: str,
+    role: str = "general",
+    rules_context: Optional[str] = None,
+    image_path: Optional[str] = None,
+) -> str:
+    return AntigravityClient().synthesize_prompt(
+        raw_idea=raw_idea, role=role, rules_context=rules_context, image_path=image_path
+    )
 
 def validate_code(file_path: str, rules_context: Optional[str] = None) -> str:
     return AntigravityClient().validate_code(file_path, rules_context=rules_context)

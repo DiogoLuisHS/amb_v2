@@ -29,16 +29,25 @@ def test_get_summary_metrics_empty(temp_telemetry_file):
         "total_sessions": 0,
         "qa_success_rate": 0.0,
         "total_prs": 0,
-        "avg_duration_seconds": 0.0
+        "avg_duration_seconds": 0.0,
+        "total_files_changed": 0,
+        "total_lines_added": 0,
+        "total_lines_removed": 0,
     }
 
 def test_get_summary_metrics_with_data(temp_telemetry_file):
     LocalTelemetry.record_session(120.5)
-    LocalTelemetry.record_session(80.0)
+    LocalTelemetry.record_session_metrics(
+        session_id="sess_123",
+        runtime=80.0,
+        files_changed=5,
+        lines_added=150,
+        lines_removed=30,
+        pr_url="https://github.com/pr/1",
+    )
     LocalTelemetry.record_qa(True)
     LocalTelemetry.record_qa(False)
     LocalTelemetry.record_qa(True)
-    LocalTelemetry.record_merge("https://github.com/pr/1")
     LocalTelemetry.record_merge("https://github.com/pr/2")
 
     metrics = LocalTelemetry.get_summary_metrics()
@@ -47,6 +56,9 @@ def test_get_summary_metrics_with_data(temp_telemetry_file):
     assert metrics["avg_duration_seconds"] == 100.25
     assert metrics["qa_success_rate"] == 66.67
     assert metrics["total_prs"] == 2
+    assert metrics["total_files_changed"] == 5
+    assert metrics["total_lines_added"] == 150
+    assert metrics["total_lines_removed"] == 30
 
 def test_get_summary_metrics_malformed_data(temp_telemetry_file):
     with open(temp_telemetry_file, "w") as f:
@@ -69,5 +81,8 @@ def test_get_summary_metrics_non_existent_file(tmp_path):
             "total_sessions": 0,
             "qa_success_rate": 0.0,
             "total_prs": 0,
-            "avg_duration_seconds": 0.0
+            "avg_duration_seconds": 0.0,
+            "total_files_changed": 0,
+            "total_lines_added": 0,
+            "total_lines_removed": 0,
         }
