@@ -1,6 +1,6 @@
 import subprocess
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Dict, Any
 from core.exceptions import AmbError
 
 class SessionExtractor:
@@ -14,6 +14,25 @@ class SessionExtractor:
             msg = out.get("changeSet", {}).get("gitPatch", {}).get("suggestedCommitMessage")
             if msg:
                 return str(msg).strip()
+        return None
+
+    @staticmethod
+    def extract_failure_reason(activities: Optional[List[Dict[str, Any]]]) -> Optional[str]:
+        """Extrai o motivo de falha (reason) a partir dos eventos sessionFailed das atividades."""
+        if not activities:
+            return None
+
+        # Percorrer em ordem reversa para encontrar a falha mais recente
+        for act in reversed(activities):
+            if not isinstance(act, dict):
+                continue
+            session_failed = act.get("sessionFailed", {})
+            if not isinstance(session_failed, dict):
+                continue
+            reason = session_failed.get("reason")
+            if reason and isinstance(reason, str):
+                return reason.strip()
+
         return None
 
     @staticmethod
