@@ -3,7 +3,7 @@ import os
 import threading
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from workspace.project_context import find_repo_root
 
