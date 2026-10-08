@@ -131,6 +131,11 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 * **Conceito:** Suporte a artefatos do tipo `media` (`mimeType`, `data` em base64) retornados nas atividades do Jules.
 * **Funcionalidade:** Decodificação de arquivos de imagem, vídeo ou diagramas gerados pelo Jules na nuvem, salvando-os de forma estruturada em `.amb/artifacts/` para integração com telas do Stitch e inspeção visual no terminal.
 
+### 3.16. Inspeção de Diff da Sessão no Terminal (`amb jules diff <id>`)
+* **Status:** ⏳ *Em Backlog*.
+* **Conceito:** Renderização direta de patches e diffs de alterações de código geradas pelo Jules na nuvem, formatados com sintaxe colorida unificada no terminal.
+* **Funcionalidade:** Permite realizar code review rápido e direto no terminal estilo `git diff` ou `gh pr diff`, sem necessidade de abrir a interface web (`jules.google.com/session/<id>`) nem aplicar patches locais em disco antes de decidir pela aprovação ou merge.
+
 ---
 
 ## 🔵 4. WON'T HAVE — Fora de Escopo Desta Fase
