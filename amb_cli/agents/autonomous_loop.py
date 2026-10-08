@@ -60,6 +60,7 @@ def run_autonomous_loop(
     branch: Optional[str] = None,
     no_auto_merge: bool = False,
     use_issues: bool = False,
+    concurrency: int = 1,
 ) -> None:
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para personas, prompts ou issues."""
     repo_name = get_repo_name()
@@ -101,7 +102,8 @@ def run_autonomous_loop(
         print(f"🤖 Personas no Ciclo ({len(items_to_run)}): {Colors.BOLD}{', '.join([it['name'] for it in items_to_run])}{Colors.RESET}")
     if modules and modules != [""]:
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
-    print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}\n")
+    print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}")
+    print(f"🔀 Nível de Concorrência: {concurrency}\n")
 
     completed_cycles = 0
 
@@ -110,14 +112,15 @@ def run_autonomous_loop(
 
         print(f"\n🔄 {Colors.BOLD}CICLO #{completed_cycles} DE {max_cycles if max_cycles else '∞'}{Colors.RESET}\n")
 
-        for item_idx, item in enumerate(items_to_run, 1):
-            current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
-            item_name = item["name"]
+        current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
 
+        # Preparar prompts para todos os itens primeiro
+        prepared_items = []
+        for item in items_to_run:
+            item_name = item["name"]
             if item["type"] == "issue":
                 iss_num = item["issue_number"]
                 iss_title = item["title"]
-                print(f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Issue #{iss_num}: {Colors.BOLD}{iss_title}{Colors.RESET}")
                 task_content = (
                     f"## 🎯 GitHub Issue #{iss_num}: {iss_title}\n"
                     f"URL da Tarefa: {item.get('url', '')}\n\n"
@@ -131,18 +134,11 @@ def run_autonomous_loop(
                 full_prompt = build_ai_context(task_content, None, stem_name)
             elif item["type"] == "prompt":
                 p_path: Path = item["path"]
-                print(
-                    f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Prompt: {Colors.BOLD}{item_name}{Colors.RESET}"
-                )
                 base_prompt = item.get("content") or p_path.read_text(encoding="utf-8", errors="replace")
                 title = f"Task: {p_path.stem.replace('_', ' ').title()}"
                 session_title = f"{title} - Ciclo #{completed_cycles}"
                 full_prompt = build_ai_context(base_prompt, None, p_path.stem)
             else:
-                print(
-                    f"\n📦 [{item_idx}/{len(items_to_run)}] Executando Persona: {Colors.BOLD}{item_name.upper()}{Colors.RESET}"
-                    + (f" - Módulo: [{current_module}]" if current_module else "")
-                )
                 title, base_prompt = load_persona_content(item_name)
                 if current_module:
                     full_prompt = (
@@ -155,51 +151,90 @@ def run_autonomous_loop(
                     full_prompt = base_prompt
                 full_prompt = build_ai_context(full_prompt, current_module, item_name)
 
-            # Despacho no Jules
+            item["_full_prompt"] = full_prompt
+            item["_session_title"] = session_title
+            prepared_items.append(item)
+
+        if concurrency > 1:
+            from agents.loop_core.concurrent_runner import ConcurrentLoopRunner
+            runner = ConcurrentLoopRunner(
+                items=prepared_items,
+                max_concurrency=concurrency,
+                client=client,
+                branch=branch,
+                repo_root=repo_root,
+                source_name=source_name,
+                completed_cycles=completed_cycles,
+                syncer=syncer,
+                no_auto_merge=no_auto_merge
+            )
             try:
-                session_id = dispatch_jules_session(
-                    client, full_prompt, source_name, session_title, branch
-                )
-
-                # Monitoramento + Auto-Resposta
-                state = monitor_and_assist_session(
-                    client=client, session_id=session_id, auto_reply_ai=True
-                )
-
-                # Aprovação e Integração do PR no Git
-                if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
-                    merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
-                    if not merged:
-                        log_error(
-                            "LOOP",
-                            f"Integração obrigatória do item '{item_name}' na branch '{branch}' falhou. "
-                            f"Interrompendo a esteira para garantir a integridade da branch principal.",
-                        )
-                        return
-                    if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
-                        syncer.close_issue(
-                            item["issue_number"],
-                            comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles})."
-                        )
-                        log("ISSUE", f"✔ GitHub Issue #{item['issue_number']} encerrada com sucesso!", Colors.GREEN)
-                elif state not in ["COMPLETED", "SUCCEEDED"]:
-                    log_error(
-                        "LOOP",
-                        f"A sessão Jules ({session_id}) do item '{item_name}' encerrou sem sucesso (Estado: {state}). "
-                        f"Interrompendo a esteira para evitar regressões.",
-                    )
+                success = runner.run()
+                if not success:
+                    log_error("LOOP", "Um ou mais itens falharam durante a execução concorrente. Interrompendo a esteira.")
                     return
-
             except KeyboardInterrupt:
                 print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
                 return
-            except Exception as e:
-                log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
-                return
+        else:
+            for item_idx, item in enumerate(prepared_items, 1):
+                item_name = item["name"]
 
-            if delay_between_cycles > 0 and len(items_to_run) > 1:
-                log("LOOP", f"Pausa de {delay_between_cycles}s antes do próximo item...", Colors.DIM)
-                time.sleep(delay_between_cycles)
+                if item["type"] == "issue":
+                    print(f"\n📦 [{item_idx}/{len(prepared_items)}] Executando Issue #{item['issue_number']}: {Colors.BOLD}{item['title']}{Colors.RESET}")
+                elif item["type"] == "prompt":
+                    print(f"\n📦 [{item_idx}/{len(prepared_items)}] Executando Prompt: {Colors.BOLD}{item_name}{Colors.RESET}")
+                else:
+                    print(
+                        f"\n📦 [{item_idx}/{len(prepared_items)}] Executando Persona: {Colors.BOLD}{item_name.upper()}{Colors.RESET}"
+                        + (f" - Módulo: [{current_module}]" if current_module else "")
+                    )
+
+                # Despacho no Jules
+                try:
+                    session_id = dispatch_jules_session(
+                        client, item["_full_prompt"], source_name, item["_session_title"], branch
+                    )
+
+                    # Monitoramento + Auto-Resposta
+                    state = monitor_and_assist_session(
+                        client=client, session_id=session_id, auto_reply_ai=True
+                    )
+
+                    # Aprovação e Integração do PR no Git
+                    if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
+                        merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
+                        if not merged:
+                            log_error(
+                                "LOOP",
+                                f"Integração obrigatória do item '{item_name}' na branch '{branch}' falhou. "
+                                f"Interrompendo a esteira para garantir a integridade da branch principal.",
+                            )
+                            return
+                        if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
+                            syncer.close_issue(
+                                item["issue_number"],
+                                comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles})."
+                            )
+                            log("ISSUE", f"✔ GitHub Issue #{item['issue_number']} encerrada com sucesso!", Colors.GREEN)
+                    elif state not in ["COMPLETED", "SUCCEEDED"]:
+                        log_error(
+                            "LOOP",
+                            f"A sessão Jules ({session_id}) do item '{item_name}' encerrou sem sucesso (Estado: {state}). "
+                            f"Interrompendo a esteira para evitar regressões.",
+                        )
+                        return
+
+                except KeyboardInterrupt:
+                    print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
+                    return
+                except Exception as e:
+                    log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
+                    return
+
+                if delay_between_cycles > 0 and len(prepared_items) > 1:
+                    log("LOOP", f"Pausa de {delay_between_cycles}s antes do próximo item...", Colors.DIM)
+                    time.sleep(delay_between_cycles)
 
         # Checagem de Limite de Ciclos Globais
         if max_cycles and completed_cycles >= max_cycles:
