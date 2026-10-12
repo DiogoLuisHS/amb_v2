@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install AMB CLI
-        run: pip install -e .
+        run: pip install -e . pytest
 
       - name: Run AMB Validate
         env:
