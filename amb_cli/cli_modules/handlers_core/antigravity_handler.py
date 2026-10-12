@@ -61,10 +61,16 @@ def handle_cmd_antigravity(args: Any) -> None:
                 return
             files_to_check = staged_files
         else:
-            target_file = getattr(args, "file", "")
+            target_file = getattr(args, "file", None)
             if not target_file:
-                print(f"{Colors.RED}Erro: Arquivo não especificado para auditoria.{Colors.RESET}")
-                sys.exit(1)
+                log("VALIDATE", "Nenhum arquivo especificado. Executando validação de integridade do projeto (QA)...", Colors.CYAN)
+                from pipeline.quality_gatekeeper import QualityGatekeeper
+                qa_ok = QualityGatekeeper.run_qa()
+                if getattr(args, "json", False):
+                    print(json.dumps({"status": "SUCCESS" if qa_ok else "FAILED", "qa_passed": qa_ok}, indent=2))
+                if not qa_ok:
+                    sys.exit(1)
+                return
             files_to_check = [target_file]
 
         reports = []

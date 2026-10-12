@@ -53,6 +53,18 @@ def test_validate_staged_clean(mock_run, mock_get_rules_manager, capsys):
     mock_run.assert_not_called()
 
 
+@patch("pipeline.quality_gatekeeper.QualityGatekeeper.run_qa")
+def test_validate_no_file_runs_qa(mock_run_qa, capsys):
+    mock_run_qa.return_value = True
+    args = DummyArgs(agy_cmd="validate", staged=False, file=None, json=True)
+
+    handle_cmd_antigravity(args)
+
+    mock_run_qa.assert_called_once()
+    captured = capsys.readouterr()
+    assert '"qa_passed": true' in captured.out
+
+
 @patch("amb_cli.cli_modules.handlers_core.hooks_handler.find_repo_root")
 def test_hooks_install_creation(mock_find_repo_root, tmp_path, capsys):
     mock_find_repo_root.return_value = str(tmp_path)
