@@ -41,6 +41,7 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("check", "Valida chaves e configurações do projeto ativo.", cmd_check, ["status"])
     p.add_argument("--json", action="store_true", help="Exibe o diagnóstico em formato JSON estruturado.")
     p.add_argument("--verify", "--probe", action="store_true", help="Realiza handshake ativo nas APIs remotas para atestar a validade real das credenciais.")
+    p.add_argument("--fix", action="store_true", help="Corrige automaticamente falhas de segurança (.gitignore) e templates ausentes.")
     p = _c("config", "Configura preferências de IA, quotas e autorizações do AMB_V2.", cmd_config, ["settings", "pref"])
     cs = p.add_subparsers(dest="config_action", help="Ações de configuração")
     cr = _sc(cs, "reload", "Recarrega as configurações em memória (.env e amb_project.json)")
