@@ -25,15 +25,32 @@ def cmd_setup(args: Any) -> None:
 
 
 def cmd_prompt(args: Any) -> None:
-    """Exibe o Prompt Mestre ou sintetiza um prompt com IA a partir de uma ideia informal."""
-    if getattr(args, "synthesize", None):
+    """Sintetiza um prompt com IA a partir de uma ideia informal."""
+    idea = getattr(args, "idea", None) or getattr(args, "synthesize", None)
+    has_image = getattr(args, "image", None) is not None
+
+    if idea or has_image:
         from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
         args.agy_cmd = "prompt"
-        args.idea = args.synthesize
+        args.idea = idea
         handle_cmd_antigravity(args)
+    elif sys.stdin.isatty():
+        try:
+            user_idea = input(f"{Colors.YELLOW}Qual funcionalidade ou ideia deseja sintetizar em prompt? > {Colors.RESET}").strip()
+            if user_idea:
+                from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
+                args.agy_cmd = "prompt"
+                args.idea = user_idea
+                handle_cmd_antigravity(args)
+            else:
+                print(f"{Colors.YELLOW}Nenhuma ideia fornecida. Operação cancelada.{Colors.RESET}")
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{Colors.YELLOW}Operação cancelada pelo usuário.{Colors.RESET}")
     else:
-        from workspace.setup.setup_project import print_setup_prompt
-        print_setup_prompt()
+        print(f"{Colors.BOLD}Uso do comando 'amb prompt':{Colors.RESET}")
+        print(f"  amb prompt \"Criar um dashboard de métricas\"")
+        print(f"  amb prompt --image mockup.png \"Implementar esta tela\"")
+        print(f"\n{Colors.DIM}Dica: O prompt de setup foi movido para 'amb setup --prompt'.{Colors.RESET}")
 
 
 def cmd_check(args: Any) -> None:
