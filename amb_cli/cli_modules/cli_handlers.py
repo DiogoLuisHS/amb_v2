@@ -67,7 +67,7 @@ def cmd_prompt(args: Any) -> None:
 def cmd_check(args: Any) -> None:
     """Verifica e valida as chaves de API e configurações do projeto ativo."""
     from core.diagnostics import run_environment_diagnostics
-    run_environment_diagnostics(as_json=getattr(args, "json", False))
+    run_environment_diagnostics(as_json=getattr(args, "json", False), verify=getattr(args, "verify", False))
 
 
 # -------------------------------------------------------------
