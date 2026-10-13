@@ -20,7 +20,8 @@ def cmd_setup(args: Any) -> None:
             interactive=not args.auto,
             target_dir=getattr(args, "path", None),
             force=getattr(args, "force", False),
-            dry_run=getattr(args, "dry_run", False)
+            dry_run=getattr(args, "dry_run", False),
+            run_check=getattr(args, "check", False)
         )
 
 

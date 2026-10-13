@@ -25,7 +25,8 @@ def run_setup(
     interactive: bool = True,
     target_dir: Optional[str] = None,
     force: bool = False,
-    dry_run: bool = False
+    dry_run: bool = False,
+    run_check: bool = False
 ) -> Dict[str, Any]:
     """Executa o fluxo completo de setup, provisiona .amb/ e salva as configurações."""
     # 1. Determina a raiz alvo de forma determinística (diretório atual ou especificado)
@@ -97,6 +98,10 @@ def run_setup(
         }
         print(f"{Colors.BOLD}{Colors.YELLOW}🔍 MODO SIMULAÇÃO (DRY-RUN) — Nenhuma alteração foi feita no disco:{Colors.RESET}")
         print(json.dumps(preview_data, indent=2, ensure_ascii=False))
+        if run_check:
+            print(f"\n{Colors.BOLD}🔍 Executando diagnóstico integrado pós-setup (Modo Simulação)...{Colors.RESET}\n")
+            from core.diagnostics import run_environment_diagnostics
+            run_environment_diagnostics(as_json=False)
         return preview_data
 
     # 5. Provisionamento da Estrutura .amb/ e Persona Genérica
@@ -180,11 +185,17 @@ def run_setup(
     print(f"🤖 Persona Ativa:     .amb/personas/engineer.md")
     print(f"🛡️  Comandos de QA:    {', '.join([f'{k}: {v}' for k, v in qa_commands.items()]) or 'Nenhum'}")
     print(f"\n👉 Próximos passos recomendados:")
-    print(f"   • Validar ambiente:         {Colors.CYAN}amb check{Colors.RESET}")
+    if not run_check:
+        print(f"   • Validar ambiente:         {Colors.CYAN}amb check{Colors.RESET}")
     print(f"   • Setup VM do Google Jules: {Colors.CYAN}amb jules env{Colors.RESET}")
     print(f"   • Executar agente autônomo: {Colors.CYAN}amb agent --role engineer{Colors.RESET}")
     print(f"   • Desenvolver por lote/dir: {Colors.CYAN}amb agent -p .amb/prompts/{Colors.RESET}")
     print(f"   • Iniciar sentinela:        {Colors.CYAN}amb monitor{Colors.RESET}\n")
+
+    if run_check:
+        print(f"\n{Colors.BOLD}🔍 Executando diagnóstico integrado pós-setup...{Colors.RESET}\n")
+        from core.diagnostics import run_environment_diagnostics
+        run_environment_diagnostics(as_json=False)
 
     return project_data
 
