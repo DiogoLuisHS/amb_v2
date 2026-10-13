@@ -80,7 +80,15 @@ def monitor_and_assist_session(
                 except Exception:
                     pass
 
-                if rejection:
+                if not has_pr:
+                    try:
+                        from integrations.jules.tools.merge_session_pr import detect_pr_from_github
+                        if detect_pr_from_github(session_id):
+                            has_pr = True
+                    except Exception:
+                        pass
+
+                if rejection and not has_pr:
                     log_error("LOOP-MONITOR", f"⚠️ Sessão {session_id} encerrou ({state}), mas auditoria reprovou: {rejection}")
                     return "COMPLETED_WITHOUT_PR"
 

@@ -80,7 +80,9 @@ class SessionExtractor:
             if isinstance(prog, dict):
                 title = (prog.get("title") or "").strip()
                 desc = (prog.get("description") or "").strip()
-                if "Code reviewed" in title or "#Partially Correct#" in desc or "#Incorrect#" in desc:
+                if "#Mostly Correct#" in desc or "#Correct#" in desc:
+                    continue
+                if "#Partially Correct#" in desc or "#Incorrect#" in desc or any(m in desc for m in ["not ready for production", "critical issues", "major regressions"]):
                     lines = [ln.strip() for ln in desc.splitlines() if ln.strip()]
                     summary = lines[0] if lines else title
                     rating = None
