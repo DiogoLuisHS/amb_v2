@@ -31,6 +31,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true", help="Sobrescreve arquivos de template existentes.")
     p.add_argument("--dry-run", action="store_true", help="Simula a execução do setup sem escrever nada no disco.")
     p.add_argument("--prompt", "-p", action="store_true", help="Exibe o Prompt Mestre de Auto-Configuração para colar em IAs.")
+    p.add_argument("--check", "-c", action="store_true", help="Executa o diagnóstico de saúde (amb check) automaticamente ao concluir o setup.")
     p = _c("prompt", "Sintetiza com IA o Prompt de Desenvolvimento a partir de uma ideia.", cmd_prompt)
     p.add_argument("idea", nargs="?", help="Ideia informal a ser estruturada e sintetizada em prompt com IA.")
     p.add_argument("--synthesize", "-s", help="Ideia informal a ser sintetizada em prompt estruturado com IA.")
