@@ -190,13 +190,16 @@ def test_cmd_validate_delegation():
 
 
 def test_cmd_prompt_synthesize_delegation():
-    with patch("cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity") as mock_agy, \
-         patch("amb_cli.cli_modules.handlers_core.antigravity_handler.handle_cmd_antigravity", mock_agy):
+    with patch("integrations.antigravity.tools.synthesize_prompt.run_synthesize_prompt") as mock_run:
         args = argparse.Namespace(synthesize="ideia teste", role="dev")
         cmd_prompt(args)
-        assert args.agy_cmd == "prompt"
-        assert args.idea == "ideia teste"
-        mock_agy.assert_called_once_with(args)
+        mock_run.assert_called_once_with(
+            raw_idea="ideia teste",
+            role="dev",
+            output_file=None,
+            image_path=None,
+            queue=False
+        )
 
 
 def test_cmd_agent_loop_parameters():
