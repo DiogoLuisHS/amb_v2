@@ -78,12 +78,8 @@ def detect_and_create_pr_from_branch(
     try:
         res = subprocess.run(
             ["git", "branch", "-r"],
-            cwd=git._resolve_cwd(),
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding="utf-8",
-            errors="replace"
+            cwd=git._resolve_cwd(), capture_output=True, text=True, check=False,
+            encoding="utf-8", errors="replace"
         )
         if res.returncode == 0:
             for line in res.stdout.splitlines():
@@ -112,20 +108,31 @@ def apply_session_patch(
     git: GitService
 ) -> bool:
     """Aplica o patch unificado da sessão localmente como fallback extremo."""
-    log("GIT-SYNC", "Verificando patches diretos no session outputs...", Colors.CYAN)
+    log("GIT-SYNC", "Verificando patches diretos no session outputs e atividades...", Colors.CYAN)
     client = JulesClient()
     try:
         sess = client.get_session(session_id)
         outputs = sess.get("outputs", [])
-        if not outputs:
-            return False
-        patch_info = outputs[0].get("changeSet", {}).get("gitPatch", {})
-        diff = patch_info.get("unidiffPatch", "")
-        commit_msg = patch_info.get("suggestedCommitMessage", f"chore(jules): integrate session {session_id}")
+        diff = ""
+        commit_msg = f"chore(jules): integrate session {session_id}"
+        if outputs:
+            patch_info = outputs[0].get("changeSet", {}).get("gitPatch", {})
+            diff = patch_info.get("unidiffPatch", "")
+            commit_msg = patch_info.get("suggestedCommitMessage", commit_msg)
+
+        if not diff:
+            acts_res = client.list_activities(session_id=session_id, page_size=50)
+            acts = acts_res.get("activities", []) if isinstance(acts_res, dict) else (acts_res if isinstance(acts_res, list) else [])
+            from integrations.jules.jules_core.session_extractor import SessionExtractor
+            try:
+                diff = SessionExtractor.extract_patch(sess, activities=acts)
+            except Exception:
+                diff = ""
+
         if not diff:
             return False
 
-        log("GIT-SYNC", "Patch detectado no session outputs. Aplicando localmente...", Colors.HEADER)
+        log("GIT-SYNC", "Patch de código detectado. Aplicando localmente...", Colors.HEADER)
         patch_path = os.path.join(repo_root, ".tmp_jules.patch")
         with open(patch_path, "w", encoding="utf-8") as pf:
             pf.write(diff)
@@ -135,7 +142,7 @@ def apply_session_patch(
             for flag in [[], ["-p0"], ["-p1", "--recount"], ["-p0", "--recount"]]:
                 res = subprocess.run(
                     base_cmd + flag + [file_to_apply],
-                    cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False
+                    cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace"
                 )
                 if res.returncode == 0:
                     return res
@@ -157,8 +164,7 @@ def apply_session_patch(
                     open(t_path, "a", encoding="utf-8").close()
                     continue
                 p_part = os.path.join(repo_root, f".tmp_{p_idx}.patch")
-                with open(p_part, "w", encoding="utf-8") as ppf:
-                    ppf.write(single_p)
+                Path(p_part).write_text(single_p, encoding="utf-8", errors="replace")
                 p_res = _exec_git_apply(p_part)
                 if os.path.exists(p_part):
                     os.remove(p_part)
@@ -234,10 +240,7 @@ def approve_and_merge_pr(
         log("GIT-SYNC", "Nenhum Pull Request aberto pela sessão (sessão diagnóstica/informativa sem alterações de código).", Colors.DIM)
         return False
 
-    print("\n" + "=" * 75)
-    print(f"🔀 {Colors.BOLD}INTEGRAÇÃO CONTÍNUA: PULL REQUEST #{resolved_pr}{Colors.RESET}")
-    print(f"📁 Repositório: {repo_name} ➔ Branch: {target_branch}")
-    print("=" * 75 + "\n")
+    print(f"\n{'=' * 75}\n🔀 {Colors.BOLD}INTEGRAÇÃO CONTÍNUA: PULL REQUEST #{resolved_pr}{Colors.RESET}\n📁 Repositório: {repo_name} ➔ Branch: {target_branch}\n{'=' * 75}\n")
 
     # 3. Marca como Pronto (caso o Jules tenha deixado o PR como Draft / Publish PR)
     git.mark_pr_ready(resolved_pr, repo_name=repo_name)
@@ -268,29 +271,25 @@ def approve_and_merge_pr(
         log_error("QA", "A suíte de testes e validação local falhou após o merge.")
         return False
 
-    print("\n" + "=" * 75)
-    print(f"🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}")
-    print("=" * 75 + "\n")
+    print(f"\n{'=' * 75}\n🎉 {Colors.BOLD}{Colors.GREEN}CÓDIGO INTEGRADO E VALIDADO COM SUCESSO!{Colors.RESET}\n{'=' * 75}\n")
     return True
 
 # Alias canônico de serviço para desacoplamento de handlers e testes (F1-M7)
 run_merge_session_pr = approve_and_merge_pr
 
 def main():
-    parser = argparse.ArgumentParser(description="Aprovação e Merge Automático de PRs do Jules no Git (AMB_V2)")
-    parser.add_argument("--session-id", "-s", help="ID da sessão Jules para extrair o PR.")
-    parser.add_argument("--pr", "-p", type=int, help="Número específico do Pull Request (ex: 15).")
-    parser.add_argument("--auto-latest", "-a", action="store_true", help="Detecta e mescla o último PR aberto no repositório.")
-    parser.add_argument("--branch", "-b", default="main", help="Branch de destino (Padrão: main).")
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(description="Aprovação e Merge Automático de PRs do Jules no Git (AMB_V2)")
+    p.add_argument("--session-id", "-s", help="ID da sessão Jules para extrair o PR.")
+    p.add_argument("--pr", "-p", type=int, help="Número específico do Pull Request (ex: 15).")
+    p.add_argument("--auto-latest", "-a", action="store_true", help="Detecta e mescla o último PR aberto.")
+    p.add_argument("--branch", "-b", default="main", help="Branch de destino (Padrão: main).")
+    args = p.parse_args()
 
-    success = approve_and_merge_pr(
-        session_id=args.session_id,
-        pr_number=args.pr,
-        auto_latest=args.auto_latest or (not args.session_id and not args.pr),
-        target_branch=args.branch
+    ok = approve_and_merge_pr(
+        session_id=args.session_id, pr_number=args.pr,
+        auto_latest=args.auto_latest or (not args.session_id and not args.pr), target_branch=args.branch
     )
-    sys.exit(0 if success else 1)
+    sys.exit(0 if ok else 1)
 
 if __name__ == "__main__":
     main()

@@ -193,19 +193,11 @@ def run_autonomous_loop(
 
                     # Monitoramento + Auto-Resposta
                     state = monitor_and_assist_session(
-                        client=client, session_id=session_id, auto_reply_ai=True
+                        client=client, session_id=session_id, auto_reply_ai=True, require_pr=not no_auto_merge
                     )
 
-                    # Aprovação e Integração do PR no Git com QA
+                    # Aprovação e Integração do PR no Git com QA pós-merge
                     if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
-                        from pipeline.quality_gatekeeper import QualityGatekeeper
-                        if not QualityGatekeeper.run_qa(repo_root):
-                            log_error(
-                                "LOOP",
-                                f"QA local falhou para o item '{item_name}'. "
-                                f"Interrompendo a esteira para garantir a integridade da branch principal.",
-                            )
-                            return
                         merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
                         if not merged:
                             log_error(
@@ -220,6 +212,13 @@ def run_autonomous_loop(
                                 comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles})."
                             )
                             log("ISSUE", f"✔ GitHub Issue #{item['issue_number']} encerrada com sucesso!", Colors.GREEN)
+                    elif state == "COMPLETED_WITHOUT_PR":
+                        log_error(
+                            "LOOP",
+                            f"A sessão Jules ({session_id}) do item '{item_name}' encerrou sem abrir Pull Request nem gerar alterações válidas. "
+                            f"Interrompendo a esteira para evitar regressões.",
+                        )
+                        return
                     elif state not in ["COMPLETED", "SUCCEEDED"]:
                         log_error(
                             "LOOP",

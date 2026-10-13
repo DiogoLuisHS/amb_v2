@@ -22,7 +22,12 @@ POST_ACTION_INTERVAL_SECONDS = 3
 
 
 def monitor_and_assist_session(
-    client: JulesClient, session_id: str, auto_reply_ai: bool = True, quiet: bool = False
+    client: JulesClient,
+    session_id: str,
+    auto_reply_ai: bool = True,
+    quiet: bool = False,
+    require_pr: bool = False,
+    max_wait_seconds: int = 3600
 ) -> str:
     """
     Monitora a sessão no Jules, verificando seu estado.
@@ -31,12 +36,20 @@ def monitor_and_assist_session(
     if not quiet:
         log("LOOP-MONITOR", f"Iniciando monitoramento da sessão {session_id}...", Colors.CYAN)
 
+    start_time = time.time()
+    last_heartbeat_time = time.time()
+    last_warned_loop = False
     last_state = None
     last_answered_agent_msg_id = None
     plan_challenges_count: Dict[str, int] = {}
 
     while True:
         try:
+            now = time.time()
+            if now - start_time > max_wait_seconds:
+                log_error("LOOP-MONITOR", f"Timeout atingido ({max_wait_seconds}s) para sessão {session_id}.")
+                return "TIMEOUT"
+
             session = client.get_session(session_id)
             state = session.get("state", "UNKNOWN")
 
@@ -50,6 +63,32 @@ def monitor_and_assist_session(
                 last_state = state
 
             if state in ["COMPLETED", "SUCCEEDED", "CLOSED"]:
+                outputs = session.get("outputs", [])
+                has_pr = any(bool(o.get("pullRequest")) for o in outputs) if isinstance(outputs, list) else False
+                has_changes = any(bool(o.get("changeSet")) for o in outputs) if isinstance(outputs, list) else False
+
+                rejection = None
+                try:
+                    acts_resp = client.list_activities(session_id=session_id, page_size=30)
+                    acts = acts_resp if isinstance(acts_resp, list) else acts_resp.get("activities", [])
+                    from integrations.jules.jules_core.session_extractor import SessionExtractor
+                    rejection = SessionExtractor.extract_review_rejection(acts)
+                    if not has_pr:
+                        pr_data = JulesClient.extract_pull_request(session, activities=acts)
+                        if pr_data:
+                            has_pr = True
+                except Exception:
+                    pass
+
+                if rejection:
+                    log_error("LOOP-MONITOR", f"⚠️ Sessão {session_id} encerrou ({state}), mas auditoria reprovou: {rejection}")
+                    return "COMPLETED_WITHOUT_PR"
+
+                if require_pr and not has_pr and not has_changes:
+                    if not quiet:
+                        log("LOOP-MONITOR", f"⚠️ Sessão {session_id} encerrou sem gerar Pull Request nem alterações de código.", Colors.YELLOW)
+                    return "COMPLETED_WITHOUT_PR"
+
                 if not quiet:
                     log("LOOP-MONITOR", f"🎉 Sessão {session_id} CONCLUÍDA com sucesso ({state})!", Colors.GREEN)
                 return state
@@ -143,6 +182,25 @@ def monitor_and_assist_session(
                         log_error("LOOP-MONITOR", f"Falha no Auto-Reply: {ar_err}")
                 time.sleep(POST_ACTION_INTERVAL_SECONDS)
                 continue
+
+            if not quiet and (now - last_heartbeat_time >= 45):
+                last_heartbeat_time = now
+                elapsed_min = int((now - start_time) // 60)
+                try:
+                    acts_resp = client.list_activities(session_id=session_id, page_size=25)
+                    acts = acts_resp if isinstance(acts_resp, list) else acts_resp.get("activities", [])
+                    from integrations.jules.jules_core.session_extractor import SessionExtractor
+                    loop_info = SessionExtractor.detect_activity_repetition(acts, threshold=8)
+                    if loop_info and not last_warned_loop:
+                        rep_count, rep_files = loop_info
+                        log("LOOP-MONITOR", f"⚠️ Alerta de repetição na VM: {rep_count} ações consecutivas alterando {rep_files}.", Colors.YELLOW)
+                        last_warned_loop = True
+                    elif not loop_info:
+                        last_warned_loop = False
+
+                    log("LOOP-MONITOR", f"Jules em progresso ({elapsed_min}m decorridos, {len(acts)} atividades registradas)...", Colors.DIM)
+                except Exception:
+                    pass
 
             time.sleep(POLL_INTERVAL_SECONDS)
 

@@ -135,6 +135,7 @@ INSTRUÇÃO DE FORMULAÇÃO DA RESPOSTA:
 2. USE O CONTEXTO COMPLETO: Utilize o histórico da Seção 2 e as regras da Seção 4 para não autorizar desvios, alterações indevidas em código funcional ou violações dos contratos e padrões da stack do projeto.
 3. SE HOUVER DESVIO: Dê instruções corretivas claras e diretas para o agente retomar o objetivo original da Seção 1.
 4. SE O TRABALHO ESTIVER CORRETO: Aprove a proposta e instrua o agente a rodar os testes/build e abrir o Pull Request.
+5. ESCOPO E ARQUIVOS: Instrua o agente a manter foco estrito nos arquivos da tarefa, sem alterar bancos de dados binários (.db), seeds ou arquivos fora do escopo.
 
 Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do Jules."""
 
@@ -174,5 +175,6 @@ Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do J
                 )
             else:
                 return (
-                    "Please proceed with the proposed implementation adhering to the repository rules, and open the Pull Request when ready."
+                    "Please proceed with the proposed implementation adhering strictly to the repository rules, "
+                    "focusing only on target files (do not alter database files or seeds), and open the Pull Request when ready."
                 )
