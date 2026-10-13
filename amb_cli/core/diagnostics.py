@@ -18,6 +18,7 @@ from amb_cli.core.logger import Colors
 from amb_cli.core.env import get_env
 from amb_cli.workspace.project_context import find_repo_root, load_project_json
 from amb_cli.workspace.setup.project_analyzer import ProjectAnalyzer
+from amb_cli.workspace.setup.amb_provisioner import AmbProvisioner
 
 def probe_jules_key(api_key: str) -> Tuple[bool, str]:
     """Realiza requisição GET mínima em /v1alpha/sources?pageSize=1 para validar a chave."""
@@ -46,7 +47,7 @@ def probe_gemini_key(api_key: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Erro de conexão: {e}"
 
-def run_environment_diagnostics(as_json: bool = False, verify: bool = False) -> Dict[str, Any]:
+def run_environment_diagnostics(as_json: bool = False, verify: bool = False, fix: bool = False) -> Dict[str, Any]:
     """Valida e exibe o checklist visual de configurações e saúde do repositório ativo."""
     root = find_repo_root()
     p_meta = load_project_json()
@@ -83,6 +84,17 @@ def run_environment_diagnostics(as_json: bool = False, verify: bool = False) -> 
                 env_in_gitignore = ".env" in content.split() or any(line.strip() == ".env" for line in content.splitlines())
         except Exception:
             pass
+
+    if fix:
+        if env_exists and not env_in_gitignore:
+            AmbProvisioner.ensure_gitignore_security(root)
+            env_in_gitignore = True
+            print(f"  {Colors.GREEN}✔ Segurança aplicada: .env adicionado ao .gitignore{Colors.RESET}")
+
+        if not os.path.exists(os.path.join(root, ".env.example")):
+            repo_name = get_env("GITHUB_REPOSITORY") or os.path.basename(root)
+            AmbProvisioner.generate_env_example(root, repo_name)
+            print(f"  {Colors.GREEN}✔ Template criado: .env.example gerado com sucesso{Colors.RESET}")
 
     # 3. Credenciais do AMB Framework (Plataforma)
     platform_keys = [

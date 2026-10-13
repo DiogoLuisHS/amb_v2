@@ -78,6 +78,20 @@ Você é o "Engineer" 🤖 — o Engenheiro de Software Autônomo responsável p
                 )
 
         # 4. Criação do .env.example sanitizado
+        cls.generate_env_example(root, repo_name, force)
+
+        # 5. Proteção de Segurança: Garantir .env no .gitignore
+        cls.ensure_gitignore_security(root)
+
+        # 6. Criação de .amb/README.md informativo
+        cls.write_amb_readme(amb_root, repo_name, stack, qa)
+
+        # 7. Geração de AGENTS.md na raiz para Google Jules & agentes autônomos
+        cls.ensure_agents_markdown(root, repo_name, stack, qa, force=force)
+
+    @classmethod
+    def generate_env_example(cls, root: str, repo_name: str, force: bool = False) -> None:
+        """Gera o arquivo de template .env.example sanitizado."""
         env_example_path = os.path.join(root, ".env.example")
         if not os.path.exists(env_example_path) or force:
             example_content = f"""# ==============================================================================
@@ -101,15 +115,6 @@ STITCH_PROJECT_ID=
 """
             with open(env_example_path, "w", encoding="utf-8") as ef:
                 ef.write(example_content)
-
-        # 5. Proteção de Segurança: Garantir .env no .gitignore
-        cls.ensure_gitignore_security(root)
-
-        # 6. Criação de .amb/README.md informativo
-        cls.write_amb_readme(amb_root, repo_name, stack, qa)
-
-        # 7. Geração de AGENTS.md na raiz para Google Jules & agentes autônomos
-        cls.ensure_agents_markdown(root, repo_name, stack, qa, force=force)
 
     @classmethod
     def ensure_gitignore_security(cls, root: str) -> None:
