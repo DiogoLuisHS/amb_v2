@@ -1,5 +1,7 @@
 import os
 import json
+import re
+from pathlib import Path
 from typing import Optional
 
 from amb_cli.core.exceptions import ConfigurationError
@@ -108,3 +110,35 @@ def get_device_type(default: Optional[str] = None) -> Optional[str]:
     if "device_type" in p_meta and p_meta["device_type"]:
         return str(p_meta["device_type"]).strip().upper()
     return default
+
+
+def get_next_prompt_filepath(prompts_dir: Path, slug_title: str) -> Path:
+    """
+    Calcula o próximo número sequencial de US analisando .amb/prompts e _completed.
+    Retorna o Path correspondente: ex: .amb/prompts/31_us31_<slug>.md
+    """
+    max_num = 0
+    pattern = re.compile(r"^(\d+)_[uU][sS](\d+)_")
+
+    dirs_to_check = [prompts_dir, prompts_dir / "_completed"]
+
+    for d in dirs_to_check:
+        if d.exists() and d.is_dir():
+            for file_path in d.iterdir():
+                if file_path.is_file() and file_path.suffix == '.md':
+                    match = pattern.match(file_path.name)
+                    if match:
+                        try:
+                            num = int(match.group(1))
+                            if num > max_num:
+                                max_num = num
+                        except ValueError:
+                            pass
+
+    next_idx = max_num + 1
+    clean_slug = re.sub(r'[^a-zA-Z0-9]+', '-', slug_title).strip('-').lower()
+    if not clean_slug:
+        clean_slug = "prompt"
+
+    filename = f"{next_idx:02d}_us{next_idx}_{clean_slug}.md"
+    return prompts_dir / filename

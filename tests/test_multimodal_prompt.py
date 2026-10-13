@@ -105,5 +105,6 @@ def test_cmd_prompt_with_image(sample_image):
             raw_idea="Criar tela de login",
             role="engineer",
             output_file=None,
-            image_path=sample_image
+            image_path=sample_image,
+            queue=False
         )
