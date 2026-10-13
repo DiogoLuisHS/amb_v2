@@ -52,6 +52,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--auto-approve", "-y", action="store_true", help="Aprova e responde chats automaticamente via Gemini.")
     p.add_argument("--check-once", "-1", action="store_true", help="Executa apenas uma rodada de checagem e encerra.")
     p.add_argument("--interval", type=int, default=15, help="Intervalo de polling em segundos (padrão: 15s).")
+    p.add_argument("--verbose", "-v", action="store_true", help="Exibe logs detalhados de polling a cada ciclo de checagem (por padrão o monitor é silencioso).")
     p = _c("advisor", "Menu cognitivo para tirar dúvidas pendentes do Jules com IA.", cmd_advisor, ["ask"])
     _sid(p, "ID ou URL da sessão do Jules (opcional).", "ID ou URL da sessão do Jules.")
     p.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")

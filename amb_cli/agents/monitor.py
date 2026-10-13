@@ -20,7 +20,7 @@ from integrations.jules.jules_watcher import JulesWatcher
 from cli_modules.alert_notifier import notify_info
 
 
-def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False) -> None:
+def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False, verbose: bool = False) -> None:
     """Loop principal de monitoramento e vigilância unificada."""
     print("\n" + "=" * 75)
     mode_text = f"{Colors.BOLD}{Colors.GREEN}[MODO AUTO-APPROVE ATIVO ⚡]{Colors.RESET}" if auto_approve else "[MODO MONITOR DE ALERTA]"
@@ -39,8 +39,9 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
     try:
         while True:
             try:
-                now_str = datetime.now().strftime("%H:%M:%S")
-                print(f"[{now_str}] 🔄 Rodada #{cycle}: Checando chats e status...", flush=True)
+                if verbose:
+                    now_str = datetime.now().strftime("%H:%M:%S")
+                    print(f"[{now_str}] 🔄 Rodada #{cycle}: Checando chats e status...", flush=True)
 
                 try:
                     jules_alerts = jules_w.check()
@@ -59,7 +60,8 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
                                 log_error("AUTO-PILOT", f"Falha no auto-reply da sessão {sid}: {e}")
 
                 if jules_alerts is not None and not jules_alerts:
-                    notify_info("Tudo operando normalmente. Nenhuma pendência humana ou erro detectado.\n")
+                    if verbose:
+                        notify_info("Tudo operando normalmente. Nenhuma pendência humana ou erro detectado.\n")
 
                 if check_once:
                     log("MONITOR", "Checagem única concluída.", Colors.CYAN)
@@ -80,13 +82,14 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 class UnifiedMonitor:
     """Classe orientada a objetos para o Sentinela Unificado AMB_V2."""
 
-    def __init__(self, interval: int = 15, auto_approve: bool = False) -> None:
+    def __init__(self, interval: int = 15, auto_approve: bool = False, verbose: bool = False) -> None:
         self.interval = interval
         self.auto_approve = auto_approve
+        self.verbose = verbose
 
     def run(self, check_once: bool = False) -> None:
         """Executa o loop do monitoramento."""
-        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve)
+        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve, verbose=self.verbose)
 
 
 def main() -> None:
