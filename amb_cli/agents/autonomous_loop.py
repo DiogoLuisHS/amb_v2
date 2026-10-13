@@ -207,11 +207,15 @@ def run_autonomous_loop(
                             )
                             return
                         if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
-                            syncer.close_issue(
-                                item["issue_number"],
-                                comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles})."
-                            )
+                            syncer.close_issue(item["issue_number"], comment=f"✅ Concluído e integrado com sucesso pelo AMB_V2 (Sessão Jules: {session_id}, Ciclo #{completed_cycles}).")
                             log("ISSUE", f"✔ GitHub Issue #{item['issue_number']} encerrada com sucesso!", Colors.GREEN)
+                            if item.get("path") and item["path"].exists():
+                                c_dir = item["path"].parent / "_completed"
+                                c_dir.mkdir(parents=True, exist_ok=True)
+                                try:
+                                    item["path"].rename(c_dir / item["path"].name)
+                                except Exception:
+                                    pass
                     elif state == "COMPLETED_WITHOUT_PR":
                         log_error(
                             "LOOP",
@@ -238,13 +242,8 @@ def run_autonomous_loop(
                     log("LOOP", f"Pausa de {delay_between_cycles}s antes do próximo item...", Colors.DIM)
                     time.sleep(delay_between_cycles)
 
-        # Checagem de Limite de Ciclos Globais
         if max_cycles and completed_cycles >= max_cycles:
-            log(
-                "LOOP",
-                f"Limite de {max_cycles} ciclos atingido. Todas as personas foram executadas com sucesso!",
-                Colors.GREEN,
-            )
+            log("LOOP", f"Limite de {max_cycles} ciclos atingido. Todas as personas foram executadas com sucesso!", Colors.GREEN)
             break
 
         log("LOOP", f"Ciclo #{completed_cycles} concluído. Iniciando Ciclo #{completed_cycles + 1}...", Colors.CYAN)
@@ -257,7 +256,7 @@ def main() -> None:
     parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
     parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
     parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou PASTA INTEIRA de prompts em lote (ex: .amb/prompts/).")
-    parser.add_argument("--sync-issues", "--issues", action="store_true", help="Sincroniza os prompts com o GitHub Issues e executa rastreando a fila.")
+    parser.add_argument("--sync-issues", "--issues", "--issue", action="store_true", help="Sincroniza os prompts com o GitHub Issues e executa rastreando a fila.")
     parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
     parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
     parser.add_argument("--delay", "-d", type=int, default=0, help="Pausa opcional em segundos entre itens/ciclos (Padrão: 0, sem espera).")
@@ -265,12 +264,7 @@ def main() -> None:
     parser.add_argument("--no-auto-merge", action="store_true", help="Não faz o merge automático do PR.")
 
     args = parser.parse_args()
-
-    modules_list = (
-        [m.strip() for m in args.modules.split(",") if m.strip()]
-        if args.modules
-        else None
-    )
+    modules_list = [m.strip() for m in args.modules.split(",") if m.strip()] if args.modules else None
 
     try:
         run_autonomous_loop(

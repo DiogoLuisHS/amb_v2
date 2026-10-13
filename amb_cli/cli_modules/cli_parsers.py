@@ -66,7 +66,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--branch", "-b", help="Branch de início para o Jules (se omitido, auto-detecta a branch ativa do Git).")
     p.add_argument("--modules", "-m", help="Lista de módulos para rotacionar no loop (separados por vírgula).")
     p.add_argument("--no-auto-merge", action="store_true", help="Desabilita o merge automático de PR no modo loop.")
-    p.add_argument("--sync-issues", "--issues", dest="sync_issues", action="store_true", help="Sincroniza os prompts da pasta com o GitHub Issues e executa rastreando a fila.")
+    p.add_argument("--sync-issues", "--issues", "--issue", dest="sync_issues", action="store_true", help="Sincroniza os prompts da pasta com o GitHub Issues e executa rastreando a fila.")
     p.add_argument("--personas-dir", help="Pasta customizada de personas.")
     p.add_argument("--concurrency", "-c", type=int, default=1, help="Nível de concorrência para processamento em lote no Jules (Padrão: 1).")
     p = _c("jules", "Comandos de integração com o Google Jules.", cmd_jules)
