@@ -33,13 +33,13 @@ def handle_cmd_antigravity(args: Any) -> None:
 
     elif sub in ["prompt", "synthesize", "synth"]:
         from integrations.antigravity.tools.synthesize_prompt import run_synthesize_prompt
-        idea = getattr(args, "idea", "")
+        idea = getattr(args, "idea", None) or getattr(args, "synthesize", None)
         role = getattr(args, "role", "general") or "general"
         output_file = getattr(args, "output", None)
         image_path = getattr(args, "image", None)
         queue_flag = getattr(args, "queue", False)
         log("ANTIGRAVITY", f"Sintetizando prompt executivo ({role})" + (f" com mockup '{image_path}'..." if image_path else "..."), Colors.CYAN)
-        res = run_synthesize_prompt(raw_idea=idea, role=role, output_file=output_file, image_path=image_path, queue=queue_flag)
+        res = run_synthesize_prompt(raw_idea=idea or "", role=role, output_file=output_file, image_path=image_path, queue=queue_flag)
         if not output_file and not queue_flag:
             print("\n" + "=" * 75)
             print(f"{Colors.BOLD}🧠 PROMPT ESTRUTURADO GERADO COM IA:{Colors.RESET}")

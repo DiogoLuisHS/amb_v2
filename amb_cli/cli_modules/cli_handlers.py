@@ -27,21 +27,32 @@ def cmd_setup(args: Any) -> None:
 def cmd_prompt(args: Any) -> None:
     """Sintetiza um prompt com IA a partir de uma ideia informal."""
     idea = getattr(args, "idea", None) or getattr(args, "synthesize", None)
-    has_image = getattr(args, "image", None) is not None
+    role = getattr(args, "role", "general")
+    output_file = getattr(args, "output", None)
+    image_path = getattr(args, "image", None)
+    queue_flag = getattr(args, "queue", False)
 
-    if idea or has_image:
-        from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
-        args.agy_cmd = "prompt"
-        args.idea = idea
-        handle_cmd_antigravity(args)
+    if idea or image_path:
+        from integrations.antigravity.tools.synthesize_prompt import run_synthesize_prompt
+        run_synthesize_prompt(
+            raw_idea=idea,
+            role=role,
+            output_file=output_file,
+            image_path=image_path,
+            queue=queue_flag
+        )
     elif sys.stdin.isatty():
         try:
             user_idea = input(f"{Colors.YELLOW}Qual funcionalidade ou ideia deseja sintetizar em prompt? > {Colors.RESET}").strip()
             if user_idea:
-                from cli_modules.handlers_core.antigravity_handler import handle_cmd_antigravity
-                args.agy_cmd = "prompt"
-                args.idea = user_idea
-                handle_cmd_antigravity(args)
+                from integrations.antigravity.tools.synthesize_prompt import run_synthesize_prompt
+                run_synthesize_prompt(
+                    raw_idea=user_idea,
+                    role=role,
+                    output_file=output_file,
+                    image_path=image_path,
+                    queue=queue_flag
+                )
             else:
                 print(f"{Colors.YELLOW}Nenhuma ideia fornecida. Operação cancelada.{Colors.RESET}")
         except (KeyboardInterrupt, EOFError):
