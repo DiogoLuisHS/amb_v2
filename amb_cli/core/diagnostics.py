@@ -10,15 +10,43 @@ e o contexto do workspace do projeto consumidor.
 import os
 import json
 import shutil
-from typing import Dict, Any
+import urllib.request
+import urllib.error
+from typing import Dict, Any, Tuple
 
 from amb_cli.core.logger import Colors
 from amb_cli.core.env import get_env
 from amb_cli.workspace.project_context import find_repo_root, load_project_json
 from amb_cli.workspace.setup.project_analyzer import ProjectAnalyzer
 
+def probe_jules_key(api_key: str) -> Tuple[bool, str]:
+    """Realiza requisição GET mínima em /v1alpha/sources?pageSize=1 para validar a chave."""
+    url = "https://jules.googleapis.com/v1alpha/sources?pageSize=1"
+    req = urllib.request.Request(url, headers={"X-Goog-Api-Key": api_key})
+    try:
+        urllib.request.urlopen(req, timeout=3.0)
+        return True, "Conexão Verificada"
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403, 400):
+            return False, "Chave inválida ou revogada"
+        return False, f"Erro na API: {e.code}"
+    except Exception as e:
+        return False, f"Erro de conexão: {e}"
 
-def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
+def probe_gemini_key(api_key: str) -> Tuple[bool, str]:
+    """Valida credencial do Gemini com requisição mínima de modelos ou healthcheck."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    try:
+        urllib.request.urlopen(urllib.request.Request(url), timeout=3.0)
+        return True, "Conexão Verificada"
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403, 400):
+            return False, "Chave inválida ou revogada"
+        return False, f"Erro na API: {e.code}"
+    except Exception as e:
+        return False, f"Erro de conexão: {e}"
+
+def run_environment_diagnostics(as_json: bool = False, verify: bool = False) -> Dict[str, Any]:
     """Valida e exibe o checklist visual de configurações e saúde do repositório ativo."""
     root = find_repo_root()
     p_meta = load_project_json()
@@ -66,11 +94,23 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
     platform_status = {}
     for key, desc in platform_keys:
         val = get_env(key)
-        platform_status[key] = {
+        is_configured = bool(val)
+        status_dict = {
             "description": desc,
-            "configured": bool(val),
+            "configured": is_configured,
             "masked": (val[:4] + "..." + val[-4:] if len(val) > 10 else "***") if val else None
         }
+        if verify and is_configured:
+            if key == "JULES_API_KEY":
+                verified, msg = probe_jules_key(val)
+                status_dict["verified"] = verified
+                status_dict["verify_message"] = msg
+            elif key == "GEMINI_API_KEY":
+                verified, msg = probe_gemini_key(val)
+                status_dict["verified"] = verified
+                status_dict["verify_message"] = msg
+
+        platform_status[key] = status_dict
 
     # 4. Contexto do Workspace Alvo (Projeto Consumidor)
     workspace_keys = [
@@ -142,7 +182,17 @@ def run_environment_diagnostics(as_json: bool = False) -> Dict[str, Any]:
     print(f"{Colors.BOLD}{Colors.BLUE}=== Credenciais do AMB Framework (Plataforma) ==={Colors.RESET}")
     for key, info in platform_status.items():
         if info["configured"]:
-            print(f"  ✅ {info['description']:<30} ({key}): {Colors.GREEN}{info['masked']}{Colors.RESET}")
+            verify_str = ""
+            if verify and "verified" in info:
+                if info["verified"]:
+                    verify_str = f" [🌐 {info['verify_message']}]"
+                else:
+                    verify_str = f" [🚫 Erro: {info['verify_message']}]"
+
+            icon = "✅" if not (verify and "verified" in info and not info["verified"]) else "❌"
+            color = Colors.GREEN if not (verify and "verified" in info and not info["verified"]) else Colors.RED
+
+            print(f"  {icon} {info['description']:<30} ({key}): {color}{info['masked']}{verify_str}{Colors.RESET}")
         else:
             print(f"  ⚠️  {info['description']:<30} ({key}): {Colors.YELLOW}Não configurado{Colors.RESET}")
 
