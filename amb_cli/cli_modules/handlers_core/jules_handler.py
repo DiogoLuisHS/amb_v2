@@ -121,22 +121,21 @@ def handle_cmd_jules(args: Any) -> None:
             start_advisor_chat(session_id=sid)
             return
 
-        if getattr(args, "message", None):
-            if not sid:
+        if sid:
+            if getattr(args, "message", None):
+                from integrations.jules.tools.send_message import run_send_message
+                run_send_message(session_id=sid, message=args.message, force=getattr(args, "force", False))
+            else:
+                from agents.auto_reply import advise_and_reply
+                advise_and_reply(session_id=sid, auto_approve=getattr(args, "auto_approve", False))
+        else:
+            if getattr(args, "message", None):
                 log_error("JULES", "Informe o ID da sessão ao usar --message direta.")
                 return
-            from integrations.jules.tools.send_message import run_send_message
-            run_send_message(
-                session_id=sid,
-                message=args.message,
-                force=getattr(args, "force", False)
-            )
-        elif sid:
-            from agents.auto_reply import advise_and_reply
-            advise_and_reply(session_id=sid, auto_approve=getattr(args, "auto_approve", False))
-        else:
-            from agents.auto_reply import run_auto_advisor
-            run_auto_advisor(auto_approve=getattr(args, "auto_approve", False))
+            else:
+                print(f"\n\033[1;36m[Redirecionamento]\033[0m Delegando para o Hub Central Interativo (amb advisor)...\n")
+                from cli_modules.cli_handlers import cmd_advisor
+                cmd_advisor(args)
 
     elif sub == "approve":
         sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
