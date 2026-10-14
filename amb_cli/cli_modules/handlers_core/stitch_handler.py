@@ -62,16 +62,22 @@ def handle_cmd_stitch(args: Any) -> None:
         _open_in_browser(res)
 
     elif sub == "generate":
+        import re
         raw_prompt = getattr(args, "prompt", None) or getattr(args, "prompt_flag", None)
         if not raw_prompt:
             from core import log_error
-            log_error("O argumento posicional 'prompt' ou a flag '--prompt' são obrigatórios.")
+            log_error("O argumento posicional \'prompt\' ou a flag \'--prompt\' são obrigatórios.")
             return
 
         prompt_text = _resolve_prompt(raw_prompt)
         device = getattr(args, "device", None)
+        title = getattr(args, "title", None)
         output_file = getattr(args, "output", None)
-        res = client.generate_screen(prompt=prompt_text, device_type=device, output_file=output_file)
+        if title and not output_file:
+            slug = re.sub(r'[^\w\s-]', '', str(title).lower().strip())
+            slug = re.sub(r'[\s_-]+', '-', slug).strip('-')
+            output_file = f"./public/{slug}.html"
+        res = client.generate_screen(prompt=prompt_text, title=title, device_type=device, output_file=output_file)
         if as_json:
             print(json.dumps(res, indent=2, ensure_ascii=False))
             return
