@@ -54,6 +54,18 @@ def handle_cmd_jules(args: Any) -> None:
             as_json=getattr(args, "json", False)
         )
 
+    elif sub in ["watch", "logs"]:
+        sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
+        if not sid:
+            log_error("JULES", "Informe o ID da sessão para acompanhar os logs.")
+            return
+        from integrations.jules.tools.get_session import run_get_session
+        run_get_session(
+            session_id=sid,
+            watch=True,
+            as_json=getattr(args, "json", False)
+        )
+
     elif sub == "create":
         from integrations.jules.tools.create_session import run_create_session
         req_appr = getattr(args, "require_approval", False)
