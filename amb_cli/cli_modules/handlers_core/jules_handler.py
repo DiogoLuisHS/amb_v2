@@ -85,6 +85,11 @@ def handle_cmd_jules(args: Any) -> None:
             from integrations.jules.jules_client import JulesClient
             sid = JulesClient.normalize_session_id(sid)
 
+        if getattr(args, "chat", False):
+            from agents.auto_reply import start_advisor_chat
+            start_advisor_chat(session_id=sid)
+            return
+
         if getattr(args, "message", None):
             if not sid:
                 log_error("JULES", "Informe o ID da sessão ao usar --message direta.")

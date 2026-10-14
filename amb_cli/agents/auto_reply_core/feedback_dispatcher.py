@@ -8,6 +8,7 @@ aprovar planos, listar sessões aguardando feedback e coordenar fluxos interativ
 """
 
 import sys
+import time
 from typing import Any, Dict, List, Optional
 
 from core.bootstrap import ensure_amb_env
@@ -44,6 +45,39 @@ class JulesFeedbackDispatcher:
         log("JULES-ADVISOR", f"Aprovando plano da sessão {session_id}...", Colors.CYAN)
         self.jules_client.approve_plan(session_id)
         log("JULES-ADVISOR", "✅ Plano aprovado com sucesso!", Colors.GREEN)
+
+
+    def run_continuous_chat(self, session_id: str) -> None:
+        """Mantém um REPL conversacional contínuo com a sessão do Jules."""
+        print(f"\n{Colors.CYAN}=== 💬 AMB ADVISOR: CHAT INTERATIVO COM GOOGLE JULES ==={Colors.RESET}")
+        clean_sid = str(session_id).strip().rstrip("/").split("/")[-1]
+        _, _, _, _, turn_info = self.extractor.get_full_session_history(self.jules_client, clean_sid)
+        last_seen = turn_info.get("last_agent_msg_id")
+
+        while True:
+            try:
+                user_msg = input(f"\n💬 Você (ou 'exit' / 'sair' para encerrar) > ").strip()
+            except (KeyboardInterrupt, EOFError):
+                print(f"\n{Colors.YELLOW}Encerrando chat interativo... Até logo!{Colors.RESET}")
+                break
+            if not user_msg:
+                continue
+            if user_msg.lower() in ['exit', 'sair', 'q']:
+                print(f"{Colors.YELLOW}Encerrando chat interativo... Até logo!{Colors.RESET}")
+                break
+            self.jules_client.send_message(session_id=clean_sid, message=user_msg)
+            print(f"✔ Mensagem enviada ao Jules. Aguardando processamento...")
+            while True:
+                time.sleep(3)
+                try:
+                    _, _, _, _, turn_info = self.extractor.get_full_session_history(self.jules_client, clean_sid)
+                    cur_msg = turn_info.get("last_agent_msg_id")
+                    if cur_msg and cur_msg != last_seen and turn_info.get("last_speaker") == "AGENT":
+                        last_seen = cur_msg
+                        print(f"\n🤖 AGENTE JULES:\n{turn_info.get('last_agent_msg', '')}")
+                        break
+                except Exception:
+                    pass
 
     def get_pending_sessions(self) -> List[Dict[str, Any]]:
         """Varre as sessões do repositório atual e retorna apenas as que demandam ação humana."""
