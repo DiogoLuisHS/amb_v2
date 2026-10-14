@@ -256,6 +256,7 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("hooks", "Gerencia hooks do Git no repositório.", cmd_hooks)
     hs = p.add_subparsers(dest="hooks_cmd", help="Subcomandos de hooks")
     _sc(hs, "install", "Instala o pre-commit hook do AMB_V2.")
+    _sc(hs, "status", "Verifica se o pre-commit hook está instalado e ativo.", ["check"])
     p = _c("persona", "Engine unificada de personas com descoberta, interpolação e validação.", cmd_persona)
     ps = p.add_subparsers(dest="persona_cmd", help="Subcomandos de persona")
     _sc(ps, "validate", "Audita conformidade arquitetural de personas.")
@@ -289,6 +290,11 @@ def create_parser() -> argparse.ArgumentParser:
     g.add_argument("file", nargs="?", default=None, help="Caminho do arquivo específico (opcional).")
     g.add_argument("--base", "-b", help="Branch base para comparação.")
     g.add_argument("--cached", action="store_true", help="Exibe diff das alterações preparadas (staged).")
+
+    hs = _sc(gs, "hooks", "Gerencia e audita hooks do Git no repositório.").add_subparsers(dest="hooks_action", help="Ações de hooks")
+    _sc(hs, "install", "Instala o pre-commit hook de validação do AMB_V2.")
+    _sc(hs, "status", "Verifica se o pre-commit hook está instalado e ativo.", ["check"])
+
     def _pr_num(p):
         p.add_argument("number", type=int, help="Número do Pull Request.")
         p.add_argument("--repo", help="Repositório alvo (dono/repo).")

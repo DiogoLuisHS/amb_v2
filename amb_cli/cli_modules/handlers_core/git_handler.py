@@ -56,5 +56,9 @@ def handle_cmd_git(args: Any) -> None:
         elif res:
             print(res)
 
+    elif sub == "hooks":
+        from .hooks_handler import handle_cmd_hooks
+        handle_cmd_hooks(args)
+
     else:
         print("Subcomando do Git inválido. Use 'amb git --help'.")
