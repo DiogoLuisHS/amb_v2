@@ -199,6 +199,8 @@ def create_parser() -> argparse.ArgumentParser:
     s = _sc(ss, "sync", "Sincroniza design tokens do design.md com o Design System do Stitch.")
     s.add_argument("--file", "-f", help="Caminho do arquivo design.md.")
     _j(s)
+    s = _sc(ss, "status", "Audita a saúde do runtime Node.js, credenciais e conectividade do Stitch SDK.", ["check"])
+    _j(s)
     s = _sc(ss, "call", "Invoca uma ferramenta arbitrária do Stitch SDK via JSON-RPC.")
     s.add_argument("tool", help="Nome da ferramenta (ex: get_screen, list_screens, download_assets).")
     s.add_argument("payload", nargs="?", default="{}", help="Payload JSON da ferramenta.")

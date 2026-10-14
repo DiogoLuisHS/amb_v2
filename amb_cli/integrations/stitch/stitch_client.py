@@ -42,59 +42,32 @@ from amb_cli.integrations.stitch.stitch_core.design_sync import (
     sync_design_system_core
 )
 
-
 class StitchClient:
     """Client oficial para o Google Stitch SDK (@google/stitch-sdk)."""
 
     def __init__(self, project_id: Optional[str] = None):
-        self.api_key = require_env("STITCH_API_KEY")
+        self.api_key = get_env("STITCH_API_KEY")
         self.project_id = project_id or get_env("STITCH_PROJECT_ID")
         self.runner_path = self._resolve_runner()
 
     def _resolve_runner(self) -> str:
-        candidates = [
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "stitch_client.mjs")),
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "client", "stitch_client.mjs")),
-        ]
-        runner = next((p for p in candidates if os.path.exists(p)), None)
-        if not runner:
-            raise ApiExecutionError(f"Runner Stitch (stitch_client.mjs) não encontrado em {candidates[0]}")
-        return runner
+        d = os.path.dirname(__file__)
+        candidates = [os.path.abspath(os.path.join(d, "stitch_client.mjs")), os.path.abspath(os.path.join(d, "client", "stitch_client.mjs"))]
+        return next((p for p in candidates if os.path.exists(p)), "")
 
     def _run_node_command(self, action: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Executa comando no runner Node.js do Stitch SDK com diagnóstico preventivo de runtime."""
+        if not self.runner_path: raise ApiExecutionError(f"Runner Stitch não encontrado")
         node_bin = shutil.which("node")
-        if not node_bin:
-            raise ConfigurationError(
-                "Runtime Node.js não foi encontrado no PATH do sistema.",
-                hint="Instale o Node.js (v18+) para utilizar as funcionalidades do Stitch SDK."
-            )
-
-        proc = subprocess.run(
-            [node_bin, self.runner_path, action, json.dumps(payload)],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace"
-        )
+        if not node_bin: raise ConfigurationError("Node.js não encontrado.", hint="Instale o Node.js (v18+).")
+        proc = subprocess.run([node_bin, self.runner_path, action, json.dumps(payload)], capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc.returncode != 0:
             err_msg = proc.stderr.strip() or proc.stdout.strip()
-            if "MODULE_NOT_FOUND" in err_msg or "Cannot find module" in err_msg:
-                raise ConfigurationError(
-                    "Dependência @google/stitch-sdk não encontrada no módulo do Stitch.",
-                    hint="Execute 'npm install' no diretório 'integrations/stitch/' para instalar o SDK oficial."
-                )
-            try:
-                err_json = json.loads(err_msg)
-                err_msg = err_json.get("error", err_msg)
-            except Exception:
-                pass
-            raise ApiExecutionError(f"Falha na execução do Stitch SDK ({action}): {err_msg}")
-
-        try:
-            return json.loads(proc.stdout.strip())
-        except json.JSONDecodeError:
-            return {"output": proc.stdout.strip()}
+            if "MODULE_NOT_FOUND" in err_msg or "Cannot find module" in err_msg: raise ConfigurationError("Dependência @google/stitch-sdk não encontrada.", hint="Execute 'npm install' em integrations/stitch/")
+            try: err_msg = json.loads(err_msg).get("error", err_msg)
+            except Exception: pass
+            raise ApiExecutionError(f"Falha no Stitch SDK ({action}): {err_msg}")
+        try: return json.loads(proc.stdout.strip())
+        except json.JSONDecodeError: return {"output": proc.stdout.strip()}
 
     save_screen_html = staticmethod(save_screen_html_core)
 
@@ -192,7 +165,6 @@ class StitchClient:
         """Lista todos os projetos Stitch acessíveis ao usuário."""
         return list_projects_core(self, filter_view)
 
-
     def generate_variants(
         self,
         screen_id: str,
@@ -271,26 +243,45 @@ class StitchClient:
         log("STITCH", f"Invocando tool '{tool_name}' no Stitch SDK...", Colors.CYAN)
         return self._run_node_command(tool_name, p)
 
+    def get_status(self) -> Dict[str, Any]:
+        """Audita e retorna o status do ambiente Stitch."""
+        status = {
+            "node_runtime": {"installed": False, "version": None},
+            "api_key": {"configured": False},
+            "project_id": {"configured": False, "value": None},
+            "runner": {"installed": False},
+            "connectivity": {"connected": False, "details": None}
+        }
+        node_bin = shutil.which("node")
+        if node_bin:
+            status["node_runtime"]["installed"] = True
+            try:
+                proc = subprocess.run([node_bin, "-v"], capture_output=True, text=True, timeout=2)
+                if proc.returncode == 0:
+                    status["node_runtime"]["version"] = proc.stdout.strip()
+            except Exception:
+                pass
+
+        status["api_key"]["configured"] = bool(get_env("STITCH_API_KEY"))
+        status["runner"]["installed"] = bool(self.runner_path)
+        pid = self.project_id or get_env("STITCH_PROJECT_ID")
+        if pid:
+            status["project_id"]["configured"] = True
+            status["project_id"]["value"] = pid
+
+        if status["node_runtime"]["installed"] and status["api_key"]["configured"] and status["project_id"]["configured"] and status["runner"]["installed"]:
+            try:
+                screens = self.list_screens(project_id=pid)
+                status["connectivity"]["connected"] = True
+                status["connectivity"]["details"] = f"{len(screens)} telas ativas"
+            except Exception as e:
+                status["connectivity"]["details"] = str(e)
+        return status
 
 # Funções utilitárias avulsas para import direto e compatibilidade retroativa
 from amb_cli.integrations.stitch.stitch_core.helpers import (
-    generate_screen,
-    edit_screen,
-    get_screen,
-    list_screens,
-    get_project,
-    create_project,
-    list_projects,
-    generate_variants,
-    download_assets,
-    upload_asset,
-    create_design_system,
-    update_design_system,
-    list_design_systems,
-    apply_design_system,
-    sync_design_system,
-    call_tool,
+    generate_screen, edit_screen, get_screen, list_screens, get_project, create_project,
+    list_projects, generate_variants, download_assets, upload_asset, create_design_system,
+    update_design_system, list_design_systems, apply_design_system, sync_design_system, call_tool
 )
-
-
 
