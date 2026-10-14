@@ -33,54 +33,56 @@ def run_amb_commit(repo_dir, message, no_verify=False):
         cmd,
         cwd=repo_dir,
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8",
+        errors="replace"
     )
     return result
 
 def test_git_commit_success(temp_git_repo):
     """Test successful commit with valid staged file (< 300 lines)."""
     valid_file = temp_git_repo / "valid.py"
-    valid_file.write_text("print('Hello World')\n" * 10)
+    valid_file.write_text("print('Hello World')\n" * 10, encoding="utf-8")
 
     subprocess.run(["git", "add", "valid.py"], cwd=temp_git_repo, check=True)
 
     res = run_amb_commit(temp_git_repo, "Add valid file")
 
     assert res.returncode == 0
-    assert "✔ Commit realizado com sucesso!" in res.stdout
+    assert "Commit realizado com sucesso!" in res.stdout
 
     # Verify the commit was actually made
-    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True)
+    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert "Add valid file" in git_log.stdout
 
 def test_git_commit_blocked_violation(temp_git_repo):
     """Test commit is blocked when file violates rules (> 300 lines)."""
     invalid_file = temp_git_repo / "invalid.py"
-    invalid_file.write_text("print('Hello World')\n" * 301)
+    invalid_file.write_text("print('Hello World')\n" * 301, encoding="utf-8")
 
     subprocess.run(["git", "add", "invalid.py"], cwd=temp_git_repo, check=True)
 
     res = run_amb_commit(temp_git_repo, "Add invalid file")
 
     assert res.returncode == 0 # we didn't exit with error code in handler, but we returned
-    assert "Commit abortado devido a violações arquiteturais" in res.stdout
+    assert "Commit abortado" in res.stdout
 
     # Verify the commit was NOT made
-    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True)
+    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert "Add invalid file" not in git_log.stdout
 
 def test_git_commit_no_verify_bypass(temp_git_repo):
     """Test commit bypasses validation with --no-verify."""
     invalid_file = temp_git_repo / "invalid_bypass.py"
-    invalid_file.write_text("print('Hello World')\n" * 301)
+    invalid_file.write_text("print('Hello World')\n" * 301, encoding="utf-8")
 
     subprocess.run(["git", "add", "invalid_bypass.py"], cwd=temp_git_repo, check=True)
 
     res = run_amb_commit(temp_git_repo, "Add invalid file with bypass", no_verify=True)
 
     assert res.returncode == 0
-    assert "✔ Commit realizado com sucesso!" in res.stdout
+    assert "Commit realizado com sucesso!" in res.stdout
 
     # Verify the commit was actually made
-    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True)
+    git_log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert "Add invalid file with bypass" in git_log.stdout
