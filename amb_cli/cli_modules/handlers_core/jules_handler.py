@@ -69,6 +69,19 @@ def handle_cmd_jules(args: Any) -> None:
             as_json=getattr(args, "json", False)
         )
 
+    elif sub in ["rerun", "restart"]:
+        sid = getattr(args, "session_id", None) or getattr(args, "session_id_flag", None)
+        if not sid:
+            log_error("JULES", "Informe o ID da sessão a ser reiniciada.")
+            return
+        from integrations.jules.tools.rerun_session import run_rerun_session
+        run_rerun_session(
+            session_id=sid,
+            new_prompt=getattr(args, "prompt", None),
+            new_branch=getattr(args, "branch", None),
+            as_json=getattr(args, "json", False)
+        )
+
     elif sub == "create":
         from integrations.jules.tools.create_session import run_create_session
         req_appr = getattr(args, "require_approval", False)
