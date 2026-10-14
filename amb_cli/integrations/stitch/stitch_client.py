@@ -74,18 +74,24 @@ class StitchClient:
     def generate_screen(
         self,
         prompt: str,
+        title: Optional[str] = None,
         device_type: Optional[str] = None,
         model_id: Optional[str] = None,
         design_system: Optional[str] = None,
         output_file: Optional[str] = None
     ) -> Dict[str, Any]:
         """Gera uma nova tela visual a partir de uma descrição textual respeitando a preferência de dispositivo."""
+        import re
         project_id = self.project_id or require_env("STITCH_PROJECT_ID")
         resolved_device = (device_type or get_device_type())
+        if title:
+            prompt = f"Title: {title}\nSpecification: {prompt}"
         payload = {
             "projectId": project_id,
             "prompt": prompt
         }
+        if title:
+            payload["title"] = title
         if model_id:
             payload["modelId"] = model_id
         if resolved_device:
@@ -96,6 +102,8 @@ class StitchClient:
         dev_label = f" ({resolved_device})" if resolved_device else ""
         log("STITCH", f"Disparando geração de nova tela visual{dev_label}...", Colors.CYAN)
         res = self._run_node_command("generate_screen_from_text", payload)
+        if title and res.get("htmlCode"):
+            res["htmlCode"] = re.sub(r'<title>.*?</title>', f'<title>{title}</title>', res["htmlCode"], flags=re.IGNORECASE)
         if output_file and res.get("htmlCode"):
             self.save_screen_html(res, output_file)
         return res

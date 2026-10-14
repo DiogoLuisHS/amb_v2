@@ -33,6 +33,7 @@ def test_stitch_generate_positional_string(mock_stitch_client):
 
     mock_stitch_client.generate_screen.assert_called_once_with(
         prompt="Dashboard Dark Mode com cards de KPI",
+        title=None,
         device_type=None,
         output_file=None
     )
@@ -57,6 +58,7 @@ def test_stitch_generate_positional_file(mock_stitch_client, tmp_path):
 
     mock_stitch_client.generate_screen.assert_called_once_with(
         prompt="Conteúdo do arquivo de prompt com utf-8",
+        title=None,
         device_type=None,
         output_file=None
     )
@@ -96,6 +98,7 @@ def test_stitch_generate_with_flag(mock_stitch_client):
 
     mock_stitch_client.generate_screen.assert_called_once_with(
         prompt="Prompt pela flag",
+        title=None,
         device_type=None,
         output_file=None
     )
