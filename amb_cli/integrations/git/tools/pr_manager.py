@@ -27,14 +27,29 @@ def run_pr_manager(action: str, **kwargs) -> Any:
 
     repo_name = kwargs.get("repo_name")
 
+    if action in ["get", "ready", "approve", "merge", "close"]:
+        pr_number = kwargs.get("pr_number")
+        if not pr_number:
+            current_branch = git.get_current_branch()
+            if current_branch in ["main", "master", "develop"]:
+                raise ApiExecutionError(f"A branch ativa é '{current_branch}'. Informe o número do PR explicitamente.")
+
+            open_prs = git.list_open_prs(repo_name=repo_name)
+            for pr in open_prs:
+                if pr.get("headRefName") == current_branch:
+                    pr_number = pr.get("number")
+                    break
+
+            if not pr_number:
+                raise ApiExecutionError(f"Nenhum PR aberto associado à branch ativa '{current_branch}'. Use 'amb git pr create'.")
+        kwargs["pr_number"] = pr_number
+
     if action == "list":
         include_drafts = kwargs.get("include_drafts", True)
         return git.list_open_prs(repo_name=repo_name, include_drafts=include_drafts)
 
     elif action == "get":
         pr_number = kwargs.get("pr_number")
-        if not pr_number:
-            raise ApiExecutionError("Número do PR é obrigatório para consulta.")
         return git.get_pr(pr_number=int(pr_number), repo_name=repo_name)
 
     elif action == "create":
@@ -72,23 +87,17 @@ def run_pr_manager(action: str, **kwargs) -> Any:
 
     elif action == "ready":
         pr_number = kwargs.get("pr_number")
-        if not pr_number:
-            raise ApiExecutionError("Número do PR é obrigatório para marcar como pronto.")
         success = git.mark_pr_ready(pr_number=int(pr_number), repo_name=repo_name)
         return {"success": success, "number": pr_number, "action": "ready"}
 
     elif action == "approve":
         pr_number = kwargs.get("pr_number")
-        if not pr_number:
-            raise ApiExecutionError("Número do PR é obrigatório para aprovação.")
         body = kwargs.get("body", "✅ Aprovado automaticamente pelo AMB_V2 após validação de integridade.")
         success = git.approve_pr(pr_number=int(pr_number), repo_name=repo_name, body=body)
         return {"success": success, "number": pr_number, "action": "approved"}
 
     elif action == "merge":
         pr_number = kwargs.get("pr_number")
-        if not pr_number:
-            raise ApiExecutionError("Número do PR é obrigatório para merge.")
         squash = kwargs.get("squash", True)
         delete_branch = kwargs.get("delete_branch", True)
         admin = kwargs.get("admin", True)
@@ -103,8 +112,6 @@ def run_pr_manager(action: str, **kwargs) -> Any:
 
     elif action == "close":
         pr_number = kwargs.get("pr_number")
-        if not pr_number:
-            raise ApiExecutionError("Número do PR é obrigatório para fechamento.")
         comment = kwargs.get("comment")
         delete_branch = kwargs.get("delete_branch", False)
         success = git.close_pr(
