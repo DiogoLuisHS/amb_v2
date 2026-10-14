@@ -64,6 +64,44 @@ def generate_ai_suggestion(
     )
 
 
+
+def start_advisor_chat(session_id: Optional[str] = None) -> None:
+    """Inicia um chat interativo contínuo com a sessão do Jules."""
+    dispatcher = JulesFeedbackDispatcher()
+
+    if session_id:
+        dispatcher.run_continuous_chat(session_id=session_id)
+        return
+
+    # Se não foi fornecido ID, listar as pendentes
+    pending = dispatcher.get_pending_sessions()
+    if not pending:
+        print(f"\n\033[92m✔ Nenhum chat aguardando resposta ou pendência no momento!\033[0m\n")
+        return
+
+    print(f"\n\033[1m📋 Escolha uma sessão pendente para iniciar o Chat Interativo:\033[0m\n")
+    for idx, item in enumerate(pending, 1):
+        print(f"  [\033[1m{idx}\033[0m] \033[96m{item['title']}\033[0m (ID: {item['session_id']})")
+
+    while True:
+        try:
+            choice = input("\n👉 Digite o número da sessão (ou '0' para sair): ").strip()
+            if choice in ["0", "s", "sair", "exit", "q"]:
+                break
+
+            idx = int(choice) - 1
+            if 0 <= idx < len(pending):
+                target_sid = pending[idx]["session_id"]
+                dispatcher.run_continuous_chat(session_id=target_sid)
+                break
+            else:
+                print(f"\033[93mOpção inválida. Digite um número de 1 a {len(pending)}.\033[0m")
+        except ValueError:
+            print(f"\033[93mDigite um número válido.\033[0m")
+        except KeyboardInterrupt:
+            break
+
+
 def advise_and_reply(
     session_id: str, auto_approve: bool = False, force: bool = False
 ) -> Optional[str]:

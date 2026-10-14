@@ -59,6 +59,8 @@ def create_parser() -> argparse.ArgumentParser:
     _sid(p, "ID ou URL da sessão do Jules (opcional).", "ID ou URL da sessão do Jules.")
     p.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
     p.add_argument("--auto-approve", "-y", action="store_true", help="Responde ou aprova automaticamente com IA sem confirmação.")
+    p.add_argument("--chat", "-c", action="store_true", help="Inicia sessão de chat conversacional contínuo (REPL) com o agente Jules.")
+
     _c("gui", "Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).", cmd_gui, ["ui", "wizard"])
     p = _c("agent", "Desenvolvimento autônomo e personas (lote -p <dir> ou loop contínuo).", cmd_agent, ["agent_alias"], desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).")
     p.add_argument("--role", "-r", help="Nome da persona a executar (ex: engineer). Opcional se usar -p/--prompt.")
@@ -109,6 +111,7 @@ def create_parser() -> argparse.ArgumentParser:
     j.add_argument("--message", "-m", help="Mensagem direta manual a ser enviada ao chat.")
     j.add_argument("--auto-approve", "-y", action="store_true", help="Envia resposta gerada pelo Gemini sem pedir confirmação.")
     j.add_argument("--force", "-f", action="store_true", help="Força envio ignorando guardrail de mensagens consecutivas do usuário.")
+    j.add_argument("--chat", "-c", action="store_true", help="Inicia sessão de chat conversacional contínuo (REPL) com o agente Jules.")
     j = _sc(js, "approve", "Aprova o plano de execução de uma sessão.")
     _sid(j, "ID ou URL da sessão do Jules.")
     j.add_argument("--force", "-f", action="store_true", help="Força aprovação sem checar se o plano está em estado pendente.")
