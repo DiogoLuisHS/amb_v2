@@ -32,14 +32,27 @@ def handle_cmd_antigravity(args: Any) -> None:
         print()
 
     elif sub in ["prompt", "synthesize", "synth"]:
+        import os
+        from core.logger import log_error
         from integrations.antigravity.tools.synthesize_prompt import run_synthesize_prompt
-        idea = getattr(args, "idea", None) or getattr(args, "synthesize", None)
+
+        raw_idea = getattr(args, "idea", None) or getattr(args, "idea_flag", None) or getattr(args, "synthesize_flag", None)
+
+        if not raw_idea:
+            log_error("ANTIGRAVITY", "Nenhuma ideia ou arquivo fornecido. Use: amb agy prompt 'Sua ideia' ou passe um arquivo.")
+            return
+
+        if os.path.isfile(raw_idea):
+            with open(raw_idea, "r", encoding="utf-8", errors="replace") as f:
+                raw_idea = f.read().strip()
+
         role = getattr(args, "role", "general") or "general"
         output_file = getattr(args, "output", None)
         image_path = getattr(args, "image", None)
         queue_flag = getattr(args, "queue", False)
+
         log("ANTIGRAVITY", f"Sintetizando prompt executivo ({role})" + (f" com mockup '{image_path}'..." if image_path else "..."), Colors.CYAN)
-        res = run_synthesize_prompt(raw_idea=idea or "", role=role, output_file=output_file, image_path=image_path, queue=queue_flag)
+        res = run_synthesize_prompt(raw_idea=raw_idea, role=role, output_file=output_file, image_path=image_path, queue=queue_flag)
         if not output_file and not queue_flag:
             print("\n" + "=" * 75)
             print(f"{Colors.BOLD}🧠 PROMPT ESTRUTURADO GERADO COM IA:{Colors.RESET}")
