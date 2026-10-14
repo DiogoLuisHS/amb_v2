@@ -1,5 +1,6 @@
 import json
-from typing import Any
+import os
+from typing import Any, Optional
 from core.bootstrap import ensure_amb_env
 
 ensure_amb_env()
@@ -148,8 +149,22 @@ def handle_cmd_antigravity(args: Any) -> None:
             print("=" * 75 + "\n")
 
     elif sub in ["run", "eval"]:
-        prompt_text = getattr(args, "prompt", "")
-        system_text = getattr(args, "system", None)
+        from core.logger import log_error
+
+        def _resolve_text_or_file(val: Optional[str]) -> Optional[str]:
+            import os
+            if val and os.path.isfile(val):
+                with open(val, "r", encoding="utf-8", errors="replace") as f:
+                    return f.read().strip()
+            return val
+
+        prompt_text = _resolve_text_or_file(getattr(args, "prompt", ""))
+        system_text = _resolve_text_or_file(getattr(args, "system", None))
+
+        if not prompt_text:
+            log_error("ANTIGRAVITY", "Nenhum prompt fornecido. Use: amb agy run 'Seu prompt' ou passe o caminho para um arquivo.")
+            return
+
         model_override = getattr(args, "model", None)
         temp = getattr(args, "temperature", 0.2)
         client = AntigravityClient(model=model_override)
