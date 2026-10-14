@@ -10,9 +10,11 @@ class DummyArgs:
 
 @pytest.fixture
 def mock_rules_manager():
-    # Patch it globally at its definition
-    with patch("amb_cli.workspace.rules_manager.get_rules_manager") as mock_get_mgr, patch("amb_cli.workspace.get_rules_manager") as mock_ws_get_mgr:
+    with patch("workspace.get_rules_manager") as mock_ws, \
+         patch("amb_cli.workspace.rules_manager.get_rules_manager") as mock_get_mgr, \
+         patch("amb_cli.workspace.get_rules_manager") as mock_ws_get_mgr:
         mgr = MagicMock()
+        mock_ws.return_value = mgr
         mock_get_mgr.return_value = mgr
         mock_ws_get_mgr.return_value = mgr
 

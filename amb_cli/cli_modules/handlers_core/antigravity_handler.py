@@ -8,9 +8,9 @@ ensure_amb_env()
 def handle_cmd_antigravity(args: Any) -> None:
     """Implementação isolada do comando antigravity."""
     sub = getattr(args, "agy_cmd", None)
-    from integrations.antigravity.antigravity_client import AntigravityClient
     from core import Colors, log
-    from amb_cli.workspace.rules_manager import get_rules_manager
+    from integrations.antigravity.antigravity_client import AntigravityClient
+    from workspace import get_rules_manager
 
     if sub in ["status", "check", None]:
         client = AntigravityClient()
