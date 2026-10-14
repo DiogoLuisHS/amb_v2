@@ -91,14 +91,18 @@ def handle_cmd_antigravity(args: Any) -> None:
         reports = []
         has_violations = False
 
+        fix_flag = getattr(args, "fix", False)
+
         for file in files_to_check:
             log("ANTIGRAVITY", f"Auditando conformidade arquitetural de {file}...", Colors.CYAN)
             res = run_validate_architecture(file_path=file)
 
             # Simple heuristic to detect violation
             res_lower = res.lower()
+            file_has_violations = False
             if "violação" in res_lower or "violacao" in res_lower or "não conform" in res_lower or "falha" in res_lower or "erro" in res_lower or "issue" in res_lower:
                 has_violations = True
+                file_has_violations = True
 
             reports.append({"file": file, "report": res})
 
@@ -108,6 +112,43 @@ def handle_cmd_antigravity(args: Any) -> None:
                 print("=" * 75)
                 print(res)
                 print("=" * 75 + "\n")
+
+            if fix_flag and file_has_violations:
+                from integrations.antigravity.tools.validate_architecture import generate_architecture_fix
+                import difflib
+
+                log("ANTIGRAVITY", f"Gerando proposta de correção para {file}...", Colors.CYAN)
+                fixed_content = generate_architecture_fix(file_path=file, report=res)
+
+                if fixed_content:
+                    with open(file, "r", encoding="utf-8", errors="replace") as f:
+                        original_content = f.read()
+
+                    if original_content != fixed_content:
+                        diff = difflib.unified_diff(
+                            original_content.splitlines(keepends=True),
+                            fixed_content.splitlines(keepends=True),
+                            fromfile=f"a/{file}",
+                            tofile=f"b/{file}",
+                        )
+                        diff_str = "".join(diff)
+
+                        print(f"\n{Colors.BOLD}{Colors.YELLOW}Proposta de Correção para {file}:{Colors.RESET}")
+                        for line in diff_str.splitlines():
+                            if line.startswith("+") and not line.startswith("+++"):
+                                print(f"{Colors.GREEN}{line}{Colors.RESET}")
+                            elif line.startswith("-") and not line.startswith("---"):
+                                print(f"{Colors.RED}{line}{Colors.RESET}")
+                            else:
+                                print(line)
+
+                        ans = input(f"\nAplicar as correções acima em {file}? [y/N]: ").strip().lower()
+                        if ans in ['y', 'yes']:
+                            with open(file, "w", encoding="utf-8", errors="replace") as f:
+                                f.write(fixed_content)
+                            log("ANTIGRAVITY", f"Correções aplicadas em {file}.", Colors.GREEN)
+                        else:
+                            log("ANTIGRAVITY", f"Correções para {file} ignoradas pelo usuário.", Colors.YELLOW)
 
         if getattr(args, "json", False):
             print(json.dumps({"reports": reports}, indent=2, ensure_ascii=False))
