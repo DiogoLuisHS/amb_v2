@@ -180,18 +180,40 @@ def handle_cmd_antigravity(args: Any) -> None:
         model_override = getattr(args, "model", None)
         temp = getattr(args, "temperature", 0.2)
         client = AntigravityClient(model=model_override)
-        log("ANTIGRAVITY", f"Executando inferência com {client.model}...", Colors.CYAN)
-        res = client.generate_text(
-            prompt=prompt_text,
-            system_instruction=system_text,
-            temperature=temp
-        )
         out_f = getattr(args, "output", None)
+        stream_flag = getattr(args, "stream", False)
+
+        log("ANTIGRAVITY", f"Executando inferência com {client.model}...", Colors.CYAN)
+
+        if stream_flag:
+            import sys
+            chunks = []
+            for chunk in client.generate_text_stream(
+                prompt=prompt_text,
+                system_instruction=system_text,
+                temperature=temp
+            ):
+                chunks.append(chunk)
+                if not out_f:
+                    sys.stdout.write(chunk)
+                    sys.stdout.flush()
+
+            if not out_f:
+                print()  # Quebra de linha final
+
+            res = "".join(chunks)
+        else:
+            res = client.generate_text(
+                prompt=prompt_text,
+                system_instruction=system_text,
+                temperature=temp
+            )
+
         if out_f:
             with open(out_f, "w", encoding="utf-8") as f:
                 f.write(res)
             log("ANTIGRAVITY", f"Resposta salva em {out_f}", Colors.GREEN)
-        else:
+        elif not stream_flag:
             print(res)
 
     else:
