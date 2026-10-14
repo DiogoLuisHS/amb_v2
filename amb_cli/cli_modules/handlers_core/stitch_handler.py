@@ -1,5 +1,6 @@
 import os
 import json
+import webbrowser
 from typing import Any
 from core.bootstrap import ensure_amb_env
 
@@ -21,6 +22,13 @@ def handle_cmd_stitch(args: Any) -> None:
                 return f.read().strip()
         return p
 
+    def _open_in_browser(res: dict, output_file: str = None) -> None:
+        url = res.get("screenshotUrl")
+        if output_file and os.path.exists(output_file):
+            webbrowser.open(f"file://{os.path.abspath(output_file)}")
+        elif url:
+            webbrowser.open(url)
+
     as_json = getattr(args, "json", False)
 
     if sub == "list":
@@ -39,6 +47,19 @@ def handle_cmd_stitch(args: Any) -> None:
             desc = f" - {s.get('description')}" if s.get("description") else ""
             print(f"  • {Colors.GREEN}{sid:<14}{Colors.RESET} {Colors.BOLD}{title}{Colors.RESET}{dims}{desc}")
         print()
+
+    elif sub == "view":
+        sid = getattr(args, "screen_id", None)
+        if not sid:
+            from core import log_error
+            log_error("O ID da tela é obrigatório. Ex: amb stitch view <id>")
+            return
+        res = client.get_screen(screen_id=sid)
+        if as_json:
+            print(json.dumps(res, indent=2, ensure_ascii=False))
+            return
+        log("STITCH", f"Abrindo visualização da tela {sid}...", Colors.GREEN)
+        _open_in_browser(res)
 
     elif sub == "generate":
         raw_prompt = getattr(args, "prompt", None) or getattr(args, "prompt_flag", None)
@@ -60,6 +81,9 @@ def handle_cmd_stitch(args: Any) -> None:
             print(f"  • Screenshot: {res['screenshotUrl']}")
         if output_file:
             print(f"  • HTML salvo em: {output_file}")
+
+        if getattr(args, "open", False):
+            _open_in_browser(res, output_file)
 
     elif sub == "refine":
         sid = getattr(args, "screen_id", None) or getattr(args, "screen_id_flag", None)
@@ -83,6 +107,9 @@ def handle_cmd_stitch(args: Any) -> None:
         if output_file:
             print(f"  • HTML salvo em: {output_file}")
 
+        if getattr(args, "open", False):
+            _open_in_browser(res, output_file)
+
     elif sub == "get":
         sid = getattr(args, "screen_id", None) or getattr(args, "screen_id_flag", None)
 
@@ -105,6 +132,9 @@ def handle_cmd_stitch(args: Any) -> None:
             print(f"  • DOM HTML: {len(res['htmlCode'])} caracteres")
         if output_file:
             print(f"  • HTML salvo em: {output_file}")
+
+        if getattr(args, "open", False):
+            _open_in_browser(res, output_file)
 
     elif sub == "variants":
         device = getattr(args, "device", None)
