@@ -28,6 +28,51 @@ def run_validate_architecture(
     return validate_code(file_path=file_path, rules_context=rules_context)
 
 
+def generate_architecture_fix(file_path: str, report: str) -> Optional[str]:
+    """
+    Lê o conteúdo original do arquivo e as regras violadas indicadas no report, e solicita ao
+    AntigravityClient uma correção pontual preservando a lógica e docstrings originais.
+    """
+    from integrations.antigravity.antigravity_client import AntigravityClient
+
+    if not os.path.exists(file_path):
+        return None
+
+    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+        code_content = f.read()
+
+    sys_inst = (
+        "Você é o Especialista Sênior em Correção Arquitetural do Google Antigravity. "
+        "Sua função é gerar o CÓDIGO CORRIGIDO COMPLETO de um arquivo baseado num relatório de auditoria, "
+        "resolvendo cirurgicamente todas as violações relatadas (como limite de linhas, tipagem estrita e SRP). "
+        "Preserve a lógica original de negócio, imports e docstrings essenciais. "
+        "ATENÇÃO: Retorne APENAS o código puro, sem formatação markdown extra (como ```python) e sem explicações."
+    )
+
+    prompt = (
+        f"Arquivo Original ({file_path}):\n"
+        f"```python\n{code_content}\n```\n\n"
+        f"Relatório de Auditoria (Violações a corrigir):\n"
+        f"{report}\n\n"
+        "Com base nas violações acima, forneça o código completo corrigido. Não retorne markdown, apenas o texto do código novo."
+    )
+
+    client = AntigravityClient()
+    try:
+        new_code = client.generate_text(prompt=prompt, system_instruction=sys_inst)
+        # Strip markdown if model still returned it
+        if new_code.startswith("```"):
+            lines = new_code.splitlines()
+            if len(lines) > 2 and lines[0].startswith("```"):
+                new_code = "\n".join(lines[1:-1])
+                if lines[-1].strip() != "```":
+                     new_code += "\n" + lines[-1]
+        return new_code.strip() + "\n"
+    except Exception as e:
+        log_error("ANTIGRAVITY", f"Falha ao gerar correção para {file_path}: {e}")
+        return None
+
+
 def main():
     p = argparse.ArgumentParser(description="Audita o código contra as diretrizes e regras arquiteturais do projeto.")
     p.add_argument("file", help="Caminho do arquivo a ser auditado.")
