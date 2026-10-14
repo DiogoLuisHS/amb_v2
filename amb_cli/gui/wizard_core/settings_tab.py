@@ -182,9 +182,15 @@ class SettingsTab:
             if "GITHUB_REPOSITORY" in new_values and new_values["GITHUB_REPOSITORY"]:
                 self.wizard.repo_name_var.set(new_values["GITHUB_REPOSITORY"])
 
+            try:
+                from core.config_manager import ConfigManager
+                ConfigManager.get_instance().reload()
+            except Exception:
+                pass
+
             messagebox.showinfo(
                 "Sucesso",
-                f"Configurações salvas com sucesso no arquivo .env!\n\nArquivo:\n{self.wizard.env_path}"
+                f"Configurações salvas e recarregadas com sucesso!\n\nArquivo:\n{self.wizard.env_path}"
             )
         except Exception as e:
             messagebox.showerror("Erro ao Salvar", f"Não foi possível gravar no arquivo .env:\n{e}")

@@ -60,14 +60,24 @@ class DynamicWizard(tk.Tk):
 
 
 def start_wizard():
-    app = DynamicWizard()
-    app.attributes('-topmost', True)
-    app.after_idle(app.attributes, '-topmost', False)
-    app.mainloop()
-    
-    if app.result_command:
-        print(f"\n⚡ Executando comando gerado pelo Wizard (no projeto {app.project_root}):\n> {app.result_command}\n")
-        subprocess.run(app.result_command, shell=True, cwd=app.project_root)
+    try:
+        app = DynamicWizard()
+        app.attributes('-topmost', True)
+        app.after_idle(app.attributes, '-topmost', False)
+        app.mainloop()
+
+        if app.result_command:
+            print(f"\n⚡ Executando comando gerado pelo Wizard (no projeto {app.project_root}):\n> {app.result_command}\n")
+            subprocess.run(app.result_command, shell=True, cwd=app.project_root)
+    except (tk.TclError, Exception) as err:
+        from core.exceptions import AmbError
+        raise AmbError(
+            f"Interface gráfica indisponível no ambiente atual: {err}",
+            "Execute a CLI diretamente pelo terminal:\n"
+            "  • amb --help (ver todos os comandos)\n"
+            "  • amb check  (diagnóstico de credenciais)\n"
+            "  • amb setup  (assistente de configuração)"
+        )
 
 if __name__ == "__main__":
     start_wizard()
