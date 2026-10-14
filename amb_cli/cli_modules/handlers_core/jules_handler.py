@@ -9,6 +9,9 @@ def handle_cmd_jules(args: Any) -> None:
     """Roteia comandos específicos da integração com o Google Jules."""
     sub = args.jules_cmd
 
+    if not sub:
+        sub = "status"
+
     if sub in ["status", "check"]:
         from integrations.jules.jules_client import JulesClient
         client = JulesClient()
