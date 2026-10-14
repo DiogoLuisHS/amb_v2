@@ -38,8 +38,30 @@ def run_create_session(
     c = client or JulesClient()
     automation_mode = "AUTO_CREATE_PR" if auto_pr else None
 
-    if not title:
-        title = synthesize_session_title(prompt)
+    if os.path.isfile(prompt):
+        original_path = prompt
+        with open(prompt, "r", encoding="utf-8", errors="replace") as f:
+            file_content = f.read()
+
+        if not title:
+            # Try to extract # H1 from markdown content
+            extracted_title = None
+            for line in file_content.splitlines():
+                if line.strip().startswith("# "):
+                    extracted_title = line.strip()[2:].strip()
+                    break
+
+            if extracted_title:
+                title = extracted_title
+            else:
+                # Fallback to filename
+                base = os.path.splitext(os.path.basename(original_path))[0]
+                title = base.replace("_", " ").title()
+
+        prompt = file_content
+    else:
+        if not title:
+            title = synthesize_session_title(prompt)
 
     is_repoless = repoless or source_name in ("none", "repoless")
 
@@ -110,7 +132,8 @@ create_session = run_create_session
 
 def main():
     p = argparse.ArgumentParser(description="Cria uma nova sessão no Google Jules.")
-    p.add_argument("--prompt", "-p", required=True, help="Texto do prompt ou caminho para arquivo com instruções.")
+    p.add_argument("prompt_pos", nargs="?", help="Texto do prompt ou caminho para arquivo (opcional se -p).")
+    p.add_argument("--prompt", "-p", required=False, help="Texto do prompt ou caminho para arquivo com instruções.")
     p.add_argument("--title", "-t", help="Título descritivo da tarefa.")
     p.add_argument("--branch", "-b", help="Branch base de início no repositório (padrão: branch ativa do Git).")
     p.add_argument("--source", "-s", help="Nome da fonte conectada (ex: sources/github/owner/repo).")
@@ -120,9 +143,14 @@ def main():
     p.add_argument("--no-repo", "--repoless", action="store_true", help="Cria sessão avulsa no Jules sem vincular repositório Git.")
     args = p.parse_args()
 
+    raw_prompt = getattr(args, "prompt_pos", None) or getattr(args, "prompt", None)
+    if not raw_prompt:
+        log_error("JULES", "É necessário fornecer um prompt (posicional ou via -p).")
+        sys.exit(1)
+
     try:
         run_create_session(
-            prompt=args.prompt,
+            prompt=raw_prompt,
             title=args.title,
             base_branch=args.branch,
             source_name=args.source,
