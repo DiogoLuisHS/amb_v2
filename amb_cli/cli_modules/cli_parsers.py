@@ -231,6 +231,7 @@ def create_parser() -> argparse.ArgumentParser:
     a.add_argument("--model", "-m", help="Modelo específico do Gemini (ex: gemini-3.8-flash).")
     a.add_argument("--temperature", "-t", type=float, default=0.2, help="Temperatura de amostragem (padrão: 0.2).")
     a.add_argument("--output", "-o", help="Salva a saída em arquivo.")
+    a.add_argument("--stream", action="store_true", help="Exibe a resposta em tempo real via streaming de tokens.")
     p = _c("validate", "Audita um arquivo contra as regras ou executa QA do projeto.", cmd_validate, ["lint", "audit"])
     p.add_argument("file", nargs="?", help="Caminho do arquivo a ser auditado (se omitido, executa QA do projeto).")
     p.add_argument("--staged", action="store_true", help="Auditar apenas os arquivos no stage.")

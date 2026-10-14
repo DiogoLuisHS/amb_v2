@@ -140,8 +140,9 @@ class BaseGoogleClient:
         timeout: Optional[int] = None,
         max_retries: Optional[int] = None,
         retry_statuses: Optional[Set[int]] = None,
-    ) -> Dict[str, Any]:
-        """Executa uma requisição HTTP autenticada com resiliência, retry e decodificação JSON."""
+        stream: bool = False,
+    ) -> Any:
+        """Executa uma requisição HTTP autenticada com resiliência e suporte a streaming."""
         # 1. Resolve URL completa
         if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
             url = path_or_url
@@ -177,7 +178,15 @@ class BaseGoogleClient:
                 method=method.upper(),
             )
             try:
-                with urllib.request.urlopen(req, timeout=req_timeout) as resp:
+                resp = urllib.request.urlopen(req, timeout=req_timeout)
+                if stream:
+                    def _stream_generator():
+                        with resp:
+                            for line in resp:
+                                yield line.decode("utf-8")
+                    return _stream_generator()
+
+                with resp:
                     resp_text = resp.read().decode("utf-8")
                     return json.loads(resp_text) if resp_text.strip() else {}
             except urllib.error.HTTPError as e:

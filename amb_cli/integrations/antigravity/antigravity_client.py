@@ -93,6 +93,48 @@ class AntigravityClient:
             prompt, self.model, system_instruction, temperature, max_output_tokens, image_path=image_path
         )
 
+    def generate_text_stream(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.2,
+        max_output_tokens: int = 8192,
+        image_path: Optional[str] = None,
+    ):
+        """Retorna um generator de chunks de texto (SSE) via API REST ou fallback síncrono para agy."""
+        if self.api_key:
+            self.backend.api_key = self.api_key
+            try:
+                # O backend já retorna o generator diretamente
+                stream_gen = self.backend._generate_stream_via_gemini_api(
+                    prompt, self.model, system_instruction, temperature, max_output_tokens, image_path=image_path
+                )
+                first_chunk_received = False
+                for chunk in stream_gen:
+                    first_chunk_received = True
+                    yield chunk
+                return
+            except Exception as e:
+                if first_chunk_received:
+                    raise e
+                log("ANTIGRAVITY", f"Chamada REST indisponível para streaming ({e}). Tentando CLI agy...", Colors.YELLOW)
+                cli_out = self._generate_via_agy_cli(prompt, system_instruction)
+                if cli_out:
+                    yield cli_out
+                    return
+                raise e
+
+        # Fallback caso não tenha api key
+        cli_out = self._generate_via_agy_cli(prompt, system_instruction)
+        if cli_out:
+            yield cli_out
+            return
+
+        self.backend.api_key = self.api_key
+        yield from self.backend._generate_stream_via_gemini_api(
+            prompt, self.model, system_instruction, temperature, max_output_tokens, image_path=image_path
+        )
+
     def generate_content(self, prompt: str, system_instruction: Optional[str] = None, json_mode: bool = False) -> str:
         return self.generate_text(prompt=prompt, system_instruction=system_instruction, temperature=0.0 if json_mode else 0.2)
 
