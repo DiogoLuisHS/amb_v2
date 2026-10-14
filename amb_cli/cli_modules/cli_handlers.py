@@ -97,10 +97,9 @@ def cmd_monitor(args: Any) -> None:
 
 
 def cmd_advisor(args: Any) -> None:
-    """Menu cognitivo para tirar dúvidas pendentes do Jules com IA (atalho para amb jules reply)."""
-    from cli_modules.handlers_core.jules_handler import handle_cmd_jules
-    args.jules_cmd = "reply"
-    handle_cmd_jules(args)
+    """Hub Central e Interativo de Chat Contínuo (US-40)."""
+    from agents.auto_reply import run_auto_advisor
+    run_auto_advisor(auto_approve=getattr(args, "auto_approve", False))
 
 
 def cmd_gui(args: Any) -> None:

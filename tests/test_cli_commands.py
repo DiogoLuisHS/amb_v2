@@ -172,12 +172,10 @@ def test_parser_git_subcommands(parser):
 # -------------------------------------------------------------
 
 def test_cmd_advisor_delegation():
-    with patch("cli_modules.handlers_core.jules_handler.handle_cmd_jules") as mock_jules, \
-         patch("amb_cli.cli_modules.handlers_core.jules_handler.handle_cmd_jules", mock_jules):
+    with patch("agents.auto_reply.run_auto_advisor") as mock_run_auto_advisor:
         args = argparse.Namespace(session_id="12345", auto_approve=True)
         cmd_advisor(args)
-        assert args.jules_cmd == "reply"
-        mock_jules.assert_called_once_with(args)
+        mock_run_auto_advisor.assert_called_once_with(auto_approve=True)
 
 
 def test_cmd_validate_delegation():
