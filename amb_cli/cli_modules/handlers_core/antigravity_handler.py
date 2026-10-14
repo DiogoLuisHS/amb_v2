@@ -10,7 +10,7 @@ def handle_cmd_antigravity(args: Any) -> None:
     sub = getattr(args, "agy_cmd", None)
     from integrations.antigravity.antigravity_client import AntigravityClient
     from core import Colors, log
-    from workspace import get_rules_manager
+    from amb_cli.workspace.rules_manager import get_rules_manager
 
     if sub in ["status", "check", None]:
         client = AntigravityClient()
@@ -120,6 +120,11 @@ def handle_cmd_antigravity(args: Any) -> None:
         mgr = get_rules_manager()
         rules_dir = mgr.resolve_rules_dir()
         rules_list = mgr.list_rules(rules_dir=rules_dir)
+        role = getattr(args, "role", None)
+
+        if role:
+            rules_list = mgr.filter_rules_for_agent(role=role, rules=rules_list)
+
         as_json = getattr(args, "json", False)
         show_content = getattr(args, "content", False)
 
@@ -129,7 +134,12 @@ def handle_cmd_antigravity(args: Any) -> None:
                 "rules": rules_list
             }
             if show_content:
-                out["consolidated_content"] = mgr.load_rules(rules_dir=rules_dir)
+                if role:
+                    # Carrega tudo e depois filtra o texto
+                    content = mgr.load_rules(rules_dir=rules_dir)
+                    out["consolidated_content"] = mgr.filter_rules_for_agent(role=role, rules_text=content)
+                else:
+                    out["consolidated_content"] = mgr.load_rules(rules_dir=rules_dir)
             print(json.dumps(out, indent=2, ensure_ascii=False))
             return
 
@@ -142,6 +152,8 @@ def handle_cmd_antigravity(args: Any) -> None:
         print()
         if show_content:
             content = mgr.load_rules(rules_dir=rules_dir)
+            if role:
+                content = mgr.filter_rules_for_agent(role=role, rules_text=content)
             print("=" * 75)
             print(f"{Colors.BOLD}CONTEÚDO CONSOLIDADO DAS REGRAS:{Colors.RESET}")
             print("=" * 75)
