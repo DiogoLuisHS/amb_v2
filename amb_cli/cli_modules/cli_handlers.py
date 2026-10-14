@@ -90,7 +90,8 @@ def cmd_monitor(args: Any) -> None:
         interval=args.interval,
         auto_approve=args.auto_approve,
         auto_merge=getattr(args, "auto_merge", False),
-        verbose=getattr(args, "verbose", False)
+        verbose=getattr(args, "verbose", False),
+        all_repos=getattr(args, "all_repos", False)
     )
     monitor.run(check_once=args.check_once)
 

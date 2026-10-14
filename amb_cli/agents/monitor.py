@@ -20,12 +20,20 @@ from integrations.jules.jules_watcher import JulesWatcher
 from cli_modules.alert_notifier import notify_info
 
 
-def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False) -> None:
+def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False, all_repos: bool = False) -> None:
     """Loop principal de monitoramento e vigilância unificada."""
     print("\n" + "=" * 75)
     mode_text = f"{Colors.BOLD}{Colors.GREEN}[MODO AUTO-APPROVE ATIVO ⚡]{Colors.RESET}" if auto_approve else "[MODO MONITOR DE ALERTA]"
     print(f"{Colors.BOLD}{Colors.CYAN}📡 AMB_V2 — SENTINELA E MONITOR UNIFICADO DE ATENÇÃO (EM TEMPO REAL) {mode_text}{Colors.RESET}")
     print("=" * 75)
+
+    if all_repos:
+        scope_text = f"🌐 Todos os repositórios da conta"
+    else:
+        from workspace import get_repo_name
+        scope_text = f"📁 Repositório local ({get_repo_name()})"
+
+    print(f"Escopo:              {scope_text}")
     print(f"Intervalo de Polling: {interval_seconds}s")
     print(f"Jules API Key:       {'Configurada ✅' if get_env('JULES_API_KEY') else 'Não configurada ⚠️'}")
     print(f"Stitch API Key:      {'Configurada ✅' if get_env('STITCH_API_KEY') else 'Não configurada ⚠️'}")
@@ -33,7 +41,7 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
     print("-" * 75)
     print(f"{Colors.DIM}Pressione Ctrl+C para encerrar o monitoramento a qualquer momento.{Colors.RESET}\n")
 
-    jules_w = JulesWatcher()
+    jules_w = JulesWatcher(all_repos=all_repos)
     cycle = 1
 
     try:
@@ -95,15 +103,16 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 class UnifiedMonitor:
     """Classe orientada a objetos para o Sentinela Unificado AMB_V2."""
 
-    def __init__(self, interval: int = 15, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False) -> None:
+    def __init__(self, interval: int = 15, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False, all_repos: bool = False) -> None:
         self.interval = interval
         self.auto_approve = auto_approve
         self.auto_merge = auto_merge
         self.verbose = verbose
+        self.all_repos = all_repos
 
     def run(self, check_once: bool = False) -> None:
         """Executa o loop do monitoramento."""
-        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve, auto_merge=self.auto_merge, verbose=self.verbose)
+        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve, auto_merge=self.auto_merge, verbose=self.verbose, all_repos=self.all_repos)
 
 
 def main() -> None:
