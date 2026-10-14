@@ -23,10 +23,13 @@ from cli_modules.alert_notifier import notify_attention  # noqa: E402
 
 
 class JulesWatcher:
-    """Vigia o estado das sessões do Jules no repositório ativo."""
+    """Vigia o estado das sessões do Jules no repositório ativo ou em toda a conta."""
 
-    def __init__(self, client: Optional[JulesClient] = None):
+    FEEDBACK_STATES = ["AWAITING_USER_FEEDBACK", "AWAITING_USER_APPROVAL"]
+
+    def __init__(self, client: Optional[JulesClient] = None, all_repos: bool = False):
         self.client = client or (JulesClient() if get_env("JULES_API_KEY") else None)
+        self.all_repos = all_repos
         self.notified_events = set()
 
     @staticmethod
@@ -41,8 +44,8 @@ class JulesWatcher:
 
         alerts = []
         try:
-            repo = get_repo_name()
-            sessions = self.client.list_sessions(page_size=30, repo_filter=repo)
+            repo_filter = None if self.all_repos else get_repo_name()
+            sessions = self.client.list_sessions(page_size=50, repo_filter=repo_filter)
             feedback_sessions = []
 
             for s in sessions:
@@ -69,6 +72,13 @@ class JulesWatcher:
                 raw_state = s.get("state", "UNKNOWN")
                 state = SessionState.from_api_string(raw_state)
                 title = s.get("title", "Sem título")
+
+                if self.all_repos:
+                    source = s.get("sourceContext", {}).get("source", "")
+                    # Extract the format [owner/repo] if it matches sources/github/owner/repo
+                    if source.startswith("sources/github/"):
+                        repo_name = source.replace("sources/github/", "")
+                        title = f"[{repo_name}] {title}"
 
                 # 1. Sessão que falhou ou foi cancelada
                 if state == SessionState.FAILED:

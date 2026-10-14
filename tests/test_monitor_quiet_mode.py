@@ -99,5 +99,5 @@ def test_cmd_monitor_passes_verbose_flag(mock_monitor_class):
 
     cmd_monitor(args)
 
-    mock_monitor_class.assert_called_once_with(interval=5, auto_approve=False, auto_merge=False, verbose=True)
+    mock_monitor_class.assert_called_once_with(interval=5, auto_approve=False, auto_merge=False, verbose=True, all_repos=False)
     mock_instance.run.assert_called_once_with(check_once=True)
