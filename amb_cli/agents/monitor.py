@@ -20,7 +20,7 @@ from integrations.jules.jules_watcher import JulesWatcher
 from cli_modules.alert_notifier import notify_info
 
 
-def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False, verbose: bool = False) -> None:
+def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False) -> None:
     """Loop principal de monitoramento e vigilância unificada."""
     print("\n" + "=" * 75)
     mode_text = f"{Colors.BOLD}{Colors.GREEN}[MODO AUTO-APPROVE ATIVO ⚡]{Colors.RESET}" if auto_approve else "[MODO MONITOR DE ALERTA]"
@@ -49,15 +49,28 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
                     log_error("MONITOR", f"Falha transiente na checagem do Jules: {e}")
                     jules_alerts = None
 
-                if auto_approve and jules_alerts:
+                if jules_alerts:
                     for alt in jules_alerts:
-                        if alt.get("type") in ["awaiting_feedback", "message"]:
+                        # 1. Auto-Approve (respostas e dúvidas)
+                        if auto_approve and alt.get("type") in ["awaiting_feedback", "message"]:
                             sid = alt.get("session_id")
                             log("AUTO-PILOT", f"⚡ Auto-respondendo à sessão {sid} via Antigravity SDK...", Colors.CYAN)
                             try:
                                 advise_and_reply(session_id=sid, auto_approve=True)
                             except Exception as e:
                                 log_error("AUTO-PILOT", f"Falha no auto-reply da sessão {sid}: {e}")
+
+                        # 2. Auto-Merge (conclusão com PR)
+                        if auto_merge and alt.get("type") == "completed_needs_merge":
+                            sid = alt.get("session_id")
+                            pr = alt.get("pr", {})
+                            pr_num = pr.get("number", "N/A")
+                            log("AUTO-PILOT", f"🔀 [AUTO-PILOT] Executando validação de QA e auto-merge para a sessão {sid} (PR #{pr_num})...", Colors.CYAN)
+                            try:
+                                from amb_cli.integrations.jules.tools.merge_session_pr import approve_and_merge_pr
+                                approve_and_merge_pr(session_id=sid, target_branch="main")
+                            except Exception as e:
+                                log_error("AUTO-PILOT", f"Falha na validação QA ou merge da sessão {sid}: {e}")
 
                 if jules_alerts is not None and not jules_alerts:
                     if verbose:
@@ -82,14 +95,15 @@ def run_monitor(interval_seconds: int = 15, check_once: bool = False, auto_appro
 class UnifiedMonitor:
     """Classe orientada a objetos para o Sentinela Unificado AMB_V2."""
 
-    def __init__(self, interval: int = 15, auto_approve: bool = False, verbose: bool = False) -> None:
+    def __init__(self, interval: int = 15, auto_approve: bool = False, auto_merge: bool = False, verbose: bool = False) -> None:
         self.interval = interval
         self.auto_approve = auto_approve
+        self.auto_merge = auto_merge
         self.verbose = verbose
 
     def run(self, check_once: bool = False) -> None:
         """Executa o loop do monitoramento."""
-        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve, verbose=self.verbose)
+        run_monitor(interval_seconds=self.interval, check_once=check_once, auto_approve=self.auto_approve, auto_merge=self.auto_merge, verbose=self.verbose)
 
 
 def main() -> None:

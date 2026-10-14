@@ -50,6 +50,7 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("monitor", "Sentinela em tempo real (Jules) com suporte a auto-resposta Gemini.", cmd_monitor, ["watch", "sentinel"])
     p.add_argument("--interactive", "-i", action="store_true", help="Abre o menu interativo cognitivo (Advisor) para inspecionar e responder pendências.")
     p.add_argument("--auto-approve", "-y", action="store_true", help="Aprova e responde chats automaticamente via Gemini.")
+    p.add_argument("--auto-merge", action="store_true", help="Executa testes locais de QA e realiza merge automático do Pull Request ao detectar conclusão de sessão.")
     p.add_argument("--check-once", "-1", action="store_true", help="Executa apenas uma rodada de checagem e encerra.")
     p.add_argument("--interval", type=int, default=15, help="Intervalo de polling em segundos (padrão: 15s).")
     p.add_argument("--verbose", "-v", action="store_true", help="Exibe logs detalhados de polling a cada ciclo de checagem (por padrão o monitor é silencioso).")
