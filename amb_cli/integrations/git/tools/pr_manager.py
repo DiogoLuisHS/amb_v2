@@ -38,14 +38,33 @@ def run_pr_manager(action: str, **kwargs) -> Any:
         return git.get_pr(pr_number=int(pr_number), repo_name=repo_name)
 
     elif action == "create":
-        title = kwargs.get("title")
+        title = kwargs.get("title") or kwargs.get("title_pos")
         body = kwargs.get("body", "")
+        base_branch = kwargs.get("base")
+
         if not title:
-            raise ApiExecutionError("Título é obrigatório para criação de PR.")
+            # Fallback para mensagem do ultimo commit
+            res = git._run_git(["git", "log", "-1", "--pretty=%B"])
+            if res.returncode == 0 and res.stdout.strip():
+                title = res.stdout.strip().split("\n")[0]
+            if not title:
+                raise ApiExecutionError("Título é obrigatório para criação de PR e não pôde ser inferido.")
+
+        if not body:
+            # Auto-body com base nos commits
+            target_base = base_branch or git.get_upstream_branch() or "main"
+            res = git._run_git(["git", "log", "--oneline", f"{target_base}..HEAD"])
+            commits = ""
+            if res.returncode == 0 and res.stdout.strip():
+                commits = "\n".join([f"- {line}" for line in res.stdout.strip().split("\n") if line])
+
+            if commits:
+                body = "### 📋 Resumo das Alterações\nPull Request gerado automaticamente pelo AMB_V2.\n\n### 📦 Commits Integrados:\n" + commits
+
         return git.create_pr(
             title=title,
             body=body,
-            base=kwargs.get("base"),
+            base=base_branch,
             head=kwargs.get("head"),
             draft=kwargs.get("draft", False),
             repo_name=repo_name,
@@ -118,7 +137,8 @@ def main():
 
     # create
     p_create = sub.add_parser("create", help="Cria um novo PR.")
-    p_create.add_argument("--title", "-t", required=True, help="Título do PR.")
+    p_create.add_argument("title_pos", nargs="?", metavar="title", help="Título do Pull Request (opcional se fornecido via -t).")
+    p_create.add_argument("--title", "-t", required=False, help="Título do PR.")
     p_create.add_argument("--body", "-b", default="", help="Corpo descritivo do PR.")
     p_create.add_argument("--base", help="Branch base.")
     p_create.add_argument("--head", help="Branch de origem.")
