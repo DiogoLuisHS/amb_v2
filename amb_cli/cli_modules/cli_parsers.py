@@ -296,7 +296,7 @@ def create_parser() -> argparse.ArgumentParser:
     _sc(hs, "status", "Verifica se o pre-commit hook está instalado e ativo.", ["check"])
 
     def _pr_num(p):
-        p.add_argument("number", type=int, help="Número do Pull Request.")
+        p.add_argument("number", nargs="?", type=int, help="Número do Pull Request (opcional se executado na branch do PR).")
         p.add_argument("--repo", help="Repositório alvo (dono/repo).")
     prs = _sc(gs, "pr", "Gerenciador de Pull Requests no GitHub via GitHub CLI.").add_subparsers(dest="pr_cmd", help="Ações de Pull Request")
     pr = _sc(prs, "list", "Lista Pull Requests abertos no repositório.")
