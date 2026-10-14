@@ -291,6 +291,10 @@ def create_parser() -> argparse.ArgumentParser:
     g.add_argument("--base", "-b", help="Branch base para comparação.")
     g.add_argument("--cached", action="store_true", help="Exibe diff das alterações preparadas (staged).")
 
+    gc = _sc(gs, "commit", "Valida a conformidade arquitetural do stage e realiza o commit com segurança.")
+    gc.add_argument("message", help="Mensagem do commit.")
+    gc.add_argument("--no-verify", action="store_true", help="Ignora a validação das regras arquiteturais.")
+
     hs = _sc(gs, "hooks", "Gerencia e audita hooks do Git no repositório.").add_subparsers(dest="hooks_action", help="Ações de hooks")
     _sc(hs, "install", "Instala o pre-commit hook de validação do AMB_V2.")
     _sc(hs, "status", "Verifica se o pre-commit hook está instalado e ativo.", ["check"])

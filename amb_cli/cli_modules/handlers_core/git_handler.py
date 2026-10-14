@@ -58,6 +58,40 @@ def handle_cmd_git(args: Any) -> None:
         elif res:
             print(res)
 
+    elif sub == "commit":
+        message = getattr(args, "message", None)
+        no_verify = getattr(args, "no_verify", False)
+        git = GitService()
+
+        if not no_verify:
+            from workspace import get_rules_manager
+            mgr = get_rules_manager()
+            staged_files = mgr.get_staged_files()
+
+            if not staged_files:
+                log("GIT", "Nenhum arquivo no stage (git add) para auditar e commitar.", Colors.CYAN)
+                return
+
+            has_violations = False
+            for file_path in staged_files:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        lines = f.readlines()
+                        if len(lines) > 300:
+                            log("ANTIGRAVITY", f"Arquivo violando regras canônicas (> 300 linhas): {file_path}", Colors.RED)
+                            has_violations = True
+                except Exception as e:
+                    pass
+
+            if has_violations:
+                log("GIT", "Commit abortado devido a violações arquiteturais.", Colors.RED)
+                return
+
+        if git._run_git(["git", "commit", "-m", message]).returncode == 0:
+            print(f"{Colors.GREEN}✔ Commit realizado com sucesso!{Colors.RESET}")
+        else:
+            log("GIT", "Erro ao realizar commit.", Colors.RED)
+
     elif sub == "hooks":
         from .hooks_handler import handle_cmd_hooks
         handle_cmd_hooks(args)
