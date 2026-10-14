@@ -62,26 +62,41 @@ def handle_cmd_stitch(args: Any) -> None:
             print(f"  • HTML salvo em: {output_file}")
 
     elif sub == "refine":
-        prompt_text = _resolve_prompt(args.prompt)
+        sid = getattr(args, "screen_id", None) or getattr(args, "screen_id_flag", None)
+        raw_prompt = getattr(args, "prompt", None) or getattr(args, "prompt_flag", None)
+
+        if not sid or not raw_prompt:
+            from core import log_error
+            log_error("O ID da tela e o prompt são obrigatórios para refinamento. Ex: amb stitch refine <id> \"<prompt>\"")
+            return
+
+        prompt_text = _resolve_prompt(raw_prompt)
         output_file = getattr(args, "output", None)
         device = getattr(args, "device", None)
-        res = client.edit_screen(screen_id=args.screen_id, prompt=prompt_text, device_type=device, output_file=output_file)
+        res = client.edit_screen(screen_id=sid, prompt=prompt_text, device_type=device, output_file=output_file)
         if as_json:
             print(json.dumps(res, indent=2, ensure_ascii=False))
             return
-        log("STITCH", f"Tela {args.screen_id} refinada com sucesso!", Colors.GREEN)
+        log("STITCH", f"Tela {sid} refinada com sucesso!", Colors.GREEN)
         if res.get("screenshotUrl"):
             print(f"  • Nova Screenshot: {res['screenshotUrl']}")
         if output_file:
             print(f"  • HTML salvo em: {output_file}")
 
     elif sub == "get":
+        sid = getattr(args, "screen_id", None) or getattr(args, "screen_id_flag", None)
+
+        if not sid:
+            from core import log_error
+            log_error("O ID da tela é obrigatório. Ex: amb stitch get <id>")
+            return
+
         output_file = getattr(args, "output", None)
-        res = client.get_screen(screen_id=args.screen_id, output_file=output_file)
+        res = client.get_screen(screen_id=sid, output_file=output_file)
         if as_json:
             print(json.dumps(res, indent=2, ensure_ascii=False))
             return
-        log("STITCH", f"Detalhes da tela {args.screen_id} obtidos com sucesso.", Colors.GREEN)
+        log("STITCH", f"Detalhes da tela {sid} obtidos com sucesso.", Colors.GREEN)
         if res.get("title"):
             print(f"  • Título: {res['title']}")
         if res.get("screenshotUrl"):
