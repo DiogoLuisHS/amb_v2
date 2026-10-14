@@ -298,7 +298,10 @@ def create_parser() -> argparse.ArgumentParser:
     def _pr_num(p):
         p.add_argument("number", nargs="?", type=int, help="Número do Pull Request (opcional se executado na branch do PR).")
         p.add_argument("--repo", help="Repositório alvo (dono/repo).")
-    prs = _sc(gs, "pr", "Gerenciador de Pull Requests no GitHub via GitHub CLI.").add_subparsers(dest="pr_cmd", help="Ações de Pull Request")
+    pr_base = _sc(gs, "pr", "Gerenciador de Pull Requests no GitHub via GitHub CLI.")
+    _j(pr_base)
+    pr_base.add_argument("--no-drafts", action="store_true", help="Oculta PRs em modo draft.")
+    prs = pr_base.add_subparsers(dest="pr_cmd", help="Ações de Pull Request")
     pr = _sc(prs, "list", "Lista Pull Requests abertos no repositório.")
     pr.add_argument("--repo", help="Repositório alvo (dono/repo).")
     pr.add_argument("--no-drafts", action="store_true", help="Oculta PRs em modo draft.")

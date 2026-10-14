@@ -34,7 +34,9 @@ def handle_cmd_git(args: Any) -> None:
 
     elif sub == "pr":
         from integrations.git.tools.pr_manager import run_pr_manager
-        pr_action = getattr(args, "pr_cmd", "list") or "list"
+        pr_action = getattr(args, "pr_cmd", None)
+        if not pr_action:
+            pr_action = "list"
         kwargs = {
             "repo_name": getattr(args, "repo", None),
             "pr_number": getattr(args, "number", None),
