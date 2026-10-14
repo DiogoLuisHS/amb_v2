@@ -86,7 +86,12 @@ def cmd_monitor(args: Any) -> None:
         return
 
     from agents.monitor import UnifiedMonitor
-    monitor = UnifiedMonitor(interval=args.interval, auto_approve=args.auto_approve, verbose=getattr(args, "verbose", False))
+    monitor = UnifiedMonitor(
+        interval=args.interval,
+        auto_approve=args.auto_approve,
+        auto_merge=getattr(args, "auto_merge", False),
+        verbose=getattr(args, "verbose", False)
+    )
     monitor.run(check_once=args.check_once)
 
 
