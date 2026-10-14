@@ -60,6 +60,24 @@ def build_ai_context(
     return full_prompt
 
 
+def find_active_session_by_title(client: JulesClient, session_title: str) -> Optional[str]:
+    """Localiza sessão ativa existente com o mesmo título para evitar duplicatas."""
+    try:
+        sessions_resp = client.list_sessions(page_size=20)
+        sessions = sessions_resp if isinstance(sessions_resp, list) else sessions_resp.get("sessions", [])
+        for s in sessions:
+            st = s.get("state", "")
+            title = s.get("title", "")
+            if st in ["IN_PROGRESS", "AWAITING_USER_FEEDBACK", "QUEUED"] and title == session_title:
+                name = s.get("name")
+                sid = name.split("/")[-1] if name else s.get("id", "")
+                if sid:
+                    return sid
+    except Exception:
+        pass
+    return None
+
+
 def dispatch_jules_session(
     client: JulesClient,
     full_prompt: str,
@@ -67,7 +85,14 @@ def dispatch_jules_session(
     session_title: str,
     branch: str,
 ) -> str:
-    """Cria a sessão no Jules e retorna o ID."""
+    """Cria a sessão no Jules ou reconecta se já houver uma ativa para este item."""
+    existing_sid = find_active_session_by_title(client, session_title)
+    if existing_sid:
+        log("LOOP", f"Reconectando à sessão ativa existente no Jules: {existing_sid}...", Colors.CYAN)
+        print(f"🎉 Sessão Conectada: {Colors.GREEN}{existing_sid}{Colors.RESET}")
+        print(f"🔗 Acompanhe: {Colors.BLUE}https://jules.google.com/session/{existing_sid}{Colors.RESET}\n")
+        return existing_sid
+
     pr_mandate = (
         "\n\n---\n\n"
         "## 🚀 Finalização Obrigatória: Pull Request\n"

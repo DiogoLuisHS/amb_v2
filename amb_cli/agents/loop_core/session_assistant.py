@@ -27,7 +27,7 @@ def monitor_and_assist_session(
     auto_reply_ai: bool = True,
     quiet: bool = False,
     require_pr: bool = False,
-    max_wait_seconds: int = 3600
+    max_wait_seconds: int = 7200
 ) -> str:
     """
     Monitora a sessão no Jules, verificando seu estado.
@@ -174,6 +174,7 @@ def monitor_and_assist_session(
                             log("LOOP-MONITOR", "✔ Plano aprovado via API com sucesso.", Colors.GREEN)
                             plan_challenges_count[session_id] = 0
                             last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
+                            start_time = time.time()
                         except Exception as e:
                             log_error("LOOP-MONITOR", f"Falha ao aprovar plano via client.approve_plan: {e}")
                 elif auto_reply_ai and turn_info.get("last_speaker") == "AGENT":
@@ -186,6 +187,7 @@ def monitor_and_assist_session(
                         advise_and_reply(session_id=session_id, auto_approve=True, force=True)
                         log("LOOP-MONITOR", "✔ Resposta enviada com sucesso para destravar o agente.", Colors.GREEN)
                         last_answered_agent_msg_id = turn_info.get("last_agent_msg_id")
+                        start_time = time.time()
                     except Exception as ar_err:
                         log_error("LOOP-MONITOR", f"Falha no Auto-Reply: {ar_err}")
                 time.sleep(POST_ACTION_INTERVAL_SECONDS)
