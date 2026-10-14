@@ -41,7 +41,13 @@ def handle_cmd_stitch(args: Any) -> None:
         print()
 
     elif sub == "generate":
-        prompt_text = _resolve_prompt(args.prompt)
+        raw_prompt = getattr(args, "prompt", None) or getattr(args, "prompt_flag", None)
+        if not raw_prompt:
+            from core import log_error
+            log_error("O argumento posicional 'prompt' ou a flag '--prompt' são obrigatórios.")
+            return
+
+        prompt_text = _resolve_prompt(raw_prompt)
         device = getattr(args, "device", None)
         output_file = getattr(args, "output", None)
         res = client.generate_screen(prompt=prompt_text, device_type=device, output_file=output_file)
