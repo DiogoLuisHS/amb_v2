@@ -1,14 +1,13 @@
 import json
 from typing import Any
 from core.bootstrap import ensure_amb_env
+from core import Colors, log, log_error
 
 ensure_amb_env()
 
 def handle_cmd_jules(args: Any) -> None:
     """Roteia comandos específicos da integração com o Google Jules."""
     sub = args.jules_cmd
-
-    from core import Colors, log, log_error
 
     if sub in ["status", "check"]:
         from integrations.jules.jules_client import JulesClient
@@ -58,8 +57,12 @@ def handle_cmd_jules(args: Any) -> None:
     elif sub == "create":
         from integrations.jules.tools.create_session import run_create_session
         req_appr = getattr(args, "require_approval", False)
+        raw_prompt = getattr(args, "prompt_pos", None) or getattr(args, "prompt", None)
+        if not raw_prompt:
+            log_error("JULES", "É necessário fornecer um prompt (posicional ou via -p).")
+            return
         run_create_session(
-            prompt=args.prompt,
+            prompt=raw_prompt,
             title=getattr(args, "title", None),
             base_branch=getattr(args, "branch", None),
             source_name=getattr(args, "source", None),
