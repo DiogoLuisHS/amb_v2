@@ -279,7 +279,7 @@ def test_antigravity_cli_handlers(capsys, monkeypatch):
     assert "model" in data_st
 
     # 2. amb agy rules --json
-    args_rules = MagicMock(agy_cmd="rules", json=True, content=False)
+    args_rules = MagicMock(agy_cmd="rules", json=True, content=False, role=None)
     cmd_antigravity(args_rules)
     out_rl = capsys.readouterr().out
     data_rl = json.loads(out_rl)

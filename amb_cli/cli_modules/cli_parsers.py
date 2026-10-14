@@ -222,6 +222,7 @@ def create_parser() -> argparse.ArgumentParser:
     a.add_argument("--staged", action="store_true", help="Auditar apenas os arquivos no stage.")
     a.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
     a = _sc(ag, "rules", "Lista e inspeciona as regras arquiteturais descobertas no projeto.")
+    a.add_argument("--role", "-r", help="Filtra e prioriza regras relevantes para uma especialidade (ex: frontend, backend, qa, security).")
     a.add_argument("--json", action="store_true", help="Exibe a lista de regras em JSON.")
     a.add_argument("--content", "-c", action="store_true", help="Exibe o conteúdo integral consolidado das regras.")
     a = _sc(ag, "run", "Executa inferência direta com prompt arbitrário via modelo cognitivo.", ["eval"])

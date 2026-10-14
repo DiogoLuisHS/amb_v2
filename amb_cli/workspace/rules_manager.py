@@ -223,18 +223,43 @@ class RulesManager:
         self,
         rules_text: Optional[str] = None,
         role: Optional[str] = None,
-        max_chars: int = 6000
-    ) -> str:
+        max_chars: int = 6000,
+        rules: Optional[List[Dict[str, Any]]] = None
+    ) -> Any:
         """
         Filtra e prioriza regras relevantes para o papel do agente (ex: frontend, backend, qa).
-        Se nenhum filtro específico se aplicar, retorna as regras consolidadas padrão.
+        Se `rules` (lista) for fornecido, retorna a lista filtrada.
+        Se `rules_text` for fornecido, retorna a string filtrada.
+        Se nenhum filtro específico se aplicar, retorna as regras padrão.
         """
+        if role is None:
+            if rules is not None:
+                return rules
+            return rules_text if rules_text is not None else self.load_rules(max_chars=max_chars)
+
+        role_lower = role.lower()
+
+        if rules is not None:
+            filtered_list = []
+            for r in rules:
+                if role_lower in r.get("name", "").lower() or role_lower in r.get("summary", "").lower():
+                    filtered_list.append(r)
+                else:
+                    # check content if possible
+                    try:
+                        with open(r["path"], "r", encoding="utf-8", errors="replace") as f:
+                            content = f.read().lower()
+                            if role_lower in content:
+                                filtered_list.append(r)
+                    except Exception:
+                        pass
+            return filtered_list
+
         base_text = rules_text if rules_text is not None else self.load_rules(max_chars=max_chars)
-        if not base_text or not role:
+        if not base_text:
             return base_text
 
         # Priorização baseada em tópicos relevantes ao papel do agente
-        role_lower = role.lower()
         paragraphs = base_text.split("\n\n### 📋 Regra: ")
         if len(paragraphs) <= 1:
             return base_text
