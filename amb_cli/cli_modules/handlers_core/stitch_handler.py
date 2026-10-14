@@ -171,6 +171,44 @@ def handle_cmd_stitch(args: Any) -> None:
             return
         log("STITCH", "✅ Design System sincronizado com sucesso!", Colors.GREEN)
 
+    elif sub in ["status", "check"]:
+        res = client.get_status()
+        if as_json:
+            print(json.dumps(res, indent=2, ensure_ascii=False))
+            return
+
+        print(f"\n{Colors.BOLD}{Colors.CYAN}=== 🎨 DIAGNÓSTICO GOOGLE STITCH SDK ==={Colors.RESET}")
+
+        # Node
+        n_ok = res["node_runtime"]["installed"]
+        n_ver = res["node_runtime"]["version"]
+        n_str = f"Instalado ({n_ver})" if n_ok else f"{Colors.RED}Não encontrado{Colors.RESET}"
+        print(f"  • Node.js Runtime:   {n_str}")
+
+        # API Key
+        k_ok = res["api_key"]["configured"]
+        k_str = "Configurada" if k_ok else f"{Colors.RED}Ausente{Colors.RESET}"
+        print(f"  • API Key:           {k_str}")
+
+        # Runner
+        r_ok = res["runner"]["installed"]
+        r_str = "Instalado" if r_ok else f"{Colors.RED}Não encontrado{Colors.RESET}"
+        print(f"  • Runner SDK:        {r_str}")
+
+        # Project
+        p_ok = res["project_id"]["configured"]
+        p_val = res["project_id"].get("value")
+        p_str = f"projects/{p_val}" if p_ok else f"{Colors.RED}Ausente{Colors.RESET}"
+        print(f"  • Projeto Ativo:     {p_str}")
+
+        # Connectivity
+        c_ok = res["connectivity"]["connected"]
+        c_det = res["connectivity"].get("details", "")
+        c_str = f"Conectada ({c_det})" if c_ok else f"{Colors.RED}Desconectada ({c_det}){Colors.RESET}"
+        if not (n_ok and k_ok and p_ok and r_ok):
+             c_str = f"{Colors.YELLOW}Ignorada (dependências faltantes){Colors.RESET}"
+        print(f"  • Conectividade:     {c_str}\n")
+
     elif sub == "call":
         payload_str = getattr(args, "payload", "{}")
         if os.path.exists(payload_str) and os.path.isfile(payload_str):
