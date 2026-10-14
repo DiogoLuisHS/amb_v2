@@ -7,7 +7,9 @@ ensure_amb_env()
 
 def handle_cmd_stitch(args: Any) -> None:
     """Implementação isolada do comando stitch."""
-    sub = args.stitch_cmd
+    sub = getattr(args, "stitch_cmd", None)
+    if not sub:
+        sub = "list"
     from integrations.stitch.stitch_client import StitchClient
     from core import Colors, log
 
