@@ -8,6 +8,7 @@ realizar o merge no GitHub, sincronizar localmente e validar com typecheck/build
 """
 
 import os
+from pathlib import Path
 import sys
 import re
 import time
@@ -157,6 +158,8 @@ def apply_session_patch(
             all_applied = True
             for p_idx, p in enumerate(diff.split("diff --git ")[1:], 1):
                 f_rel = p.split("\n")[0].split(" b/")[-1].strip()
+                if f_rel.endswith(".db") or "GIT binary patch" in p:
+                    continue
                 single_p = "diff --git " + p
                 if "@@" not in single_p and "new file mode" in single_p:
                     t_path = os.path.join(repo_root, f_rel)
