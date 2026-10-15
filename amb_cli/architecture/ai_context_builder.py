@@ -255,8 +255,8 @@ class AIContextBuilder:
         return result
 
 
-def generate_context(target: Optional[str] = None, output_json: bool = False) -> None:
-    """Gera o contexto arquitetural do módulo no terminal."""
+def generate_context(target: Optional[str] = None, output_json: bool = False, output_file: Optional[str] = None) -> None:
+    """Gera o contexto arquitetural do módulo no terminal ou em arquivo."""
     root = find_repo_root()
     builder = AIContextBuilder(Path(root))
     builder.analyze()
@@ -265,11 +265,20 @@ def generate_context(target: Optional[str] = None, output_json: bool = False) ->
         modules = builder.discover_modules()
         if modules:
             if output_json:
-                print(json.dumps({"modules": modules}, indent=2, ensure_ascii=False))
+                out_content = json.dumps({"modules": modules}, indent=2, ensure_ascii=False)
+                if output_file:
+                    _save_to_file(output_file, out_content)
+                else:
+                    print(out_content)
             else:
-                print("=== 🧩 MÓDULOS ENCONTRADOS NO PROJETO ===")
+                out_lines = ["=== 🧩 MÓDULOS ENCONTRADOS NO PROJETO ==="]
                 for mod in modules:
-                    print(f"  • {mod['name']:<12} ({mod['files_count']} arquivos) -> amb context {mod['name']}")
+                    out_lines.append(f"  • {mod['name']:<12} ({mod['files_count']} arquivos) -> amb context {mod['name']}")
+                out_content = "\n".join(out_lines)
+                if output_file:
+                    _save_to_file(output_file, out_content)
+                else:
+                    print(out_content)
             return
         target = "PROJETO"
 
@@ -283,10 +292,26 @@ def generate_context(target: Optional[str] = None, output_json: bool = False) ->
             "total_files": sum(len(layer["files"]) for layer in layers.values()),
             "layers": layers,
         }
-        print(json.dumps(result_json, indent=2, ensure_ascii=False))
+        out_content = json.dumps(result_json, indent=2, ensure_ascii=False)
+        if output_file:
+            _save_to_file(output_file, out_content)
+        else:
+            print(out_content)
     else:
         markdown_output = builder.generate_markdown(query, layers)
-        print(markdown_output)
+        if output_file:
+            _save_to_file(output_file, markdown_output)
+        else:
+            print(markdown_output)
+
+def _save_to_file(filepath: str, content: str) -> None:
+    """Salva o conteúdo em um arquivo e cria os diretórios necessários."""
+    parent_dir = os.path.dirname(filepath)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
+    with open(filepath, "w", encoding="utf-8", errors="replace") as f:
+        f.write(content)
+    print(f"✔ Roteiro arquitetural salvo com sucesso em: {filepath}")
 
 
 if __name__ == "__main__":
