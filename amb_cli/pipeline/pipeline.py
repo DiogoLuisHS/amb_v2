@@ -50,7 +50,12 @@ class PipelineOrchestrator:
 
         machine = LoopStateMachine(repo_root=repo_root)
 
-        starting_branch = starting_branch or GitService(repo_root=repo_root).get_current_branch(cwd=repo_root) or "main"
+        detected_branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root) or "main"
+        if detected_branch.startswith("jules-"):
+            detected_branch = "main"
+        starting_branch = starting_branch or detected_branch
+        if starting_branch.startswith("jules-"):
+            starting_branch = "main"
 
         if resume:
             resume_session = resume_session or machine.get_current_state().get("session_id")

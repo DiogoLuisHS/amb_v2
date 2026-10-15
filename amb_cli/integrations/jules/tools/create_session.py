@@ -65,6 +65,9 @@ def run_create_session(
 
     is_repoless = repoless or source_name in ("none", "repoless")
 
+    if base_branch and base_branch.startswith("jules-"):
+        base_branch = "main"
+
     # Pre-validation of branch if required
     if not skip_branch_check and not is_repoless:
         resolved_source = source_name

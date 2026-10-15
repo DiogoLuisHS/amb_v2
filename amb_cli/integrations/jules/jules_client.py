@@ -92,13 +92,15 @@ class JulesClient(BaseGoogleClient):
             from workspace import get_repo_name
             resolved_source = source_name or f"sources/github/{get_repo_name()}"
 
-            if not base_branch:
+            if not base_branch or base_branch.startswith("jules-"):
                 try:
                     from integrations.git.git_service import GitService
-                    base_branch = GitService().get_current_branch()
+                    detected = GitService().get_current_branch()
+                    base_branch = "main" if (detected and detected.startswith("jules-")) else (detected or "main")
                 except Exception:
-                    base_branch = None
-            base_branch = base_branch or "main"
+                    base_branch = "main"
+            if base_branch.startswith("jules-"):
+                base_branch = "main"
 
             payload["sourceContext"] = {
                 "source": resolved_source,
