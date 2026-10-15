@@ -233,7 +233,8 @@ def cmd_pipeline(args: Any) -> None:
         sync_ds=getattr(args, "sync_ds", False),
         starting_branch=getattr(args, "branch", None),
         auto_merge=getattr(args, "auto_merge", False),
-        no_auto_merge=getattr(args, "no_auto_merge", False)
+        no_auto_merge=getattr(args, "no_auto_merge", False),
+        resume=getattr(args, "resume", False)
     )
 
 

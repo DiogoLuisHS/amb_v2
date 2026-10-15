@@ -9,12 +9,14 @@ import os
 import sys
 import argparse
 from typing import Optional
+from pathlib import Path
 
 from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
 from core import Colors, log, log_error, AmbError
 from workspace import find_repo_root, get_repo_name
+from agents.loop_core.loop_state_machine import LoopStateMachine, LoopState
 from integrations.jules.jules_client import JulesClient
 from integrations.git.git_service import GitService
 from integrations.antigravity.antigravity_client import AntigravityClient
@@ -33,7 +35,7 @@ class PipelineOrchestrator:
         auto_approve: bool = False, skip_stitch: bool = False, no_qa: bool = False,
         resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
         screen_id: str = None, sync_ds: bool = False, starting_branch: str = None,
-        auto_merge: bool = False, no_auto_merge: bool = False
+        auto_merge: bool = False, no_auto_merge: bool = False, resume: bool = False
     ):
         if auto_approve and not no_auto_merge:
             auto_merge = True
@@ -41,7 +43,12 @@ class PipelineOrchestrator:
         repo_root = find_repo_root()
         repo_name = get_repo_name()
 
+        machine = LoopStateMachine(repo_root=repo_root)
+
         starting_branch = starting_branch or GitService(repo_root=repo_root).get_current_branch(cwd=repo_root) or "main"
+
+        if resume:
+            resume_session = resume_session or machine.get_current_state().get("session_id")
 
         if resume_session:
             log("PIPELINE", f"Retomando monitoramento: {resume_session}", Colors.HEADER)
@@ -77,6 +84,7 @@ class PipelineOrchestrator:
         current_screen_id, stitch_html, screenshot_url, screen_title = screen_id or edit_screen_id, "", "", ""
 
         if not skip_stitch:
+            machine.transition_to(LoopState.DESIGN_GENERATING, active_item=file_label)
             d_res = process_design_stage(stitch_prompt, current_screen_id, edit_screen_id, device_type, auto_approve, sync_ds)
             if d_res.get("cancelled"): return
             current_screen_id = d_res.get("current_screen_id")
@@ -92,6 +100,7 @@ class PipelineOrchestrator:
 
         rules_summary = cls._extract_clean_rules()
 
+        machine.transition_to(LoopState.PROMPT_SYNTHESIZING)
         executive_prompt = build_executive_prompt(
             repo_name, starting_branch, file_label, jules_prompt, stitch_prompt,
             current_screen_id, screen_title, screenshot_url, stitch_summary, rules_summary, skip_stitch
@@ -111,6 +120,8 @@ class PipelineOrchestrator:
         session_id = session_resp.get("name", "").split("/")[-1] or session_resp.get("id", "")
         if not session_id: raise AmbError(f"Resposta inválida Jules: {session_resp}")
 
+        machine.set_active_session(session_id=session_id, item_name=file_label)
+
         if auto_merge:
             cls._monitor_jules_session(session_id, repo_root, no_qa, auto_merge=auto_merge, starting_branch=starting_branch)
         else:
@@ -121,11 +132,13 @@ class PipelineOrchestrator:
         cls, session_id: str, repo_root: str, no_qa: bool = False,
         auto_merge: bool = False, starting_branch: str = "main"
     ):
+        machine = LoopStateMachine(repo_root=repo_root)
         client = JulesClient()
         from agents.autonomous_loop import monitor_and_assist_session
         state = monitor_and_assist_session(client=client, session_id=session_id, auto_reply_ai=True)
         if not no_qa:
             log("ETAPA 6/6", "🛡️ Gatekeeper 2: Validação Local de Integridade", Colors.HEADER)
+            machine.transition_to(LoopState.QA_VALIDATING, session_id=session_id, active_item=f"QA for {session_id}")
             qa_ok = QualityGatekeeper.run_qa(repo_root)
             if not qa_ok:
                 log_error("PIPELINE", "Validação local de QA falhou. Abortando processo de integração.")
@@ -134,6 +147,8 @@ class PipelineOrchestrator:
             from integrations.jules.tools.merge_session_pr import run_merge_session_pr
             log("PIPELINE", "🔀 Integrando Pull Request automaticamente no Git...", Colors.HEADER)
             run_merge_session_pr(session_id=session_id, target_branch=starting_branch)
+
+        machine.transition_to(LoopState.CYCLE_COMPLETED)
 
     @staticmethod
     def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
@@ -160,6 +175,7 @@ def main():
     parser.add_argument("--skip-stitch", action="store_true", help="Pula a etapa de layout visual do Stitch e vai direto ao Jules")
     parser.add_argument("--no-qa", action="store_true", help="Não executa a verificação local de typecheck/build ao final")
     parser.add_argument("--resume-session", "-r", help="Retoma o monitoramento de uma sessão existente do Jules")
+    parser.add_argument("--resume", action="store_true", help="Retoma o monitoramento da sessão ativa salva no loop_state.json")
     parser.add_argument("--device-type", choices=["DESKTOP", "MOBILE", "TABLET"], default=None, help="Tipo de dispositivo alvo para o Stitch")
     parser.add_argument("--screen-id", help="ID de tela existente no Stitch para reaproveitar")
     parser.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt")
@@ -170,7 +186,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.prompt_file and not args.stitch_prompt and not args.jules_prompt and not args.resume_session:
+    if not args.prompt_file and not args.stitch_prompt and not args.jules_prompt and not args.resume_session and not getattr(args, 'resume', False):
         parser.print_help()
         sys.exit(0)
 
@@ -180,7 +196,7 @@ def main():
             auto_approve=args.auto_approve, skip_stitch=args.skip_stitch, no_qa=args.no_qa,
             resume_session=args.resume_session, device_type=args.device_type, edit_screen_id=args.edit_screen,
             screen_id=args.screen_id, sync_ds=args.sync_ds, starting_branch=args.branch,
-            auto_merge=args.auto_merge, no_auto_merge=args.no_auto_merge
+            auto_merge=args.auto_merge, no_auto_merge=args.no_auto_merge, resume=getattr(args, "resume", False)
         )
     except AmbError as e:
         log_error("PIPELINE", e.message, hint=e.hint)

@@ -246,6 +246,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--jules-prompt", "-j", help="Instruções técnicas para o Jules.")
     p.add_argument("--prompt-file", "-f", help="Arquivo único unificado (.md) com divisões.")
     p.add_argument("--resume-session", "-r", help="ID da sessão Jules para retomar.")
+    p.add_argument("--resume", action="store_true", help="Retoma o monitoramento da sessão ativa salva no loop_state.json.")
     p.add_argument("--skip-stitch", action="store_true", help="Pula geração de UI no Stitch.")
     p.add_argument("--no-qa", action="store_true", help="Desabilita teste QA local automático.")
     p.add_argument("--auto-approve", "-y", action="store_true", help="Aprova planos automaticamente.")
