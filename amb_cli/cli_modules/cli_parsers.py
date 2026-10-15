@@ -275,7 +275,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("target", nargs="?", default=None, help="Nome da tabela ou módulo a filtrar (ex: kanban, agenda, projects).")
     _j(p)
     p = _c("context", "Gera o roteiro de leitura de arquivos por camadas para a IA.", cmd_context, ["ctx", "ai-context"])
-    p.add_argument("module", nargs="?", default="agenda", help="Nome do módulo ou pasta para rastrear (ex: agenda, kanban, projects).")
+    p.add_argument("module", nargs="?", default=None, help="Nome do módulo ou pasta para rastrear (se omitido, auto-descobre os módulos do projeto).")
     p.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
     p = _c("stats", "Exibe métricas históricas de tempo de execução, PRs e telemetria local.", cmd_stats)
     _j(p)

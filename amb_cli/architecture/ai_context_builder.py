@@ -207,15 +207,9 @@ class AIContextBuilder:
         total_files = sum(len(layer["files"]) for layer in layers.values())
 
         md = []
-        md.append(
-            f"# 🧭 ROTEIRO DE LEITURA PARA A IA — MÓDULO / CONTEXTO: `{query.upper()}`\n"
-        )
-        md.append(
-            "> **Instrução para a IA:** Para analisar, debugar ou implementar qualquer mudança neste módulo sem se perder no projeto, siga rigorosamente a leitura dos arquivos na ordem arquitetural abaixo (do banco de dados até a interface do usuário):\n"
-        )
-        md.append(
-            f"**Total de arquivos essenciais:** {total_files} arquivos mapeados\n"
-        )
+        md.append(f"# 🧭 ROTEIRO DE LEITURA PARA A IA — MÓDULO / CONTEXTO: `{query.upper()}`\n")
+        md.append("> **Instrução para a IA:** Para analisar, debugar ou implementar qualquer mudança neste módulo sem se perder no projeto, siga rigorosamente a leitura dos arquivos na ordem arquitetural abaixo (do banco de dados até a interface do usuário):\n")
+        md.append(f"**Total de arquivos essenciais:** {total_files} arquivos mapeados\n")
         md.append("---\n")
 
         for key, layer_info in layers.items():
@@ -238,26 +232,48 @@ class AIContextBuilder:
         )
         md.append("2. **Repositories (`repositories/`):** Executam consultas SQL.")
         md.append("3. **Services (`services/`):** Contêm a lógica de negócio.")
-        md.append(
-            "4. **Controllers & Routers (`controllers/`, `routers/`):** Endpoints HTTP e validações."
-        )
-        md.append(
-            "5. **Frontend Hooks (`hooks/`):** Gerenciam estado e chamadas de API."
-        )
-        md.append(
-            "6. **UI Components & Pages (`components/`, `pages/`):** Renderizam as interfaces."
-        )
-
+        md.append("4. **Controllers & Routers (`controllers/`, `routers/`):** Endpoints HTTP e validações.")
+        md.append("5. **Frontend Hooks (`hooks/`):** Gerenciam estado e chamadas de API.")
+        md.append("6. **UI Components & Pages (`components/`, `pages/`):** Renderizam as interfaces.")
         return "\n".join(md)
 
+    def discover_modules(self) -> List[Dict[str, Any]]:
+        counts: Dict[str, int] = {}
+        for file in self.file_map:
+            parts = Path(file).parts
+            mod_name = None
+            if len(parts) >= 2 and parts[0] == "apps":
+                mod_name = parts[1]
+            elif len(parts) >= 3 and parts[0] == "src" and parts[1] in ["modules", "features", "domains", "domain"]:
+                mod_name = parts[2]
 
-def generate_context(target: str, output_json: bool = False) -> None:
+            if mod_name:
+                counts[mod_name] = counts.get(mod_name, 0) + 1
+
+        result = [{"name": m, "files_count": c} for m, c in counts.items()]
+        result.sort(key=lambda x: str(x["name"]))
+        return result
+
+
+def generate_context(target: Optional[str] = None, output_json: bool = False) -> None:
     """Gera o contexto arquitetural do módulo no terminal."""
     root = find_repo_root()
     builder = AIContextBuilder(Path(root))
     builder.analyze()
 
-    query = target or "agenda"
+    if not target:
+        modules = builder.discover_modules()
+        if modules:
+            if output_json:
+                print(json.dumps({"modules": modules}, indent=2, ensure_ascii=False))
+            else:
+                print("=== 🧩 MÓDULOS ENCONTRADOS NO PROJETO ===")
+                for mod in modules:
+                    print(f"  • {mod['name']:<12} ({mod['files_count']} arquivos) -> amb context {mod['name']}")
+            return
+        target = "PROJETO"
+
+    query = target
     file_chain = builder.trace_module_chain(query)
     layers = builder.classify_and_order_files(file_chain, query)
 
@@ -274,6 +290,6 @@ def generate_context(target: str, output_json: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    t = sys.argv[1] if len(sys.argv) > 1 else "agenda"
+    t = sys.argv[1] if len(sys.argv) > 1 else None
     is_json = "--json" in sys.argv
     generate_context(t, output_json=is_json)
