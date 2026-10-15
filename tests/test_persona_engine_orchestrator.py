@@ -12,7 +12,7 @@ def test_persona_engine_methods(mock_repo_root):
 
     # ensure it uses custom dir
     custom_dir = engine.get_personas_directory(custom_dir="/tmp/fake/custom")
-    assert custom_dir == "/tmp/fake/custom"
+    assert custom_dir == os.path.abspath("/tmp/fake/custom")
 
 @patch("amb_cli.agents.autonomous_loop.get_repo_name", return_value="fake_repo")
 @patch("amb_cli.agents.autonomous_loop.find_repo_root", return_value="/fake/repo")
