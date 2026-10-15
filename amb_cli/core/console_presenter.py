@@ -106,3 +106,31 @@ class ConsolePresenter:
 
         # Default de fallback caso quem chamou não lidou com a versão não-JSON
         self.print_message(f"Data: {data}", Colors.CYAN)
+
+    def render_executive_summary(self, metrics: Dict[str, Any]) -> None:
+        """
+        Renderiza no terminal o quadro executivo de produtividade formatado.
+        """
+        if self.json_mode:
+            self.print_json(metrics)
+            return
+
+        if self.quiet_mode:
+            return
+
+        total_time_str = f"{int(metrics.get('total_duration_seconds', 0) // 60)}m {int(metrics.get('total_duration_seconds', 0) % 60)}s"
+        qa_color = Colors.GREEN if metrics.get('qa_success_rate', 0) == 100 else Colors.YELLOW
+
+        summary = (
+            f"\n{Colors.BOLD}===========================================================================\n"
+            f"🏆 RESUMO EXECUTIVO DE ORQUESTRAÇÃO AMB_V2\n"
+            f"==========================================================================={Colors.RESET}\n"
+            f"  • Tarefas Executadas:    {metrics.get('total_items', 0)} prompts processados\n"
+            f"  • Telas Stitch Geradas:  {metrics.get('total_stitch_screens', 0)} interfaces visuais\n"
+            f"  • Sessões Jules Cloud:   {metrics.get('total_sessions', 0)} sessões completadas com sucesso\n"
+            f"  • Pull Requests:         {metrics.get('total_prs_opened', 0)} PRs abertos | {metrics.get('total_prs_merged', 0)} PRs integrados via Auto-Merge\n"
+            f"  • Validação de QA Local: {qa_color}{metrics.get('qa_success_rate', 0)}% verde (Passou em typecheck, build e tests){Colors.RESET}\n"
+            f"  • Tempo Total de Rodada: {total_time_str}\n"
+            f"{Colors.BOLD}==========================================================================={Colors.RESET}\n"
+        )
+        print(summary, flush=True)

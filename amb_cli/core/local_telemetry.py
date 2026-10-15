@@ -140,3 +140,67 @@ class LocalTelemetry:
             "total_lines_removed": 0,
         }
 
+
+    @classmethod
+    def get_round_metrics(cls, start_time: Optional[float] = None) -> Dict[str, Any]:
+        filepath = cls._get_telemetry_file()
+        if not filepath.exists():
+            return cls._empty_round_metrics()
+
+        metrics = cls._empty_round_metrics()
+
+        with cls._lock:
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            event = json.loads(line)
+                            event_time_str = event.get("timestamp")
+                            event_time = datetime.fromisoformat(event_time_str).timestamp() if event_time_str else 0
+
+                            if start_time and event_time < start_time:
+                                continue
+
+                            etype = event.get("event_type")
+                            data = event.get("data", {})
+
+                            if etype == "SESSION_COMPLETED":
+                                metrics["total_sessions"] += 1
+                                if data.get("pr_url"):
+                                    metrics["total_prs_opened"] += 1
+                            elif etype == "ROUND_COMPLETED":
+                                metrics["total_duration_seconds"] += data.get("total_duration_seconds", 0.0)
+                                metrics["total_items"] += data.get("total_items", 0)
+                                metrics["total_stitch_screens"] += data.get("total_stitch_screens", 0)
+                            elif etype == "QA_RUN":
+                                metrics["qa_runs"] = metrics.get("qa_runs", 0) + 1
+                                if data.get("success"):
+                                    metrics["qa_successes"] = metrics.get("qa_successes", 0) + 1
+                            elif etype == "PR_MERGED":
+                                metrics["total_prs_merged"] += 1
+                        except json.JSONDecodeError:
+                            continue
+            except Exception:
+                pass
+
+        qa_success_rate = (metrics.get("qa_successes", 0) / metrics.get("qa_runs", 1) * 100.0) if metrics.get("qa_runs", 0) > 0 else 100.0
+        metrics["qa_success_rate"] = round(qa_success_rate, 2)
+
+        return metrics
+
+    @staticmethod
+    def _empty_round_metrics() -> Dict[str, Any]:
+        return {
+            "total_items": 0,
+            "total_stitch_screens": 0,
+            "total_sessions": 0,
+            "total_prs_opened": 0,
+            "total_prs_merged": 0,
+            "qa_success_rate": 100.0,
+            "total_duration_seconds": 0.0,
+            "qa_runs": 0,
+            "qa_successes": 0
+        }
