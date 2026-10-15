@@ -41,17 +41,20 @@ amb hooks install            # Instalar hook pre-commit automático (.git/hooks/
 amb gui                      # Abrir interface gráfica nativa (Runner + editor de .env)
 ```
 
-### 🤖 Loop Autônomo & Personas (`amb agent`, `amb loop`)
+### 🤖 Loop Autônomo & Personas (`amb agent`, `amb loop`, `amb persona`)
 ```bash
-amb agent -p <pasta>         # Execução sequencial em lote de prompts numerados
-amb agent -p <pasta> --loop  # Rotação infinita contínua sobre a pasta de prompts
+amb agent [alvo]             # Executar pasta ou arquivo .md via argumento posicional
+amb agent .amb/prompts/ -i   # Executar fila de prompts com sincronização automática de GitHub Issues
+amb agent [alvo] --pipeline  # Modo batch visual Design-to-Deploy iterando sobre prompts
+amb agent [alvo] --dry-run   # Simular parsing, regras e execução sem efeitos colaterais
+amb agent [alvo] -c <N>      # Processamento paralelo com N workers concorrentes no Jules
 amb agent --role <persona>   # Despachar persona para o Google Jules na nuvem
 amb agent --role <p> --agy   # Executar persona localmente via Antigravity SDK
-amb agent --all --loop       # Loop contínuo iterando sobre todas as personas
-amb persona validate         # Auditar estrutura obrigatória das personas locais
-amb loop status              # Inspecionar estado persistido em .amb/loop_state.json
-amb loop pause               # Pausar graciosamente o ciclo autônomo
-amb loop resume              # Retomar o ciclo do ponto exato onde foi pausado
+amb agent --all --loop       # Loop contínuo iterando sobre todas as personas locais
+amb loop                     # Invocação amigável padrão: exibe status da máquina de estados
+amb loop pause / resume      # Pausar graciosamente ou retomar o ciclo autônomo
+amb persona                  # Invocação amigável padrão: lista personas com validação arquitetural
+amb persona validate         # Auditar conformidade estrutural obrigatória das personas
 ```
 
 ### ☁️ Google Jules Cloud (`amb jules`)
@@ -69,14 +72,19 @@ amb jules clean [--failed]   # Limpar sessões finalizadas para economizar cotas
 amb stitch generate -p "..." # Gerar tela visual interativa (Mobile, Desktop, Agnostic)
 amb stitch refine -s <id>    # Refinar componentes ou cores de uma tela existente
 amb stitch variants -s <id>  # Gerar de 1 a 5 variantes visuais exploratórias
+amb pipeline [spec.md]       # Argumento posicional para especificação visual + engenharia
 amb pipeline -s <d> -j <e>   # Pipeline Design-to-Deploy com prompts separados (SRP)
-amb pipeline -j <e> --no-qa  # Tarefa pura de engenharia sem interface gráfica
+amb pipeline [alvo] --auto-merge # Auto-merge do PR gerado pós-QA 100% verde
+amb pipeline [alvo] --dry-run    # Simulação do pipeline de design sem chamadas externas
 ```
 
 ### 🧠 Arquitetura, Schemas & Git
 ```bash
-amb context [modulo]         # Mapear 6 camadas (DB ➔ Services ➔ API ➔ UI) para IA
-amb schema [filtro]          # Inspecionar tabelas e colunas de banco de dados
+amb context [modulo]         # Mapear camadas (DB ➔ Services ➔ API ➔ UI) para IA
+amb context [modulo] --tree  # Visualização em árvore compacta de dependências do módulo
+amb context [modulo] -o <f>  # Salvar roteiro arquitetural diretamente em arquivo
+amb context --list-modules   # Autodescoberta dinâmica de módulos do repositório
+amb schema [filtro] [--json] # Inspecionar tabelas e colunas (suporte a Drizzle e Prisma)
 amb git status [--json]      # Status completo de branches, upstream e GitHub CLI
 amb git sync [-b <branch>]   # Sincronização segura com auto-stash transparente
 ```

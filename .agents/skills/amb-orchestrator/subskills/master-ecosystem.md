@@ -43,16 +43,19 @@ amb gui
 | `amb stats [--json]` | Relatório analítico de telemetria local: taxa de sucesso de QA, tempo médio de ciclo e PRs integrados. |
 | `amb gui` (ou `amb ui`) | Abre a interface gráfica interativa (Tkinter) para montar comandos e editar variáveis do `.env`. |
 
-### 🤖 Agentes Autônomos, Personas & Controle de Loop (`amb agent`, `amb loop`)
+### 🤖 Agentes Autônomos, Personas & Controle de Loop (`amb agent`, `amb loop`, `amb persona`)
 | Comando | Descrição & Uso no Projeto |
 | :--- | :--- |
-| `amb agent -p <pasta_ou_arquivo>` | **Desenvolvimento em Lote:** Executa uma pasta inteira de prompts numerados (ex: `-p .amb/prompts/`) sequencialmente com auto-reply e auto-merge. |
-| `amb agent -p <pasta> --loop` | Ciclo infinito iterando sobre os prompts da pasta. |
+| `amb agent [alvo]` | **Argumento Posicional:** Executa pasta de prompts (ex: `amb agent .amb/prompts/`) ou arquivo `.md` diretamente. |
+| `amb agent [alvo] --issue` (`-i`) | **Sincronização com GitHub Issues:** Mapeia prompts para issues, acompanha ciclo e encerra issue pós-merge. |
+| `amb agent [alvo] --pipeline` | **Batch Visual Pipeline:** Executa o orquestrador Design-to-Deploy (Stitch + Jules) em lote para os prompts. |
+| `amb agent [alvo] --dry-run` | **Simulação Segura:** Simula parsing, regras e ciclo sem criar sessões na nuvem ou alterar branches. |
+| `amb agent [alvo] -c <N>` | **Concorrência Paralela:** Executa até N prompts ou personas simultaneamente no Jules. |
 | `amb agent --list` (`-l`) | Lista as personas cadastradas no projeto (`.amb/personas/`). |
+| `amb persona` | **Invocação Padrão Amigável:** Lista personas locais exibindo status de validação arquitetural. |
 | `amb persona validate` | Audita conformidade das personas (`# Missão`, `## Arquivos`, `## Regras`) com interpolação de contexto. |
-| `amb loop status` | Exibe o status da máquina de estados (`.amb/loop_state.json`), ciclo ativo e sessão Jules associada. |
-| `amb loop pause` | Pausa graciosamente o loop autônomo contínuo. |
-| `amb loop resume` | Retoma o ciclo do ponto exato onde foi interrompido. |
+| `amb loop` | **Invocação Padrão Amigável:** Exibe o status atual da máquina finita (`.amb/loop_state.json`). |
+| `amb loop pause` / `resume` | Pausa graciosamente ou retoma o ciclo autônomo do ponto exato onde parou. |
 | `amb agent --role <nome>` | Despacha persona para o Google Jules na nuvem (cria VM, branch dedicada e abre PR). |
 | `amb agent --role <nome> --agy` | Executa a persona **localmente** via Antigravity SDK (`agy` CLI) sem consumir cota Jules. |
 | `amb agent --all --loop` | Loop contínuo infinito iterando por todas as personas do projeto. |
@@ -92,7 +95,10 @@ amb gui
 ### 🚀 Pipeline Design-to-Deploy (`amb pipeline`)
 | Comando | Descrição & Uso no Projeto |
 | :--- | :--- |
+| `amb pipeline [spec.md]` | **Argumento Posicional:** Executa o pipeline com especificação unificada (Visual + Engenharia). |
 | `amb pipeline -s <stitch.md> -j <jules.md>` | **Pipeline Completo:** Prompts separados (SRP) para design visual no Stitch e engenharia no Jules. |
+| `amb pipeline [alvo] --auto-merge` | Aprova e realiza o merge automático do PR gerado pós-QA 100% aprovado. |
+| `amb pipeline [alvo] --dry-run` | Valida parsing e regras sem gerar telas reais ou criar sessões na nuvem. |
 | `amb pipeline -j <jules.md> --skip-stitch` | Executa apenas a etapa de engenharia de backend/código sem interface. |
 | `amb pipeline --resume-session <id>` | Retoma o monitoramento e QA de uma sessão Jules já iniciada. |
 | `amb pipeline -s <s.md> -j <j.md> -y` | Modo 100% autônomo sem pausas de aprovação no Gatekeeper 1. |
@@ -101,7 +107,10 @@ amb gui
 | Comando | Descrição & Uso no Projeto |
 | :--- | :--- |
 | `amb context [modulo] [--json]` | Mapeia as camadas do projeto (Database ➔ Services ➔ API ➔ UI) para acelerar IAs. |
-| `amb schema [filtro]` | Inspeciona schemas e tabelas do banco de dados do projeto (Drizzle, Prisma, etc.). |
+| `amb context [modulo] --tree` | Visualização compacta em árvore de dependências do módulo no terminal. |
+| `amb context [modulo] -o <arquivo>` | Salva o roteiro arquitetural e contexto do módulo diretamente em arquivo. |
+| `amb context --list-modules` | Autodescobre dinamicamente todos os módulos detectados no repositório ativo. |
+| `amb schema [filtro] [--json]` | Inspeciona schemas e tabelas do banco de dados (suporte a Drizzle ORM e Prisma Schema). |
 | `amb validate <arquivo>` (ou `amb agy validate`) | Audita conformidade arquitetural do código contra as regras do repositório. |
 | `amb validate --staged` | Audita conformidade arquitetural **exclusivamente dos arquivos preparados para commit** no Git. |
 | `amb hooks install` | Gera e instala o Git Hook de pré-commit (`.git/hooks/pre-commit`) executando `amb validate --staged`. |
@@ -124,7 +133,7 @@ amb gui
 
 ## ⚡ 3. Os 3 Fluxos de Desenvolvimento Mais Poderosos
 
-### Fluxo 1: Desenvolvimento em Lote por Prompts (`amb agent -p`)
+### Fluxo 1: Desenvolvimento em Lote com GitHub Issues (`amb agent [alvo] --issue`)
 1. Crie uma pasta `.amb/prompts/` com arquivos numerados dividindo a feature:
    - `01_database.md`: Migrations e modelos.
    - `02_services.md`: Regras de negócio e use cases.
@@ -132,25 +141,25 @@ amb gui
    - `04_ui.md`: Telas e componentes.
 2. Execute no terminal do projeto:
    ```bash
-   amb agent -p .amb/prompts/ --branch feature/minha-feature
+   amb agent .amb/prompts/ --issue
    ```
-3. O AMB despachará cada arquivo sequencialmente para o Jules, vigiará a execução, responderá dúvidas com o Gemini, rodará o QA local (`amb_project.json`) e fará o auto-merge de cada PR antes de avançar para o próximo!
+3. O AMB sincroniza cada arquivo com uma GitHub Issue, despacha sequencialmente para o Jules, vigia a execução, responde dúvidas com o Gemini, roda o QA local (`amb_project.json`), faz o auto-merge de cada PR e encerra a Issue no GitHub antes de avançar para o próximo!
 
 ### Fluxo 2: Loop Autônomo Contínuo (`amb agent --loop`)
 1. Escolha uma persona de engenharia (ex: `engineer`):
    ```bash
    amb agent --role engineer --loop --max-cycles 5
    ```
-2. O AMB extrai o contexto arquitetural do projeto automaticamente (`amb context`), despacha para a Cloud VM do Jules, responde eventuais dúvidas ou erros de build com o Gemini e realiza merge seguro com validação de testes locais.
+2. O AMB extrai o contexto arquitetural do projeto automaticamente (`amb context`), despacha para a Cloud VM do Jules, responde eventuais dúvidas ou erros de build com o Gemini, realiza merge seguro com validação de testes locais e emite o Resumo Executivo de Produtividade ao término.
 
 ### Fluxo 3: Design-to-Deploy com Stitch & Jules (`amb pipeline`)
 1. Crie `specs/login_ui.md` com a especificação visual para o Stitch.
-2. Crie `specs/login_eng.md` com os requisitos de código para o Jules.
+2. Crie `specs/login_eng.md` com os requisitos de código para o Jules (ou unifique em um único `specs/login.md`).
 3. Execute:
    ```bash
-   amb pipeline -s specs/login_ui.md -j specs/login_eng.md
+   amb pipeline specs/login.md --auto-merge
    ```
-4. O Stitch gera a tela ➔ você valida no Gatekeeper ➔ o Jules implementa no framework do seu projeto ➔ o pipeline valida o QA e abre/mescla o PR.
+4. O Stitch gera a tela ➔ você valida no Gatekeeper ➔ o Jules implementa no framework do seu projeto ➔ o pipeline valida o QA e realiza o auto-merge do PR.
 
 ---
 

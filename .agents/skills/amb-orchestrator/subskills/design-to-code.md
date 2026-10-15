@@ -46,11 +46,17 @@ O `amb pipeline` adota o princípio da responsabilidade única: aceita um arquiv
 
 ### 2. Executar o Pipeline Completo
 ```bash
-# Execução padrão (Gatekeeper 1 pausa para validação visual da tela):
+# Execução via argumento posicional com especificação unificada (.md):
+amb pipeline specs/drawer_feature.md --branch feature/filter-drawer
+
+# Prompts separados (SRP) com pausa no Gatekeeper 1 para validação visual da tela:
 amb pipeline -s specs/drawer_ui.md -j specs/drawer_eng.md --branch feature/filter-drawer
 
-# Modo 100% autônomo (aprova a tela automaticamente sem pausar):
-amb pipeline -s specs/drawer_ui.md -j specs/drawer_eng.md -y
+# Modo 100% autônomo com auto-merge automático pós-aprovação no QA local:
+amb pipeline -s specs/drawer_ui.md -j specs/drawer_eng.md -y --auto-merge
+
+# Simulação segura do pipeline sem chamadas externas ou alterações no Git:
+amb pipeline specs/drawer_feature.md --dry-run
 ```
 
 ### 3. Execução para Tarefas de Engenharia Pura (Sem Tela Stitch)
@@ -59,11 +65,13 @@ Quando a tarefa for estritamente de backend, refatoração ou API:
 amb pipeline -j specs/fix_auth_tokens.md --skip-stitch --branch fix/auth-bug
 ```
 
-### 4. Retomar uma Sessão Existente (`--resume-session`)
+### 4. Retomar uma Sessão Existente (`--resume-session`) ou Máquina de Estados
 Se uma sessão do Jules já foi criada e você deseja apenas reconectar o monitoramento e a validação de QA:
 ```bash
 amb pipeline --resume-session <SESSION_ID>
 ```
+
+> **💡 Persistência de Estágios do Pipeline:** O pipeline registra o progresso de cada estágio em `.amb/pipeline_state.json`. Caso ocorra qualquer interrupção, o orquestrador retoma a partir do último checkpoint com total integridade de contexto.
 
 ---
 

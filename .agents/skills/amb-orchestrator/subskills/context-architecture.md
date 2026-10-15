@@ -43,7 +43,25 @@ amb context financeiro
 amb context agenda
 ```
 
-### 3. Obter Saída Estruturada em JSON
+### 3. Visualizar em Árvore Compacta de Dependências
+Para uma visualização hierárquica clara das dependências do módulo:
+```bash
+amb context agenda --tree
+```
+
+### 4. Salvar o Contexto Arquitetural em Arquivo
+Gera o roteiro completo diretamente em um arquivo Markdown:
+```bash
+amb context agenda -o .amb/context_agenda.md
+```
+
+### 5. Autodescobrir Módulos do Repositório
+Lista dinamicamente todos os módulos detectados no projeto ativo:
+```bash
+amb context --list-modules
+```
+
+### 6. Obter Saída Estruturada em JSON
 Para ferramentas automatizadas ou scripts de orquestração:
 ```bash
 amb context auth --json
@@ -68,20 +86,20 @@ O AMB classifica automaticamente os arquivos do seu repositório com base em pad
 
 ## 🗄️ 4. Inspeção de Schemas de Banco de Dados (`amb schema`)
 
-O AMB inclui um leitor de schemas somente leitura (Read-Only) que funciona em repositórios com Drizzle ORM, Prisma, TypeORM, SQLAlchemy ou arquivos SQL:
+O AMB inclui um leitor de schemas somente leitura (Read-Only) com suporte nativo a **Drizzle ORM** (TypeScript) e **Prisma Schema** (`schema.prisma`):
 
 ```bash
-# Inspecionar todos os schemas e tabelas do projeto:
+# Inspecionar todos os schemas e tabelas do projeto (Drizzle ou Prisma):
 amb schema
 
 # Filtrar tabelas por palavra-chave (ex: pedidos, users, kanban):
 amb schema kanban
 
-# Exibir os schemas em formato JSON:
+# Exibir os schemas completos em formato JSON estruturado:
 amb schema --json
 ```
 
-O comando exibe o nome das tabelas, colunas, tipos de dados, chaves primárias e relacionamentos sem precisar de conexão com banco de dados externo.
+O comando exibe o nome das tabelas, colunas, tipos de dados, chaves primárias e relacionamentos sem precisar de conexão com banco de dados externo ou servidor ativo.
 
 ---
 

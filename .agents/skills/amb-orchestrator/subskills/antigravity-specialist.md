@@ -50,17 +50,23 @@ Construir e refatorar componentes de interface garantindo fidelidade ao Design S
 
 ### Comandos de Persona & PersonaEngine:
 ```bash
-# Listar todas as personas do projeto:
+# Invocação padrão amigável: lista personas com validação arquitetural
+amb persona
+
+# Listagem explícita com status de validação estrutural (✅ Válida ou ⚠️ Incompleta):
+amb persona list
+
+# Listar todas as personas do projeto via amb agent:
 amb agent --list
 
-# Auditar conformidade estrutural das personas em .amb/personas/ (PersonaEngine):
+# Auditar conformidade estrutural detalhada das personas em .amb/personas/ (PersonaEngine):
 amb persona validate
 
 # Executar a persona localmente com uma instrução adicional:
 amb agent --role frontend --agy -t "Refatorar modal de login para suportar OAuth"
 ```
 
-> **💡 Interpolação Dinâmica de Variáveis:** O `PersonaEngine` interpola automaticamente variáveis contextuais presentes nas personas, como `{repo_name}`, `{stack}`, `{qa_command}` e `{rules}`, garantindo especificações vivas e alinhadas ao projeto.
+> **💡 Interpolação Dinâmica de Variáveis & Unificação da PersonaEngine:** A `PersonaEngine` atua como motor unificado de governança em todos os orquestradores (`autonomous_loop`, `local_agent_runner`, `pipeline`), interpolando dinamicamente variáveis contextuais presentes nas personas como `{repo_name}`, `{stack}`, `{qa_command}` e `{rules}`, garantindo especificações vivas e alinhadas ao projeto.
 
 
 ---

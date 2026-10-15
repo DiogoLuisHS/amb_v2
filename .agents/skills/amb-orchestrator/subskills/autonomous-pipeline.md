@@ -45,7 +45,7 @@ graph TD
 
 ---
 
-## 📁 3. Modo de Desenvolvimento em Lote (`amb agent -p`)
+## 📁 3. Modo de Desenvolvimento em Lote (`amb agent [alvo]`)
 
 Este é o modo mais recomendado para implementar features de médio e grande porte em um projeto consumidor.
 
@@ -62,17 +62,31 @@ Crie na pasta `.amb/prompts/` (ou em qualquer pasta do seu projeto) arquivos `.m
 
 ### Como Executar:
 ```bash
-# Executa todos os prompts da pasta em sequência na branch ativa:
-amb agent -p .amb/prompts/
+# Executa todos os prompts da pasta em sequência via argumento posicional:
+amb agent .amb/prompts/
+
+# Sincronização automática com GitHub Issues (cria/reaproveita issue e fecha pós-merge):
+amb agent .amb/prompts/ --issue
+
+# Modo Batch Visual Pipeline (integra design Stitch + código Jules em lote):
+amb agent .amb/prompts/ --pipeline
+
+# Simulação segura de fluxo sem efetuar chamadas na nuvem ou alterações locais:
+amb agent .amb/prompts/ --dry-run
+
+# Execução paralela com múltiplos workers concorrentes no Jules:
+amb agent .amb/prompts/ -c 2
 
 # Direcionar a execução para uma branch específica (ex: feature/pedidos):
-amb agent -p .amb/prompts/ --branch feature/pedidos
+amb agent .amb/prompts/ --branch feature/pedidos
 
 # Manter em rotação contínua (looping infinito sobre os prompts):
-amb agent -p .amb/prompts/ --loop
+amb agent .amb/prompts/ --loop
 ```
 
 O AMB processará cada prompt até o PR ser aberto, testado no QA local e mesclado com sucesso antes de iniciar o prompt seguinte!
+
+> **💡 Reconexão Inteligente de Sessões:** Se o terminal for fechado e reiniciado, o despachante de ciclo detecta automaticamente se já existe uma sessão saudável ativa no Jules correspondente ao prompt/issue (via `find_active_session_by_title`), reatachando o monitoramento sem criar sessões duplicadas ou gastar cota na nuvem.
 
 ---
 
@@ -104,7 +118,8 @@ amb agent --role engineer --loop --no-auto-merge
 O pipeline conta com máquina de estados finita persistida em `.amb/loop_state.json`. Se o terminal fechar ou a conexão oscilar, o progresso não é perdido:
 
 ```bash
-# Inspecionar o estado da máquina finita, ciclo ativo e sessão Jules:
+# Inspecionar o estado da máquina finita (invocação padrão amigável):
+amb loop
 amb loop status
 
 # Pausar o ciclo com segurança entre etapas:
@@ -113,6 +128,8 @@ amb loop pause
 # Retomar a execução exatamente do ponto onde foi pausada ou interrompida:
 amb loop resume
 ```
+
+> **🏆 Telemetria Executiva Integrada:** Ao concluir uma orquestração em lote ou atingir o limite de ciclos, o AMB renderiza automaticamente o **Quadro Executivo de Produtividade**, reportando prompts finalizados, telas Stitch geradas, sessões Jules completadas, PRs integrados via auto-merge e taxa de conformidade no QA.
 
 > **Sandbox de Logs de QA:** Todo log de compilação e teste executado pelo pipeline é salvo automaticamente em `.amb/logs/qa/qa_<timestamp>.log`. Em caso de falha, o AMB isola as 30 linhas essenciais do stacktrace para direcionar o agente sem estourar limites de contexto.
 
