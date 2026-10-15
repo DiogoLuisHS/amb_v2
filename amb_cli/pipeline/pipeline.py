@@ -33,8 +33,11 @@ class PipelineOrchestrator:
         auto_approve: bool = False, skip_stitch: bool = False, no_qa: bool = False,
         resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
         screen_id: str = None, sync_ds: bool = False, starting_branch: str = None,
-        auto_merge: bool = False
+        auto_merge: bool = False, no_auto_merge: bool = False
     ):
+        if auto_approve and not no_auto_merge:
+            auto_merge = True
+
         repo_root = find_repo_root()
         repo_name = get_repo_name()
 
@@ -128,9 +131,9 @@ class PipelineOrchestrator:
                 log_error("PIPELINE", "Validação local de QA falhou. Abortando processo de integração.")
                 return
         if auto_merge and state in ["COMPLETED", "SUCCEEDED"]:
-            from agents.loop_core.cycle_dispatcher import handle_pr_merge
-            log("PIPELINE", "🔀 Executando auto-merge do Pull Request pós-QA...", Colors.CYAN)
-            handle_pr_merge(session_id, starting_branch, repo_root, 1)
+            from integrations.jules.tools.merge_session_pr import run_merge_session_pr
+            log("PIPELINE", "🔀 Integrando Pull Request automaticamente no Git...", Colors.HEADER)
+            run_merge_session_pr(session_id=session_id, target_branch=starting_branch)
 
     @staticmethod
     def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
@@ -162,6 +165,8 @@ def main():
     parser.add_argument("--edit-screen", help="ID de tela existente para refinar com novo prompt")
     parser.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar")
     parser.add_argument("--branch", "-b", help="Branch de início para o Jules (Padrão: detecta a atual ou develop)")
+    parser.add_argument("--auto-merge", action="store_true", help="Realiza o merge automático do Pull Request no Git após aprovação nos testes locais de QA.")
+    parser.add_argument("--no-auto-merge", action="store_true", help="Desabilita o merge automático do Pull Request ao concluir.")
 
     args = parser.parse_args()
 
@@ -174,7 +179,8 @@ def main():
             prompt_file=args.prompt_file, stitch_prompt_file=args.stitch_prompt, jules_prompt_file=args.jules_prompt,
             auto_approve=args.auto_approve, skip_stitch=args.skip_stitch, no_qa=args.no_qa,
             resume_session=args.resume_session, device_type=args.device_type, edit_screen_id=args.edit_screen,
-            screen_id=args.screen_id, sync_ds=args.sync_ds, starting_branch=args.branch
+            screen_id=args.screen_id, sync_ds=args.sync_ds, starting_branch=args.branch,
+            auto_merge=args.auto_merge, no_auto_merge=args.no_auto_merge
         )
     except AmbError as e:
         log_error("PIPELINE", e.message, hint=e.hint)

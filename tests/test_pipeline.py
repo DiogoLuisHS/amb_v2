@@ -116,4 +116,4 @@ class TestPipelineOrchestrator(unittest.TestCase):
         mock_synth.assert_called_once()
         mock_build_prompt.assert_called_once()
         mock_jules_instance.create_session.assert_called_once()
-        mock_monitor_session.assert_called_once_with("123", "/tmp/repo", True)
+        mock_monitor_session.assert_called_once_with("123", "/tmp/repo", True, auto_merge=True, starting_branch="main")
