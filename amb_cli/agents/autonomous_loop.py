@@ -37,6 +37,7 @@ def run_autonomous_loop(
     use_issues: bool = False,
     concurrency: int = 1,
     use_pipeline: bool = False,
+    dry_run: bool = False,
 ) -> None:
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para personas, prompts ou issues."""
     repo_name = get_repo_name()
@@ -64,6 +65,27 @@ def run_autonomous_loop(
             items_to_run = [{"type": "persona", "name": role}]
         else:
             items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
+
+    if dry_run:
+        print(f"\n{Colors.BOLD}{Colors.CYAN}=== 🔍 SIMULAÇÃO DE ORQUESTRAÇÃO EM LOTE [DRY-RUN] ==={Colors.RESET}")
+        print(f"  • Total de Itens: {len(items_to_run)}")
+        print(f"  • Branch Base: {branch}")
+        print(f"  • Fila Ordenada de Execução:")
+        for idx, item in enumerate(items_to_run, 1):
+            if item["type"] == "issue":
+                title = item.get("title", f"Issue #{item.get('issue_number')}")
+                print(f"    {idx}. [Issue] {item.get('issue_number')} -> \"{title}\"")
+            elif item["type"] == "prompt":
+                p_path = Path(item["path"])
+                base_prompt = item.get("content") or p_path.read_text(encoding="utf-8", errors="replace")
+                stitch_p, jules_p = parse_single_prompt(base_prompt)
+                has_stitch = "Sim" if (stitch_p and stitch_p != jules_p) or "## stitch" in base_prompt.lower() or "ui:" in base_prompt.lower() else "Não"
+                has_jules = "Sim" if jules_p or not has_stitch else "Não"
+                title = p_path.stem.replace('_', ' ').title()
+                print(f"    {idx}. [Prompt] {p_path.name} -> \"{title}\" (Stitch: {has_stitch} | Jules: {has_jules})")
+            else:
+                print(f"    {idx}. [Persona] {item['name'].capitalize()} Agent")
+        return
 
     modules_list = modules or [""]
 
@@ -108,7 +130,7 @@ def run_autonomous_loop(
                 stem_name = item.get("path").stem if item.get("path") else f"issue_{iss_num}"
                 full_prompt = build_ai_context(task_content, None, stem_name)
             elif item["type"] == "prompt":
-                p_path: Path = item["path"]
+                p_path = Path(item["path"])
                 base_prompt = item.get("content") or p_path.read_text(encoding="utf-8", errors="replace")
                 title = f"Task: {p_path.stem.replace('_', ' ').title()}"
                 session_title = f"{title} - Ciclo #{completed_cycles}"

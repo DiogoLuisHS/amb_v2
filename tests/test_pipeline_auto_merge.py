@@ -26,6 +26,7 @@ class TestPipelineAutoMerge(unittest.TestCase):
         args.auto_merge = True
         args.no_auto_merge = False
         args.resume = False
+        args.dry_run = False
 
         cmd_pipeline(args)
 
@@ -43,7 +44,8 @@ class TestPipelineAutoMerge(unittest.TestCase):
             starting_branch="main",
             auto_merge=True,
             no_auto_merge=False,
-            resume=False
+            resume=False,
+            dry_run=False
         )
 
 
