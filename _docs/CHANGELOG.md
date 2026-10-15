@@ -4,6 +4,24 @@ Todas as alterações notáveis, novas funcionalidades, refatorações e correç
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.6.1] — 2026-10-15
+
+### 🧠 Otimização Cognitiva do Antigravity & Respostas ao Google Jules
+- **Cadeia Canônica de Fallbacks do Google Gemini (`GeminiBackend`):**
+  - Removidos modelos descontinuados (`gemini-3.6-flash`, `gemini-3.5-flash` legado e previews obsoletos).
+  - Estabelecida a cadeia moderna ativa: `gemini-3.8-flash` (padrão) ➔ `gemini-3.7-flash` ➔ `gemini-2.5-flash` ➔ `gemini-2.5-pro`.
+  - Failover inteligente e resiliente para erros 404 (*Model not found* / descontinuado), 429 (*Quota exceeded* / *Rate Limit*) e 503/500 (*Service Unavailable*), avançando sem travar para o próximo modelo disponível.
+- **Sanitização Preventiva de Modelos (`AntigravityClient`):**
+  - Migração automática em `_resolve_model` caso o usuário ou arquivos de configuração antigos apontem para modelos sunset/descontinuados.
+- **Otimização de Desempenho e Latência no Advisor do Jules:**
+  - **Compressão de Histórico Bash (`TurnHistoryExtractor`):** Comandos bash anteriores aos 3 mais recentes têm suas saídas truncadas e compactadas como `(executado)`, economizando até 90% dos tokens de histórico e acelerando a resposta da IA.
+  - **Diretrizes de Resposta Cirúrgica (`CognitiveAdvisor`):** Prompt configurado com regras de concisão extrema (2 a 4 frases, zero saudações e preâmbulos prolixos) e parâmetros de inferência rápidos (`temperature=0.1`, `max_output_tokens=1024`).
+  - **Refatoração Limpa do Despachador (`JulesFeedbackDispatcher`):** Reduzido para 225 linhas em total conformidade com a Regra 02 (teto máximo de 300 linhas).
+- **Suíte de Testes Expandida:**
+  - Adicionados testes dedicados em `tests/test_gemini_fallbacks_and_advisor.py`, elevando a suíte para **521 testes unitários 100% verdes**.
+
+---
+
 ## [2.6.0] — 2026-10-15
 
 ### 🚀 Orquestração Autônoma de 75 User Stories, Pipeline Visual & Sincronização GitHub

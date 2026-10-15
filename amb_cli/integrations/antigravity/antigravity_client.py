@@ -49,14 +49,19 @@ class AntigravityClient:
 
     @staticmethod
     def _resolve_model(model: Optional[str] = None) -> str:
-        if model: return model
-        env_m = get_env("ANTIGRAVITY_MODEL") or get_env("GEMINI_MODEL")
-        if env_m: return env_m
-        p_data = load_project_json()
-        if isinstance(p_data, dict):
-            if isinstance(p_data.get("antigravity"), dict) and p_data["antigravity"].get("model"): return p_data["antigravity"]["model"]
-            if isinstance(p_data.get("gemini"), dict) and p_data["gemini"].get("model"): return p_data["gemini"]["model"]
-        return "gemini-3.8-flash"
+        chosen = model or get_env("ANTIGRAVITY_MODEL") or get_env("GEMINI_MODEL")
+        if not chosen:
+            p_data = load_project_json()
+            if isinstance(p_data, dict):
+                if isinstance(p_data.get("antigravity"), dict) and p_data["antigravity"].get("model"):
+                    chosen = p_data["antigravity"]["model"]
+                elif isinstance(p_data.get("gemini"), dict) and p_data["gemini"].get("model"):
+                    chosen = p_data["gemini"]["model"]
+        chosen = chosen or "gemini-3.8-flash"
+        if chosen in ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
+            log("ANTIGRAVITY", f"Modelo '{chosen}' foi descontinuado. Utilizando 'gemini-3.8-flash'.", Colors.YELLOW)
+            return "gemini-3.8-flash"
+        return chosen
 
     def _generate_via_agy_cli(self, prompt: str, system_instruction: Optional[str] = None) -> Optional[str]:
         if not shutil.which("agy"): return None

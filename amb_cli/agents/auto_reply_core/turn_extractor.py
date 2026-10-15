@@ -155,7 +155,11 @@ class TurnHistoryExtractor:
         chat_lines = []
         current_question = turn_info.get("last_agent_msg", "")
 
-        for a in chronological_acts:
+        # Identifica os últimos 3 comandos bash para reter output relevante e podar os antigos
+        bash_indices = [i for i, a in enumerate(chronological_acts) if a.get("bashCommand")]
+        recent_bash_set = set(bash_indices[-3:] if len(bash_indices) > 3 else bash_indices)
+
+        for i, a in enumerate(chronological_acts):
             time_str = a.get("createTime", "")[:19].replace("T", " ")
 
             # Mensagem do Usuário
@@ -169,16 +173,19 @@ class TurnHistoryExtractor:
                 chat_lines.append(f"[{time_str}] 🤖 AGENTE JULES:\n{agent_txt}\n")
                 current_question = agent_txt
 
-            # Comando Bash
+            # Comando Bash otimizado
             elif a.get("bashCommand"):
                 cmd = a["bashCommand"].get("command", "")
-                out = a["bashCommand"].get("output", "")
-                trunc_out = out[:800] + (
-                    f"\n...[+{len(out) - 800} chars omitidos]" if len(out) > 800 else ""
-                )
-                chat_lines.append(
-                    f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n"
-                )
+                if i in recent_bash_set:
+                    out = a["bashCommand"].get("output", "")
+                    trunc_out = out[:400] + (
+                        f"\n...[+{len(out) - 400} chars omitidos]" if len(out) > 400 else ""
+                    )
+                    chat_lines.append(
+                        f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n"
+                    )
+                else:
+                    chat_lines.append(f"[{time_str}] 💻 BASH: `$ {cmd}` (executado)\n")
 
             # Plano do Agente
             elif a.get("plan") or a.get("planGenerated"):
