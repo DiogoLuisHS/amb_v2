@@ -19,8 +19,12 @@ def _get_amb_dir() -> Path:
 class LoopState(str, enum.Enum):
     IDLE = "IDLE"
     SELECTING_PERSONA = "SELECTING_PERSONA"
+    DESIGN_GENERATING = "DESIGN_GENERATING"
+    PROMPT_SYNTHESIZING = "PROMPT_SYNTHESIZING"
     DISPATCHING_JULES = "DISPATCHING_JULES"
+    SESSION_ACTIVE = "SESSION_ACTIVE"
     MONITORING_SESSION = "MONITORING_SESSION"
+    QA_VALIDATING = "QA_VALIDATING"
     RUNNING_LOCAL_QA = "RUNNING_LOCAL_QA"
     MERGING_PR = "MERGING_PR"
     CYCLE_COMPLETED = "CYCLE_COMPLETED"
@@ -31,9 +35,13 @@ class LoopState(str, enum.Enum):
 class LoopStateMachine:
     """Máquina de estados finita para gerenciar persistência do autonomous loop."""
 
-    def __init__(self, amb_dir: Optional[Path] = None):
+    def __init__(self, amb_dir: Optional[Path] = None, repo_root: Optional[str] = None):
         if amb_dir is None:
-            amb_dir = _get_amb_dir()
+            if repo_root is not None:
+                amb_dir = Path(repo_root) / ".amb"
+                amb_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                amb_dir = _get_amb_dir()
         self.state_file = amb_dir / "loop_state.json"
 
         self.state: LoopState = LoopState.IDLE
@@ -107,6 +115,13 @@ class LoopStateMachine:
                     tmp_file.unlink()
                 except OSError:
                     pass
+
+    def set_active_session(self, session_id: str, item_name: Optional[str] = None) -> None:
+        """Define a sessão ativa do Jules e transita para o estado correspondente."""
+        kwargs = {"session_id": session_id}
+        if item_name:
+            kwargs["active_item"] = item_name
+        self.transition_to(LoopState.SESSION_ACTIVE, **kwargs)
 
     def transition_to(self, new_state: LoopState, **kwargs: Any) -> None:
         """Transita para um novo estado com parâmetros opcionais."""
