@@ -277,6 +277,7 @@ def create_parser() -> argparse.ArgumentParser:
     p = _c("context", "Gera o roteiro de leitura de arquivos por camadas para a IA.", cmd_context, ["ctx", "ai-context"])
     p.add_argument("module", nargs="?", default=None, help="Nome do módulo ou pasta para rastrear (se omitido, auto-descobre os módulos do projeto).")
     p.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
+    p.add_argument("--output", "-o", help="Caminho do arquivo para salvar o roteiro markdown gerado.")
     p = _c("stats", "Exibe métricas históricas de tempo de execução, PRs e telemetria local.", cmd_stats)
     _j(p)
     p = _c("git", "Comandos de controle de versão e ciclo de vida de Pull Requests via Git & GitHub CLI.", cmd_git)
