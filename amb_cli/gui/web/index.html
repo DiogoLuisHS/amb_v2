@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMB_V2 Web Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navbar / Header -->
+    <header class="navbar">
+        <div class="logo-area">
+            <h1>AMB // MISSION CONTROL</h1>
+            <span class="badge online">DiogoLuisHS/amb_v2 - Online</span>
+        </div>
+        <div class="status-indicators">
+            <span class="status-badge"><span class="dot green"></span> Jules API: Online</span>
+            <span class="status-badge"><span class="dot green"></span> Stitch API: Online</span>
+            <span class="status-badge"><span class="dot green"></span> Gemini IA: Ready</span>
+        </div>
+        <div class="actions">
+            <button class="btn-icon">Docs</button>
+            <button class="btn-primary">Iniciar Pipeline PROD</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>AMB CORE V2.4</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <p class="nav-section">ORQUESTRAÇÃO CLI</p>
+                <ul>
+                    <li class="active"><span class="icon">🚀</span> amb pipeline</li>
+                    <li><span class="icon">✅</span> amb check</li>
+                    <li><span class="icon">🧠</span> amb prompt</li>
+                    <li><span class="icon">👁️</span> amb monitor</li>
+                    <li><span class="icon">🧹</span> amb jules clean</li>
+                </ul>
+                <button class="btn-secondary mt-2 w-full">New Agent Session</button>
+            </nav>
+            <div class="sidebar-footer">
+                <p>Logs & Terminal</p>
+                <p>System Config</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="content-header">
+                <h2>Painel de Controle Central <span class="badge outline">v2.4.1 PROD-SYNC</span></h2>
+            </header>
+
+            <!-- KPIs / Metrics Dashboard -->
+            <section class="kpi-grid">
+                <div class="card kpi-card">
+                    <h4>Sessões Jules Ativas</h4>
+                    <div class="kpi-value">03 <span class="kpi-sub">em execução</span></div>
+                    <div class="progress-bar"><div class="fill" style="width: 25%;"></div></div>
+                    <p class="kpi-desc">Capacidade Max: 04 | 12 concluídas hoje</p>
+                </div>
+                <div class="card kpi-card">
+                    <h4>Saúde do Projeto (QA)</h4>
+                    <div class="kpi-value text-green">100% <span class="kpi-sub text-light">cobertura</span></div>
+                    <div class="badge-inline green">42/42 Passando</div> <span class="kpi-desc">0 Regressões</span>
+                    <p class="kpi-desc mt-1">✓ Zero falhas reportadas no build</p>
+                </div>
+                <div class="card kpi-card">
+                    <h4>Branch Git Ativa</h4>
+                    <div class="kpi-value text-white">main <span class="kpi-sub text-light">v2.4.1</span></div>
+                    <p class="kpi-desc text-green">✓ Sincronizada: #a0f91a0</p>
+                    <p class="kpi-desc text-light">feat: agent auto-healing loop v2</p>
+                </div>
+                <div class="card kpi-card">
+                    <h4>Status do Loop Autônomo</h4>
+                    <div class="kpi-value text-purple">Running</div>
+                    <div class="badge-inline purple">Orquestrando pipelines...</div>
+                </div>
+            </section>
+
+            <div class="layout-grid">
+                <!-- Terminal / Logs -->
+                <section class="terminal-section">
+                    <div class="terminal-header">
+                        <div class="window-controls">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="terminal-title">amb_console.log // Live-stream <span class="badge green">TAIL -F</span></span>
+                        <div class="terminal-actions">
+                            <button class="btn-small">Copiar</button>
+                            <button class="btn-small">Limpar</button>
+                        </div>
+                    </div>
+                    <div class="terminal-body" id="terminal-output">
+                        <!-- JS Will populate this -->
+                    </div>
+                    <div class="terminal-input">
+                        <span class="prompt-text">amb_v2 ></span>
+                        <input type="text" placeholder="Digite um comando (ex: amb pipeline --prod, amb check, amb prompt)..." />
+                    </div>
+                </section>
+
+                <!-- Command Hub -->
+                <aside class="command-hub">
+                    <div class="card">
+                        <h3>Command Hub // CLI Quick Actions</h3>
+                        <div class="action-list">
+                            <button class="action-btn"><span class="icon blue">▶</span> Iniciar Pipeline</button>
+                            <button class="action-btn"><span class="icon green">🛡</span> Executar Diagnóstico</button>
+                            <button class="action-btn"><span class="icon purple">✨</span> Sintetizar Prompt com IA</button>
+                            <button class="action-btn"><span class="icon cyan">👁</span> Sentinela em Tempo Real</button>
+                            <button class="action-btn"><span class="icon gray">🧹</span> Auditar e Limpar Sessões</button>
+                        </div>
+                    </div>
+                    <div class="card mt-2">
+                        <h3>Recursos do Cluster / Telemetria</h3>
+                        <div class="telemetry-item">
+                            <label>Uso de CPU (Alpha-Node-01)</label>
+                            <div class="progress-bar"><div class="fill purple" style="width: 45%;"></div></div>
+                        </div>
+                        <div class="telemetry-item">
+                            <label>Memória RAM Dedicada</label>
+                            <div class="progress-bar"><div class="fill blue" style="width: 60%;"></div></div>
+                        </div>
+                        <div class="telemetry-item">
+                            <label>Token Budget Jules (Gemini 2.5)</label>
+                            <div class="progress-bar"><div class="fill green" style="width: 80%;"></div></div>
+                        </div>
+                        <p class="text-sm text-light mt-1">Latência Gateway: 18ms</p>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Recent Sessions -->
+            <section class="sessions-section mt-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Sessões Recentes do Agente Jules</h3>
+                        <span class="text-sm text-light">4 Registros Ativos no Buffer de Execução</span>
+                    </div>
+                    <table class="sessions-table">
+                        <thead>
+                            <tr>
+                                <th>ID SESSÃO</th>
+                                <th>NOME / DESCRIÇÃO DA TAREFA</th>
+                                <th>STATUS</th>
+                                <th>BRANCH / ALVO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessions-body">
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

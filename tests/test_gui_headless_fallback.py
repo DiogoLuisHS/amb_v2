@@ -1,11 +1,22 @@
 import pytest
-import tkinter as tk
+import sys
 from unittest.mock import patch, MagicMock
 
-from amb_cli.core.exceptions import AmbError
-from amb_cli.gui.wizard_app import start_wizard
-from amb_cli.gui.wizard_core.settings_tab import SettingsTab
+try:
+    import tkinter as tk
+    HAS_TKINTER = True
+except ImportError:
+    HAS_TKINTER = False
 
+from amb_cli.core.exceptions import AmbError
+try:
+    from amb_cli.gui.wizard_app import start_wizard
+    from amb_cli.gui.wizard_core.settings_tab import SettingsTab
+except ImportError:
+    # Handle the case when tkinter is missing so collection doesn't fail
+    pass
+
+@pytest.mark.skipif(not HAS_TKINTER, reason="Requires tkinter")
 def test_start_wizard_headless_fallback():
     """Test that start_wizard gracefully falls back when DynamicWizard raises TclError in a headless environment."""
     with patch("amb_cli.gui.wizard_app.DynamicWizard") as mock_wizard:
@@ -23,6 +34,7 @@ def test_start_wizard_headless_fallback():
         assert "Interface gráfica indisponível no ambiente atual" in str(exc_info.value)
         assert "Execute a CLI diretamente pelo terminal" in getattr(exc_info.value, 'hint', str(exc_info.value))
 
+@pytest.mark.skipif(not HAS_TKINTER, reason="Requires tkinter")
 @patch("amb_cli.gui.wizard_core.settings_tab.os.path.exists")
 @patch("amb_cli.gui.wizard_core.settings_tab.open")
 @patch("amb_cli.gui.wizard_core.settings_tab.os.makedirs")
@@ -69,6 +81,7 @@ def test_save_env_syncs_config_manager(mock_messagebox, mock_makedirs, mock_open
     mock_messagebox.showinfo.assert_called_once()
     assert "Configurações salvas e recarregadas com sucesso!" in mock_messagebox.showinfo.call_args[0][1]
 
+@pytest.mark.skipif(not HAS_TKINTER, reason="Requires tkinter")
 @patch("amb_cli.gui.wizard_core.settings_tab.os.path.exists")
 @patch("amb_cli.gui.wizard_core.settings_tab.open")
 @patch("amb_cli.gui.wizard_core.settings_tab.os.makedirs")
