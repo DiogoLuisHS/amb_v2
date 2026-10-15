@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMB_V2 Web Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <h1>AMB_V2 Web Console</h1>
+            <span class="badge online">DiogoLuisHS/amb_v2 - Online</span>
+        </div>
+        <div class="status-indicators">
+            <span class="indicator green">Google Jules</span>
+            <span class="indicator green">Google Stitch</span>
+            <span class="indicator green">Gemini IA</span>
+        </div>
+        <div class="actions">
+            <button class="btn theme-toggle">🌙</button>
+            <button class="btn doc">Documentação</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="dashboard-kpis">
+            <div class="card glass">
+                <h3>Sessões Jules Ativas</h3>
+                <div class="value">03 <span class="subtext">/ 04 slots</span></div>
+                <div class="progress-bar"><div class="progress" style="width: 75%"></div></div>
+            </div>
+            <div class="card glass">
+                <h3>Saúde do Projeto (QA)</h3>
+                <div class="value">100% <span class="subtext">cobertura</span></div>
+                <div class="subtext green">42/42 Passando</div>
+            </div>
+            <div class="card glass">
+                <h3>Branch Git Ativa</h3>
+                <div class="value">main</div>
+                <div class="subtext">Sincronizada</div>
+            </div>
+            <div class="card glass">
+                <h3>Status do Loop Autônomo</h3>
+                <div class="value green">Running</div>
+                <div class="subtext">420ms</div>
+            </div>
+        </section>
+
+        <section class="content-grid">
+            <div class="left-panel">
+                <div class="terminal glass">
+                    <div class="terminal-header">
+                        <span class="dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </span>
+                        <span class="title">amb_console.log // live-stream</span>
+                    </div>
+                    <div class="terminal-body" id="terminal-logs">
+                        <!-- Logs go here -->
+                    </div>
+                </div>
+
+                <div class="recent-sessions glass">
+                    <h3>Sessões Recentes do Agente Jules</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID Sessão</th>
+                                <th>Nome / Descrição</th>
+                                <th>Status</th>
+                                <th>Branch</th>
+                                <th>Duração</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessions-table-body">
+                            <!-- Sessions go here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="command-hub glass">
+                    <h3>Command Hub <span class="subtext">CLI Rápida</span></h3>
+                    <div class="command-grid">
+                        <button class="cmd-btn" data-cmd="amb pipeline">
+                            <span class="icon">🚀</span>
+                            <span class="text">Iniciar Pipeline<br><small>amb pipeline</small></span>
+                        </button>
+                        <button class="cmd-btn" data-cmd="amb check">
+                            <span class="icon">✅</span>
+                            <span class="text">Executar Diagnóstico<br><small>amb check</small></span>
+                        </button>
+                        <button class="cmd-btn" data-cmd="amb prompt">
+                            <span class="icon">🧠</span>
+                            <span class="text">Sintetizar Prompt<br><small>amb prompt</small></span>
+                        </button>
+                        <button class="cmd-btn" data-cmd="amb monitor">
+                            <span class="icon">👁️</span>
+                            <span class="text">Sentinela (Monitor)<br><small>amb monitor</small></span>
+                        </button>
+                        <button class="cmd-btn" data-cmd="amb jules clean">
+                            <span class="icon">🧹</span>
+                            <span class="text">Auditar Sessões<br><small>amb jules clean</small></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

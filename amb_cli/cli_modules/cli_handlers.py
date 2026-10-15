@@ -103,7 +103,12 @@ def cmd_advisor(args: Any) -> None:
 
 
 def cmd_gui(args: Any) -> None:
-    """Inicia o Assistente Gráfico (Tkinter UI)."""
+    """Inicia o Assistente Gráfico (Tkinter UI ou Web Console)."""
+    if getattr(args, "web", False):
+        from gui.web.server import start_web_gui
+        start_web_gui()
+        return
+
     from gui.wizard_app import start_wizard
     start_wizard()
 

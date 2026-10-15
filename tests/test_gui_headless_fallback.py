@@ -1,9 +1,14 @@
 import pytest
-import tkinter as tk
+try:
+    import tkinter as tk
+except ImportError:
+    tk = None
+
 from unittest.mock import patch, MagicMock
 
 from amb_cli.core.exceptions import AmbError
 from amb_cli.gui.wizard_app import start_wizard
+pytestmark = pytest.mark.skipif(tk is None, reason="tkinter not available")
 from amb_cli.gui.wizard_core.settings_tab import SettingsTab
 
 def test_start_wizard_headless_fallback():

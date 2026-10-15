@@ -30,7 +30,7 @@ class TestPipelineAutoMerge(unittest.TestCase):
 
         cmd_pipeline(args)
 
-        mock_run.assert_called_once_with(
+        mock_run.assert_called_once_with(prompt_file=getattr(args, "prompt_file", getattr(args, "spec", None)),
             stitch_prompt_file=None,
             jules_prompt_file=None,
             auto_approve=False,
