@@ -63,6 +63,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     _c("gui", "Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).", cmd_gui, ["ui", "wizard"])
     p = _c("agent", "Desenvolvimento autônomo e personas (lote -p <dir> ou loop contínuo).", cmd_agent, ["agent_alias"], desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).")
+    p.add_argument("target", nargs="?", help="Nome da persona (ex: engineer) OU caminho de pasta/arquivo de prompts (.amb/prompts/).")
     p.add_argument("--role", "-r", help="Nome da persona a executar (ex: engineer). Opcional se usar -p/--prompt.")
     p.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em lote a cada ciclo.")
     p.add_argument("--prompt", "-p", help="Arquivo .md individual OU PASTA INTEIRA de prompts (ex: .amb/prompts/) para desenvolvimento autônomo sequencial em lote.")
@@ -239,6 +240,7 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true", help="Exibe o relatório em JSON estruturado.")
     p.add_argument("--fix", action="store_true", help="Gera e propõe correções automáticas para as violações detectadas.")
     p = _c("pipeline", "Orquestrador Design-to-Deploy (Stitch -> Jules -> GitHub).", cmd_pipeline)
+    p.add_argument("spec", nargs="?", help="Arquivo markdown com divisões de tela/código OU descrição visual da tarefa.")
     p.add_argument("--stitch-prompt", "-s", help="Especificação visual para o Stitch.")
     p.add_argument("--jules-prompt", "-j", help="Instruções técnicas para o Jules.")
     p.add_argument("--prompt-file", "-f", help="Arquivo único unificado (.md) com divisões.")

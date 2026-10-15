@@ -119,6 +119,13 @@ def cmd_config(args: Any) -> None:
 # -------------------------------------------------------------
 def cmd_agent(args: Any) -> None:
     """Executa personas dinâmicas localmente, em loop contínuo ou na nuvem."""
+    target = getattr(args, "target", None)
+    if target:
+        if os.path.exists(target):
+            args.prompt = target
+        else:
+            args.role = target
+
     if getattr(args, "loop", False) or getattr(args, "prompt", None) or getattr(args, "sync_issues", False):
         from agents.autonomous_loop import run_autonomous_loop
         prompt_file = getattr(args, "prompt", None) or (args.task if (getattr(args, "task", None) and os.path.exists(args.task)) else None)
@@ -203,6 +210,14 @@ def cmd_validate(args: Any) -> None:
 
 def cmd_pipeline(args: Any) -> None:
     """Executa o pipeline completo Design-to-Deploy."""
+    spec = getattr(args, "spec", None)
+    if spec:
+        if os.path.exists(spec):
+            args.prompt_file = spec
+        else:
+            args.stitch_prompt = spec
+            args.jules_prompt = spec
+
     from pipeline.pipeline import PipelineOrchestrator
     PipelineOrchestrator.run(
         stitch_prompt_file=getattr(args, "stitch_prompt", None),
