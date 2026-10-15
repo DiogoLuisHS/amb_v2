@@ -4,6 +4,40 @@ Todas as alterações notáveis, novas funcionalidades, refatorações e correç
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.6.0] — 2026-10-15
+
+### 🚀 Orquestração Autônoma de 75 User Stories, Pipeline Visual & Sincronização GitHub
+- **Sincronização Bidirecional com GitHub Issues (`amb agent --issue`):**
+  - Mapeamento dinâmico de arquivos de prompt para GitHub Issues com detecção inteligente de issues abertas e vinculação de labels.
+  - Fechamento automatizado de issues pós-merge com comentários estruturados reportando o hash de commit e status de QA.
+- **Argumentos Posicionais nos Orquestradores (`US-69`):**
+  - Execução simplificada e sem atrito via argumentos posicionais: `amb agent .amb/prompts/` (substituindo obrigatoriedade de `-p`) e `amb pipeline specs/task.md` (substituindo `-s` / `-j` obrigatórios).
+- **Batch Visual Pipeline (`amb agent --pipeline` — `US-70`):**
+  - Capacidade de processar filas inteiras de prompts no modo Design-to-Deploy, sintetizando telas com Stitch e despachando para a Cloud do Jules em esteira contínua.
+- **Persistência de Estados do Pipeline (`amb pipeline` — `US-71`, `US-72`):**
+  - Máquina de estados persistente em `.amb/pipeline_state.json` cobrindo estágios visuais e de engenharia.
+  - Auto-merge integrado e auto-close de Pull Requests pós-QA 100% verde no orquestrador `amb pipeline`.
+- **Modo de Simulação Segura (`--dry-run` — `US-73`):**
+  - Validação estática de fluxo, parsing de prompts e conformidade de regras em `amb agent` e `amb pipeline` sem criar sessões no Jules ou gerar efeitos colaterais locais/remotos.
+- **Telemetria Executiva & Quadro de Produtividade (`US-74`):**
+  - Exibição de resumo executivo consolidado (`🏆 RESUMO EXECUTIVO DE ORQUESTRAÇÃO AMB_V2`) ao final de ciclos em lote, contabilizando prompts processados, telas Stitch geradas, sessões Jules, PRs integrados e índice de aprovação no QA local.
+- **Inteligência de Repositório Expandida (`US-63`, `US-64`, `US-65`, `US-66`, `US-67`):**
+  - **Suporte Multi-ORM em `amb schema`:** Leitura e inspeção de schemas Prisma (`schema.prisma`) além de Drizzle ORM, com suporte a saída estruturada em JSON (`--json`).
+  - **Visualização em Árvore em `amb context`:** Renderização de árvore hierárquica em ASCII (`--tree`) mapeando dependências por camada.
+  - **Exportação de Contexto:** Suporte a salvamento direto do roteiro arquitetural via `amb context <modulo> -o <arquivo>`.
+  - **Descoberta Dinâmica de Módulos:** Autodetecção de submódulos do projeto ativo com `amb context --list-modules`.
+- **Ergonomia CLI & Defaults Amigáveis (`US-75`):**
+  - `amb loop` sem argumentos executa automaticamente `amb loop status`.
+  - `amb persona` sem argumentos lista as personas locais com validação arquitetural estruturada (`amb persona list`).
+  - Concorrência de processamento em lote padronizada com o alias curto exclusivo `-c` (`--concurrency`).
+  - Limpeza e remoção da flag obsoleta `--dispatch-jules`.
+- **Reconexão Inteligente de Sessões:**
+  - Método `find_active_session_by_title` no despachante de ciclos, reatachando automaticamente a sessões em andamento na VM do Jules caso o loop seja reiniciado.
+- **515 Testes Unitários Verificados:**
+  - Suíte completa de testes unitários expandida para 515 testes (100% aprovados), garantindo conformidade rigorosa com a Regra 02 (teto de 300 linhas por arquivo) e Regra 04 (tipagem estrita).
+
+---
+
 ## [2.5.0] — 2026-10-08
 
 ### 🚀 Resiliência de Loop, Observabilidade & Governança de Qualidade

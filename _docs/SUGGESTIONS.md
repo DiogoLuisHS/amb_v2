@@ -4,32 +4,43 @@ Este documento consolida as propostas técnicas, novas funcionalidades e melhori
 
 ---
 
-## 📊 Matriz Resumida de Priorização MoSCoW
+## 📊 Matriz Resumida de Priorização MoSCoW (Atualizada pós-v2.6.0)
 
 | Prioridade | Itens Planejados | Foco Principal | Status Atual |
 | :--- | :--- | :--- | :--- |
-| 🔴 **MUST HAVE** | • `LoopStateMachine` com persistência (`.amb/loop_state.json`)<br>• `SessionMonitor` e enum `SessionState`<br>• Validador Pré-Commit de Regras (`amb validate --staged`) e `amb hooks install` | Estabilidade do loop contínuo e resiliência a falhas/interrupções | ✅ **100% Concluído (PRs #31, #32, #33)** |
-| 🟡 **SHOULD HAVE** | • `ConfigManager` Singleton com cache em memória e `amb config reload`<br>• `LocalTelemetry` em `.amb/telemetry.jsonl` e comando `amb stats`<br>• `PersonaEngine` unificado com interpolação e `amb persona validate` | Otimização de performance local e observabilidade de execução | ✅ **100% Concluído (PRs #34, #35, #36)** |
-| 🟢 **COULD HAVE** | • `ConsolePresenter` centralizado (`--json` e `--quiet`)<br>• `LocalQASandbox` e sanitizador de logs de QA em `.amb/logs/qa/`<br>• Scanner Proativo de TODOs (`amb suggest`) inspirado no Jules<br>• Notificações no Google Chat via Webhooks<br>• Deploy serverless no Google Cloud Run (`amb cloudrun`)<br>• Sincronização com Google Secret Manager (`amb secret`)<br>• Exportação de telemetria para Google Sheets / Looker Studio | Refinamentos de DX e expansão de integrações no ecossistema Google | 🟡 **Core Concluído (PR #37)** / Extensões em Backlog |
-| 🔵 **WON'T HAVE** | • Reescrita do core em TypeScript ou Rust<br>• Frameworks pesados de injeção de dependência (DI)<br>• Bancos de dados relacionais externos para persistência local<br>• Orquestração complexa de clusters Kubernetes (GKE) | Decisões arquiteturais deliberadas fora do escopo | 🔵 Mantido fora de escopo |
+| 🔴 **MUST HAVE (v2.6.0)** | • Sincronização com GitHub Issues (`--issue`)<br>• Argumentos posicionais em `amb agent` e `pipeline`<br>• Batch visual pipeline (`--pipeline`)<br>• Persistência de estados do pipeline (`.amb/pipeline_state.json`)<br>• Modo de simulação segura (`--dry-run`) | Orquestração contínua e ciclo de vida completo Design-to-Deploy | ✅ **100% Concluído (75 USs Integradas)** |
+| 🟡 **SHOULD HAVE (v2.6.0)** | • Telemetria executiva ao fim da orquestração<br>• Suporte a Prisma Schema e `--json` em `amb schema`<br>• Árvore visual (`--tree`), exportação (`-o`) e autodescoberta (`--list-modules`) em `amb context`<br>• Defaults amigáveis para `amb loop` e `amb persona` | Ergonomia da CLI, inteligência de repositório e observabilidade | ✅ **100% Concluído (75 USs Integradas)** |
+| 🟢 **COULD HAVE (Próximas Versões)** | • Scanner Proativo de TODOs (`amb suggest`)<br>• Rastreador de cota diária do Jules (`amb jules quota`)<br>• Dashboard categorizado de sessões (`amb jules list --grouped`)<br>• Notificações em salas de equipe (Discord, Slack, Google Chat)<br>• Deploy serverless pós-merge no Google Cloud Run (`amb cloudrun`)<br>• Sincronização com Google Secret Manager (`amb secret`) | Refinamentos avançados de DX e ecossistema Google Cloud | ⏳ Em Backlog / Próximo Ciclo |
+| 🔵 **WON'T HAVE** | • Reescrita do core em TypeScript ou Rust<br>• Frameworks pesados de injeção de dependência (DI)<br>• Bancos de dados relacionais externos para persistência local (usa SQLite/JSON)<br>• Orquestração complexa de clusters Kubernetes (GKE) | Decisões arquiteturais deliberadas fora do escopo | 🔵 Mantido fora de escopo |
 
 ---
 
-## 🔴 1. MUST HAVE — Estabilidade Crítica & Ciclo de Vida do Loop (CONCLUÍDO)
+## 🏆 1. Marco v2.6.0: Conclusão das 75 User Stories Canônicas (100% CONCLUÍDO)
 
-### 1.1. Orquestrador de Estados do Loop Autônomo com Persistência Local (`LoopStateMachine`)
-* **Status:** ✅ **Concluído (PR #32)**
+Todas as 75 User Stories foram implementadas com cobertura de 515 testes unitários (100% green), respeitando o teto de 300 linhas por arquivo (Regra 02) e tipagem estrita (Regra 04):
+- **Ciclo Autônomo com GitHub Issues:** Mapeamento dinâmico de prompts, aproveitamento de issues abertas e auto-close pós-merge com comentários estruturados.
+- **Argumentos Posicionais Universais:** `amb agent .amb/prompts/` e `amb pipeline specs/task.md` diretamente.
+- **Batch Visual Pipeline:** Execução ponta a ponta de design visual (Stitch) + engenharia (Jules) em lote.
+- **Resiliência e Persistência:** Máquinas de estados finitas para `amb loop` e `amb pipeline` com persistência em JSON e recuperação limpa.
+- **Inteligência Multi-ORM:** Inspeção de Drizzle ORM e Prisma Schema (`schema.prisma`), emissão em JSON e grafos de dependência por camadas em ASCII.
+
+---
+
+## 🔴 2. MUST HAVE — Estabilidade Crítica & Ciclo de Vida do Loop (CONCLUÍDO)
+
+### 2.1. Orquestrador de Estados do Loop Autônomo com Persistência Local (`LoopStateMachine`)
+* **Status:** ✅ **Concluído**
 * **Módulo Implementado:** `amb_cli/agents/loop_core/loop_state_machine.py`
 * **Comandos:** `amb loop status`, `amb loop pause` e `amb loop resume`.
 * **Persistência:** `.amb/loop_state.json` com recuperação graciosa e transições atômicas.
 
-### 1.2. Unificação de Polling e Monitoramento de Sessões (`SessionMonitor` & `SessionState`)
-* **Status:** ✅ **Concluído (PR #31)**
+### 2.2. Unificação de Polling e Monitoramento de Sessões (`SessionMonitor` & `SessionState`)
+* **Status:** ✅ **Concluído**
 * **Módulos Implementados:** `amb_cli/integrations/jules/jules_core/session_state.py` e `session_monitor.py`.
-* **Benefício:** Eliminação de 7 pontos de código redundante e strings mágicas. Reutilizável por sentinelas, watcher e loop.
+* **Benefício:** Eliminação de pontos de código redundante e strings mágicas. Reutilizável por sentinelas, watcher e loop.
 
-### 1.3. Validador Pré-Commit de Regras Locais (`amb validate --staged` e `amb hooks install`)
-* **Status:** ✅ **Concluído (PR #33)**
+### 2.3. Validador Pré-Commit de Regras Locais (`amb validate --staged` e `amb hooks install`)
+* **Status:** ✅ **Concluído**
 * **Módulos Implementados:** `amb_cli/architecture/rules_manager.py` e `amb_cli/cli_modules/handlers_core/hooks_handler.py`.
 * **Comandos:** `amb validate --staged` (audita apenas o que está em stage) e `amb hooks install` (instala hook `.git/hooks/pre-commit`).
 
