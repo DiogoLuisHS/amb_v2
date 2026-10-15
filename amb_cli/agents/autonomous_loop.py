@@ -21,6 +21,8 @@ from integrations.jules.jules_client import JulesClient
 from amb_cli.agents.persona_engine import PersonaEngine
 from agents.loop_core.session_assistant import monitor_and_assist_session
 from agents.loop_core.cycle_dispatcher import build_ai_context, dispatch_jules_session, handle_pr_merge
+from pipeline.pipeline import PipelineOrchestrator
+from pipeline.pipeline_core.prompt_builder import parse_single_prompt
 
 
 def run_autonomous_loop(
@@ -34,6 +36,7 @@ def run_autonomous_loop(
     no_auto_merge: bool = False,
     use_issues: bool = False,
     concurrency: int = 1,
+    use_pipeline: bool = False,
 ) -> None:
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para personas, prompts ou issues."""
     repo_name = get_repo_name()
@@ -185,6 +188,29 @@ def run_autonomous_loop(
 
                 # Despacho no Jules
                 try:
+                    trigger_pipeline = use_pipeline
+                    if item["type"] in ("prompt", "issue"):
+                        content = item.get("_full_prompt", "")
+                        stitch_p, jules_p = parse_single_prompt(content)
+                        if (stitch_p and stitch_p != jules_p) or "## stitch" in content.lower() or "ui:" in content.lower():
+                            trigger_pipeline = True
+
+                    if trigger_pipeline and item.get("path") and item.get("path").exists():
+                        log("PIPELINE", f"Detectada execução em lote com Pipeline Visual para '{item_name}'", Colors.CYAN)
+                        PipelineOrchestrator.run(prompt_file=str(item["path"]), auto_approve=True, auto_merge=not no_auto_merge, starting_branch=branch)
+
+                        if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
+                            syncer.close_issue(item["issue_number"], comment=f"✅ Concluído via Pipeline Visual em Lote (Ciclo #{completed_cycles}).")
+
+                        if item.get("path"):
+                            c_dir = item["path"].parent / "_completed"
+                            c_dir.mkdir(parents=True, exist_ok=True)
+                            try:
+                                item["path"].rename(c_dir / item["path"].name)
+                            except Exception:
+                                pass
+                        continue
+
                     session_id = dispatch_jules_session(
                         client, item["_full_prompt"], source_name, item["_session_title"], branch
                     )
@@ -249,40 +275,3 @@ def run_autonomous_loop(
             time.sleep(delay_between_cycles)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Loop Autônomo Contínuo Jules + Antigravity (AMB_V2)")
-    parser.add_argument("--role", "-r", help="Persona a ser executada em loop (ex: engineer).")
-    parser.add_argument("--all", "-a", action="store_true", help="Executa todas as personas em cada ciclo.")
-    parser.add_argument("--prompt", "-p", help="Arquivo markdown (.md) ou PASTA INTEIRA de prompts em lote (ex: .amb/prompts/).")
-    parser.add_argument("--sync-issues", "--issues", "--issue", action="store_true", help="Sincroniza os prompts com o GitHub Issues e executa rastreando a fila.")
-    parser.add_argument("--modules", "-m", help="Módulos separados por vírgula para alternar por ciclo.")
-    parser.add_argument("--max-cycles", "-c", type=int, help="Número máximo de ciclos antes de parar.")
-    parser.add_argument("--delay", "-d", type=int, default=0, help="Pausa opcional em segundos entre itens/ciclos (Padrão: 0, sem espera).")
-    parser.add_argument("--branch", "-b", default="develop", help="Branch alvo no GitHub (Padrão: develop).")
-    parser.add_argument("--no-auto-merge", action="store_true", help="Não faz o merge automático do PR.")
-
-    args = parser.parse_args()
-    modules_list = [m.strip() for m in args.modules.split(",") if m.strip()] if args.modules else None
-
-    try:
-        run_autonomous_loop(
-            role=args.role,
-            all_personas=args.all,
-            prompt_file=args.prompt,
-            modules=modules_list,
-            max_cycles=args.max_cycles,
-            delay_between_cycles=args.delay,
-            branch=args.branch,
-            no_auto_merge=args.no_auto_merge,
-            use_issues=getattr(args, "sync_issues", False),
-        )
-    except AmbError as e:
-        log_error("LOOP", e.message, hint=e.hint)
-        sys.exit(1)
-    except Exception as e:
-        log_error("LOOP", str(e))
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

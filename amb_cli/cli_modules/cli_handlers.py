@@ -143,6 +143,7 @@ def cmd_agent(args: Any) -> None:
             "branch": getattr(args, "branch", None),
             "no_auto_merge": getattr(args, "no_auto_merge", False),
             "concurrency": getattr(args, "concurrency", 1),
+            "use_pipeline": getattr(args, "pipeline", False),
         }
         if getattr(args, "sync_issues", False):
             loop_kwargs["use_issues"] = True
