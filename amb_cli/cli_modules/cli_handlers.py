@@ -229,7 +229,7 @@ def cmd_schema(args: Any) -> None:
 def cmd_context(args: Any) -> None:
     """Gera o roteiro de arquivos ordenados por camadas de dependência para a IA."""
     from architecture.ai_context_builder import generate_context
-    generate_context(target=args.module, output_json=args.json, output_file=getattr(args, "output", None))
+    generate_context(target=args.module, output_json=args.json, output_file=getattr(args, "output", None), tree_view=getattr(args, "tree", False))
 
 
 def cmd_git(args: Any) -> None:

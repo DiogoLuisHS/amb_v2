@@ -237,6 +237,25 @@ class AIContextBuilder:
         md.append("6. **UI Components & Pages (`components/`, `pages/`):** Renderizam as interfaces.")
         return "\n".join(md)
 
+    def generate_tree_view(self, query: str, layers: Dict[str, Any]) -> str:
+        total_files = sum(len(layer["files"]) for layer in layers.values())
+
+        lines = []
+        lines.append(f"🧭 FLUXO ARQUITETURAL EM CAMADAS: {query.upper()}")
+
+        active_layers = [(key, layer) for key, layer in layers.items() if layer["files"]]
+
+        for i, (key, layer) in enumerate(active_layers):
+            is_last = i == len(active_layers) - 1
+            prefix = "└──" if is_last else "├──"
+            count = len(layer["files"])
+            title = f"{layer['icon']}  {layer['title'].split(' (')[0]}:"
+            lines.append(f"{prefix} {title:<25} {count} arquivo{'s' if count > 1 else ''}")
+
+        lines.append(f"Total: {total_files} arquivos mapeados (DB ➔ Services ➔ UI)")
+
+        return "\n".join(lines)
+
     def discover_modules(self) -> List[Dict[str, Any]]:
         counts: Dict[str, int] = {}
         for file in self.file_map:
@@ -255,7 +274,7 @@ class AIContextBuilder:
         return result
 
 
-def generate_context(target: Optional[str] = None, output_json: bool = False, output_file: Optional[str] = None) -> None:
+def generate_context(target: Optional[str] = None, output_json: bool = False, output_file: Optional[str] = None, tree_view: bool = False) -> None:
     """Gera o contexto arquitetural do módulo no terminal ou em arquivo."""
     root = find_repo_root()
     builder = AIContextBuilder(Path(root))
@@ -297,6 +316,12 @@ def generate_context(target: Optional[str] = None, output_json: bool = False, ou
             _save_to_file(output_file, out_content)
         else:
             print(out_content)
+    elif tree_view:
+        tree_output = builder.generate_tree_view(query, layers)
+        if output_file:
+            _save_to_file(output_file, tree_output)
+        else:
+            print(tree_output)
     else:
         markdown_output = builder.generate_markdown(query, layers)
         if output_file:
