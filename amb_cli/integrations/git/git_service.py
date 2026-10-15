@@ -15,8 +15,8 @@ ensure_amb_env()
 from workspace.project_context import find_repo_root
 from integrations.git.git_core.gh_cli import (
     is_gh_installed, check_gh_auth, list_open_prs, get_latest_open_pr,
-    get_pr_legacy, create_pr_legacy, mark_pr_ready, approve_pr,
-    merge_pr_legacy, close_pr, list_issues, get_issue, create_issue, close_issue
+    get_pr, create_pr, mark_pr_ready, approve_pr,
+    merge_pr, close_pr, list_issues, get_issue, create_issue, close_issue
 )
 
 class GitService:
@@ -219,11 +219,11 @@ class GitService:
 
     def get_pr(self, pr_number: int, repo_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get pr method."""
-        return get_pr_legacy(pr_number, repo_name)
+        return get_pr(pr_number, repo_name, cwd=self.repo_root)
 
     def create_pr(self, title: str, body: str, base: Optional[str] = None, head: Optional[str] = None, draft: bool = False, repo_name: Optional[str] = None) -> Dict[str, Any]:
         """Create pr method."""
-        return create_pr_legacy(title, body, base, head, draft, repo_name, cwd=self.repo_root)
+        return create_pr(title, body, base, head, draft, repo_name, cwd=self.repo_root)
 
     def mark_pr_ready(self, pr_number: int, repo_name: Optional[str] = None) -> bool:
         """Mark pr ready method."""
@@ -235,7 +235,7 @@ class GitService:
 
     def merge_pr(self, pr_number: int, repo_name: Optional[str] = None, squash: bool = True, delete_branch: bool = True, admin: bool = True) -> bool:
         """Merge pr method."""
-        return merge_pr_legacy(pr_number, repo_name, squash, delete_branch, admin)
+        return merge_pr(pr_number, repo_name, squash, delete_branch, admin, cwd=self.repo_root)
 
     def close_pr(self, pr_number: int, comment: Optional[str] = None, delete_branch: bool = False, repo_name: Optional[str] = None) -> bool:
         """Close pr method."""

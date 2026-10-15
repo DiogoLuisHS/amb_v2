@@ -111,7 +111,6 @@ def main() -> None:
     parser.add_argument("--task", "-t", help="Instrução ou escopo específico adicional para anexar ao prompt da persona.")
     parser.add_argument("--list", "-l", action="store_true", help="Lista todas as personas disponíveis na pasta e encerra.")
     parser.add_argument("--agy", "--local", action="store_true", default=False, help="Executa o agente localmente via agy CLI em vez de despachar para o Google Jules.")
-    parser.add_argument("--dispatch-jules", "-j", action="store_true", help="(Legado) Força o despacho para o Google Jules na nuvem (comportamento padrão).")
     parser.add_argument("--personas-dir", help="Caminho customizado da pasta de personas.")
 
     args = parser.parse_args()
