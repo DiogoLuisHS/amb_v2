@@ -273,6 +273,7 @@ def create_parser() -> argparse.ArgumentParser:
     _sc(ls, "resume", "Retoma a execução do loop.")
     p = _c("schema", "Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only).", cmd_schema, ["db"])
     p.add_argument("target", nargs="?", default=None, help="Nome da tabela ou módulo a filtrar (ex: kanban, agenda, projects).")
+    _j(p)
     p = _c("context", "Gera o roteiro de leitura de arquivos por camadas para a IA.", cmd_context, ["ctx", "ai-context"])
     p.add_argument("module", nargs="?", default="agenda", help="Nome do módulo ou pasta para rastrear (ex: agenda, kanban, projects).")
     p.add_argument("--json", action="store_true", help="Retorna o resultado em JSON estruturado.")
