@@ -27,10 +27,12 @@ class TestPipelineAutoMerge(unittest.TestCase):
         args.no_auto_merge = False
         args.resume = False
         args.dry_run = False
+        args.prompt_file = None
 
         cmd_pipeline(args)
 
         mock_run.assert_called_once_with(
+            prompt_file=None,
             stitch_prompt_file=None,
             jules_prompt_file=None,
             auto_approve=False,
