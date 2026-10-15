@@ -8,8 +8,7 @@ def handle_cmd_loop(args: Any) -> None:
     sub_cmd = getattr(args, "loop_cmd", None)
 
     if not sub_cmd:
-        print(f"{Colors.RED}Comando de loop ausente. Use: amb loop [status|pause|resume]{Colors.RESET}")
-        sys.exit(1)
+        sub_cmd = "status"
 
     machine = LoopStateMachine()
 
