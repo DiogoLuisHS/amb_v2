@@ -178,8 +178,8 @@ class TurnHistoryExtractor:
                 cmd = a["bashCommand"].get("command", "")
                 if i in recent_bash_set:
                     out = a["bashCommand"].get("output", "")
-                    trunc_out = out[:400] + (
-                        f"\n...[+{len(out) - 400} chars omitidos]" if len(out) > 400 else ""
+                    trunc_out = out[:1200] + (
+                        f"\n...[+{len(out) - 1200} chars omitidos]" if len(out) > 1200 else ""
                     )
                     chat_lines.append(
                         f"[{time_str}] 💻 BASH: `$ {cmd}`\nOutput:\n{trunc_out}\n"

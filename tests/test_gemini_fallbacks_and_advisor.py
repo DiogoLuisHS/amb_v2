@@ -117,8 +117,8 @@ def test_turn_extractor_bash_compression():
     assert "100% passed" in history
 
 
-def test_cognitive_advisor_conciseness_parameters():
-    """Valida que CognitiveAdvisor utiliza parâmetros velozes (temp=0.1, max_tokens=1024) e prompt conciso."""
+def test_cognitive_advisor_completeness_and_rigor():
+    """Valida que CognitiveAdvisor prioriza completude técnica (4096 tokens, temp=0.2) e zero ambiguidade."""
     mock_client = MagicMock()
     mock_client.generate_text.return_value = "Plan approved. Proceed to PR."
 
@@ -133,7 +133,8 @@ def test_cognitive_advisor_conciseness_parameters():
     assert res == "Plan approved. Proceed to PR."
     mock_client.generate_text.assert_called_once()
     call_kwargs = mock_client.generate_text.call_args[1]
-    assert call_kwargs["temperature"] == 0.1
-    assert call_kwargs["max_output_tokens"] == 1024
-    # Valida regra de concisão no prompt
-    assert "CONCISÃO E VELOCIDADE" in call_kwargs["prompt"]
+    assert call_kwargs["temperature"] == 0.2
+    assert call_kwargs["max_output_tokens"] == 4096
+    # Valida regra de rigor e ausência de ambiguidades no prompt
+    assert "CLAREZA TOTAL E RIGOR TÉCNICO" in call_kwargs["prompt"]
+    assert "ZERO AMBIGUIDADE" in call_kwargs["prompt"]

@@ -15,7 +15,7 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
   - Migração automática em `_resolve_model` caso o usuário ou arquivos de configuração antigos apontem para modelos sunset/descontinuados.
 - **Otimização de Desempenho e Latência no Advisor do Jules:**
   - **Compressão de Histórico Bash (`TurnHistoryExtractor`):** Comandos bash anteriores aos 3 mais recentes têm suas saídas truncadas e compactadas como `(executado)`, economizando até 90% dos tokens de histórico e acelerando a resposta da IA.
-  - **Diretrizes de Resposta Cirúrgica (`CognitiveAdvisor`):** Prompt configurado com regras de concisão extrema (2 a 4 frases, zero saudações e preâmbulos prolixos) e parâmetros de inferência rápidos (`temperature=0.1`, `max_output_tokens=1024`).
+  - **Diretrizes de Rigor Técnico e Zero Ambiguidade (`CognitiveAdvisor`):** Prompt configurado para priorizar correção total, especificando arquivos, contratos de tipos e passos de teste com máxima clareza técnica e janela ampla de tokens (`max_output_tokens=4096`, `temperature=0.2`), sem deixar margem para suposições ou erros no desenvolvimento do Jules.
   - **Refatoração Limpa do Despachador (`JulesFeedbackDispatcher`):** Reduzido para 225 linhas em total conformidade com a Regra 02 (teto máximo de 300 linhas).
 - **Suíte de Testes Expandida:**
   - Adicionados testes dedicados em `tests/test_gemini_fallbacks_and_advisor.py`, elevando a suíte para **521 testes unitários 100% verdes**.

@@ -133,10 +133,10 @@ INSTRUÇÃO DE FORMULAÇÃO DA RESPOSTA:
 ================================================================================
 1. FOCO NA ÚLTIMA MENSAGEM: Responda diretamente ao que o agente perguntou ou propôs na Seção 3.
 2. USE O CONTEXTO COMPLETO: Utilize o histórico da Seção 2 e as regras da Seção 4 para não autorizar desvios, alterações indevidas em código funcional ou violações dos contratos e padrões da stack do projeto.
-3. SE HOUVER DESVIO: Dê instruções corretivas claras e diretas para o agente retomar o objetivo original da Seção 1.
+3. SE HOUVER DESVIO: Dê instruções corretivas claras, completas e diretas para o agente retomar o objetivo original da Seção 1.
 4. SE O TRABALHO ESTIVER CORRETO: Aprove a proposta e instrua o agente a rodar os testes/build e abrir o Pull Request.
 5. ESCOPO E ARQUIVOS: Instrua o agente a manter foco estrito nos arquivos da tarefa, sem alterar bancos de dados binários (.db), seeds ou arquivos fora do escopo.
-6. CONCISÃO E VELOCIDADE: Responda em no máximo 2 a 4 frases diretas e técnicas. Não inclua saudações nem preâmbulos prolixos (como 'Olá Jules', 'Entendido'). Vá direto à ação.
+6. CLAREZA TOTAL E RIGOR TÉCNICO (ZERO AMBIGUIDADE): Priorize sempre a precisão, correção e completude técnica sobre a brevidade. Não deixe margem para dúvidas ou suposições no desenvolvimento do Jules. Especifique arquivos, contratos de tipos e passos de teste com total clareza, evitando apenas saudações ou preâmbulos vazios.
 
 Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do Jules."""
 
@@ -161,8 +161,8 @@ Retorne APENAS o texto da mensagem técnica pronta para ser enviada no chat do J
             return self.client.generate_text(
                 prompt=prompt,
                 system_instruction=system_instruction,
-                temperature=0.1,
-                max_output_tokens=1024,
+                temperature=0.2,
+                max_output_tokens=4096,
             )
         except Exception as e:
             log_error("ANTIGRAVITY", f"Falha na inferência Gemini: {e}")
