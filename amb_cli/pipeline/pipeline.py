@@ -14,6 +14,9 @@ from pathlib import Path
 from core.bootstrap import ensure_amb_env
 ensure_amb_env()
 
+from core.console_presenter import ConsolePresenter
+from core.local_telemetry import LocalTelemetry
+import time
 from core import Colors, log, log_error, AmbError
 from workspace import find_repo_root, get_repo_name
 from agents.loop_core.loop_state_machine import LoopStateMachine, LoopState
@@ -36,11 +39,12 @@ class PipelineOrchestrator:
         resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
         screen_id: str = None, sync_ds: bool = False, starting_branch: str = None,
         auto_merge: bool = False, no_auto_merge: bool = False, resume: bool = False,
-        dry_run: bool = False
+        dry_run: bool = False, json_mode: bool = False
     ):
         if auto_approve and not no_auto_merge:
             auto_merge = True
 
+        cls._current_run_start_time = time.time()
         repo_root = find_repo_root()
         repo_name = get_repo_name()
 
@@ -134,14 +138,14 @@ class PipelineOrchestrator:
         machine.set_active_session(session_id=session_id, item_name=file_label)
 
         if auto_merge:
-            cls._monitor_jules_session(session_id, repo_root, no_qa, auto_merge=auto_merge, starting_branch=starting_branch)
+            cls._monitor_jules_session(session_id, repo_root, no_qa, auto_merge=auto_merge, starting_branch=starting_branch, json_mode=json_mode)
         else:
-            cls._monitor_jules_session(session_id, repo_root, no_qa)
+            cls._monitor_jules_session(session_id, repo_root, no_qa, json_mode=json_mode)
 
     @classmethod
     def _monitor_jules_session(
         cls, session_id: str, repo_root: str, no_qa: bool = False,
-        auto_merge: bool = False, starting_branch: str = "main"
+        auto_merge: bool = False, starting_branch: str = "main", json_mode: bool = False
     ):
         machine = LoopStateMachine(repo_root=repo_root)
         client = JulesClient()
@@ -161,6 +165,9 @@ class PipelineOrchestrator:
 
         machine.transition_to(LoopState.CYCLE_COMPLETED)
 
+        cls._record_and_present_summary(cls._current_run_start_time if hasattr(cls, '_current_run_start_time') else time.time(), json_mode)
+
+
     @staticmethod
     def _parse_single_prompt(markdown_text: str) -> tuple[str, str]:
         return parse_single_prompt(markdown_text)
@@ -176,6 +183,16 @@ class PipelineOrchestrator:
     @classmethod
     def _synthesize_stitch_ui(cls, client_agy: AntigravityClient, stitch_prompt: str, stitch_html: str, screen_title: str) -> str:
         return synthesize_stitch_ui(client_agy, stitch_prompt, stitch_html, screen_title)
+
+    @classmethod
+    def _record_and_present_summary(cls, start_time: float, json_mode: bool):
+        round_duration = time.time() - start_time
+        metrics = LocalTelemetry.get_round_metrics(start_time)
+        metrics["total_duration_seconds"] = round_duration
+        metrics["total_items"] = 1
+        metrics["total_stitch_screens"] = 1
+        LocalTelemetry.record_event("ROUND_COMPLETED", metrics)
+        ConsolePresenter(json_mode=json_mode).render_executive_summary(metrics)
 
 def main():
     parser = argparse.ArgumentParser(description="Pipeline Autônomo Design-to-Code (AMB_V2)")
@@ -193,6 +210,7 @@ def main():
     parser.add_argument("--sync-ds", action="store_true", help="Sincroniza os design tokens locais com o Stitch antes de iniciar")
     parser.add_argument("--branch", "-b", help="Branch de início para o Jules (Padrão: detecta a atual ou develop)")
     parser.add_argument("--auto-merge", action="store_true", help="Realiza o merge automático do Pull Request no Git após aprovação nos testes locais de QA.")
+    parser.add_argument("--json", action="store_true", help="Output json só")
     parser.add_argument("--no-auto-merge", action="store_true", help="Desabilita o merge automático do Pull Request ao concluir.")
 
     args = parser.parse_args()
@@ -207,7 +225,7 @@ def main():
             auto_approve=args.auto_approve, skip_stitch=args.skip_stitch, no_qa=args.no_qa,
             resume_session=args.resume_session, device_type=args.device_type, edit_screen_id=args.edit_screen,
             screen_id=args.screen_id, sync_ds=args.sync_ds, starting_branch=args.branch,
-            auto_merge=args.auto_merge, no_auto_merge=args.no_auto_merge, resume=getattr(args, "resume", False)
+            auto_merge=args.auto_merge, no_auto_merge=args.no_auto_merge, resume=getattr(args, "resume", False), json_mode=getattr(args, "json", False)
         )
     except AmbError as e:
         log_error("PIPELINE", e.message, hint=e.hint)

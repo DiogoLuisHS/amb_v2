@@ -3,18 +3,17 @@
 """
 Responsabilidade Única: Orquestrador de alto nível dos ciclos de desenvolvimento autônomo contínuo, delegando despacho e preparação de contexto para `amb_cli/agents/loop_core/cycle_dispatcher.py` e monitoramento/assistência cognitiva para `amb_cli/agents/loop_core/session_assistant.py`.
 """
-
 import os
 import sys
 import time
 import argparse
 from pathlib import Path
 from typing import List, Optional
-
 from core.bootstrap import ensure_amb_env
 ensure_amb_env()
-
 from core import Colors, log, log_error, AmbError
+from core.console_presenter import ConsolePresenter
+from core.local_telemetry import LocalTelemetry
 from workspace import find_repo_root, get_repo_name, IssueSynchronizer
 from integrations.git.git_service import GitService
 from integrations.jules.jules_client import JulesClient
@@ -23,8 +22,12 @@ from agents.loop_core.session_assistant import monitor_and_assist_session
 from agents.loop_core.cycle_dispatcher import build_ai_context, dispatch_jules_session, handle_pr_merge
 from pipeline.pipeline import PipelineOrchestrator
 from pipeline.pipeline_core.prompt_builder import parse_single_prompt
-
-
+def _record_and_present_summary(start_time: float, items_count: int, json_mode: bool):
+    round_duration = time.time() - start_time
+    metrics = LocalTelemetry.get_round_metrics(start_time)
+    metrics.update({"total_duration_seconds": round_duration, "total_items": items_count})
+    LocalTelemetry.record_event("ROUND_COMPLETED", metrics)
+    ConsolePresenter(json_mode=json_mode).render_executive_summary(metrics)
 def run_autonomous_loop(
     role: Optional[str] = None,
     all_personas: bool = False,
@@ -36,25 +39,19 @@ def run_autonomous_loop(
     no_auto_merge: bool = False,
     use_issues: bool = False,
     concurrency: int = 1,
-    use_pipeline: bool = False,
-    dry_run: bool = False,
-) -> None:
+    use_pipeline: bool = False, dry_run: bool = False, json_mode: bool = False) -> None:
     """Executa o loop contínuo de envio, monitoramento, auto-resposta e re-disparo para personas, prompts ou issues."""
     repo_name = get_repo_name()
     repo_root = find_repo_root()
     client = JulesClient()
     source_name = f"sources/github/{repo_name}"
-
     if not branch or branch in ["develop", "main"]:
         branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root)
     branch = branch or "main"
-
     engine = PersonaEngine(repo_root=repo_root)
     discovered = engine.discover_personas()
-
     syncer = IssueSynchronizer(repo_root=repo_root)
     items_to_run = syncer.resolve_items_queue(prompt_file, use_issues=use_issues)
-
     if not items_to_run:
         if prompt_file or use_issues:
             log_error("AGENT", "Nenhum item válido encontrado na fila para processamento.")
@@ -65,7 +62,6 @@ def run_autonomous_loop(
             items_to_run = [{"type": "persona", "name": role}]
         else:
             items_to_run = [{"type": "persona", "name": k} for k in discovered.keys()] if discovered else [{"type": "persona", "name": "engineer"}]
-
     if dry_run:
         print(f"\n{Colors.BOLD}{Colors.CYAN}=== 🔍 SIMULAÇÃO DE ORQUESTRAÇÃO EM LOTE [DRY-RUN] ==={Colors.RESET}")
         print(f"  • Total de Itens: {len(items_to_run)}")
@@ -86,9 +82,7 @@ def run_autonomous_loop(
             else:
                 print(f"    {idx}. [Persona] {item['name'].capitalize()} Agent")
         return
-
     modules_list = modules or [""]
-
     print(f"\n{Colors.BOLD}{Colors.CYAN}🔁 INICIANDO LOOP AUTÔNOMO JULES + ANTIGRAVITY{Colors.RESET}")
     print(f"📁 Repositório: {Colors.BOLD}{repo_name}{Colors.RESET} (Branch: {branch})")
     if items_to_run and items_to_run[0]["type"] == "issue":
@@ -102,16 +96,12 @@ def run_autonomous_loop(
         print(f"🎯 Módulos em Rotação: {', '.join(modules)}")
     print(f"⏱️ Limite de Ciclos: {f'{max_cycles} rodadas completas' if max_cycles else 'Infinito (Contínuo)'}")
     print(f"🔀 Nível de Concorrência: {concurrency}\n")
-
     completed_cycles = 0
-
+    round_start_time = time.time()
     while True:
         completed_cycles += 1
-
         print(f"\n🔄 {Colors.BOLD}CICLO #{completed_cycles} DE {max_cycles if max_cycles else '∞'}{Colors.RESET}\n")
-
         current_module = modules_list[(completed_cycles - 1) % len(modules_list)]
-
         # Preparar prompts para todos os itens primeiro
         prepared_items = []
         for item in items_to_run:
@@ -147,9 +137,7 @@ def run_autonomous_loop(
                     else:
                         base_prompt_raw = f"Você é o agente especialista {item_name} do projeto."
                     log("AGENT", f"Persona '{item_name}' não encontrada. Usando fallback padrão.", Colors.YELLOW)
-
                 base_prompt = engine.render_persona_template(base_prompt_raw)
-
                 # Para manter compatibilidade de pegar title:
                 # O title vem da descoberta ou de fallback.
                 title = item_name.capitalize() + " Agent"
@@ -157,7 +145,6 @@ def run_autonomous_loop(
                     title = discovered[item_name.lower()].get("title", title)
                 elif item_name.lower() == "engineer":
                     title = "Autonomous Software Engineer"
-
                 if current_module:
                     full_prompt = (
                         f"{base_prompt}\n\n---\n\n"
@@ -168,11 +155,9 @@ def run_autonomous_loop(
                     session_title = f"{title} - Ciclo #{completed_cycles}"
                     full_prompt = base_prompt
                 full_prompt = build_ai_context(full_prompt, current_module, item_name)
-
             item["_full_prompt"] = full_prompt
             item["_session_title"] = session_title
             prepared_items.append(item)
-
         if concurrency > 1:
             from agents.loop_core.concurrent_runner import ConcurrentLoopRunner
             runner = ConcurrentLoopRunner(
@@ -193,11 +178,11 @@ def run_autonomous_loop(
                     return
             except KeyboardInterrupt:
                 print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
+                _record_and_present_summary(round_start_time, len(items_to_run) * completed_cycles, json_mode)
                 return
         else:
             for item_idx, item in enumerate(prepared_items, 1):
                 item_name = item["name"]
-
                 if item["type"] == "issue":
                     print(f"\n📦 [{item_idx}/{len(prepared_items)}] Executando Issue #{item['issue_number']}: {Colors.BOLD}{item['title']}{Colors.RESET}")
                 elif item["type"] == "prompt":
@@ -207,7 +192,6 @@ def run_autonomous_loop(
                         f"\n📦 [{item_idx}/{len(prepared_items)}] Executando Persona: {Colors.BOLD}{item_name.upper()}{Colors.RESET}"
                         + (f" - Módulo: [{current_module}]" if current_module else "")
                     )
-
                 # Despacho no Jules
                 try:
                     trigger_pipeline = use_pipeline
@@ -216,14 +200,11 @@ def run_autonomous_loop(
                         stitch_p, jules_p = parse_single_prompt(content)
                         if (stitch_p and stitch_p != jules_p) or "## stitch" in content.lower() or "ui:" in content.lower():
                             trigger_pipeline = True
-
                     if trigger_pipeline and item.get("path") and item.get("path").exists():
                         log("PIPELINE", f"Detectada execução em lote com Pipeline Visual para '{item_name}'", Colors.CYAN)
                         PipelineOrchestrator.run(prompt_file=str(item["path"]), auto_approve=True, auto_merge=not no_auto_merge, starting_branch=branch)
-
                         if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
                             syncer.close_issue(item["issue_number"], comment=f"✅ Concluído via Pipeline Visual em Lote (Ciclo #{completed_cycles}).")
-
                         if item.get("path"):
                             c_dir = item["path"].parent / "_completed"
                             c_dir.mkdir(parents=True, exist_ok=True)
@@ -232,16 +213,13 @@ def run_autonomous_loop(
                             except Exception:
                                 pass
                         continue
-
                     session_id = dispatch_jules_session(
                         client, item["_full_prompt"], source_name, item["_session_title"], branch
                     )
-
                     # Monitoramento + Auto-Resposta
                     state = monitor_and_assist_session(
                         client=client, session_id=session_id, auto_reply_ai=True, require_pr=not no_auto_merge
                     )
-
                     # Aprovação e Integração do PR no Git com QA pós-merge
                     if state in ["COMPLETED", "SUCCEEDED"] and not no_auto_merge:
                         merged = handle_pr_merge(session_id, branch, repo_root, completed_cycles)
@@ -276,24 +254,20 @@ def run_autonomous_loop(
                             f"Interrompendo a esteira para evitar regressões.",
                         )
                         return
-
                 except KeyboardInterrupt:
                     print(f"\n{Colors.YELLOW}Loop interrompido pelo usuário.{Colors.RESET}")
+                    _record_and_present_summary(round_start_time, len(items_to_run) * completed_cycles, json_mode)
                     return
                 except Exception as e:
                     log_error("LOOP", f"Erro no processamento de '{item_name}': {e}")
                     return
-
                 if delay_between_cycles > 0 and len(prepared_items) > 1:
                     log("LOOP", f"Pausa de {delay_between_cycles}s antes do próximo item...", Colors.DIM)
                     time.sleep(delay_between_cycles)
-
         if max_cycles and completed_cycles >= max_cycles:
             log("LOOP", f"Limite de {max_cycles} ciclos atingido. Todas as personas foram executadas com sucesso!", Colors.GREEN)
+            _record_and_present_summary(round_start_time, len(items_to_run) * completed_cycles, json_mode)
             break
-
         log("LOOP", f"Ciclo #{completed_cycles} concluído. Iniciando Ciclo #{completed_cycles + 1}...", Colors.CYAN)
         if delay_between_cycles > 0:
             time.sleep(delay_between_cycles)
-
-
