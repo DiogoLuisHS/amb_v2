@@ -222,29 +222,41 @@ Ferramentas de inspeção de banco de dados e inteligência contextual de depend
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas do banco de dados (Read-Only). |
-| `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA. |
+| `amb schema [filtro]` | `db` | Inspeciona tabelas e colunas de schemas Drizzle ou Prisma (`schema.prisma`) em modo Read-Only. |
+| `amb schema [filtro] --json` | — | Emite o catálogo de tabelas, campos e relacionamentos em formato JSON estruturado. |
+| `amb context <modulo>` | `ctx`, `ai-context` | Gera o roteiro ordenado de leitura de arquivos por camadas para a IA (DB ➔ Services ➔ API ➔ UI). |
 | `amb context <modulo> --json` | — | Retorna o grafo de dependências e arquivos em formato JSON estruturado. |
+| `amb context <modulo> -o <arquivo>` | `--output` | Salva o roteiro arquitetural e contexto do módulo diretamente em um arquivo especificado. |
+| `amb context <modulo> --tree` | — | Renderiza a visualização em árvore compacta de dependências do módulo no terminal. |
+| `amb context --list-modules` | — | Autodescobre e lista dinamicamente todos os módulos arquiteturais detectados no repositório. |
 
 ```bash
 # Exemplos:
-amb schema kanban                                      # Inspecionar tabelas relacionadas ao kanban
-amb context agenda                                     # Roteiro de arquivos (DB ➔ Services ➔ API ➔ UI)
+amb schema kanban                                      # Inspecionar tabelas relacionadas ao kanban (Drizzle/Prisma)
+amb schema --json                                      # Catálogo completo do banco de dados em JSON
+amb context agenda                                     # Roteiro de arquivos por camadas para a IA
 amb context projects --json                            # Grafo estruturado em JSON
+amb context agenda -o .amb/context_agenda.md           # Salvar contexto do módulo em arquivo
+amb context kanban --tree                              # Árvore compacta visual de dependências
+amb context --list-modules                             # Listar módulos autodetectados no projeto
 ```
 
 ---
 
 ### 🤖 2.8. Agentes, Personas e Loop Autônomo (`agent`, `loop`, `persona`, `workflow`)
 
-Descobre dinamicamente e executa personas da pasta `.amb/personas/`, operando ciclos contínuos de desenvolvimento com auto-reply e auto-merge.
+Descobre dinamicamente e executa personas da pasta `.amb/personas/` ou filas de prompts de engenharia em lote, operando ciclos contínuos de desenvolvimento com auto-reply cognitivo, auto-merge e sincronização com GitHub Issues.
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb agent -p <pasta_ou_arquivo>` | `-p` | **Desenvolvimento em Lote:** Executa um arquivo `.md` ou **PASTA INTEIRA de prompts** (ex: `-p .amb/prompts/`) sequencialmente com auto-reply e auto-merge. |
-| `amb agent -p <pasta> --loop` | — | Loop contínuo iterando sobre todos os prompts da pasta. |
+| `amb agent [target]` | — | **Argumento Posicional:** Executa diretamente um arquivo `.md` ou pasta inteira de prompts (ex: `amb agent .amb/prompts/`) sem exigir `-p`. |
+| `amb agent -p <alvo>` | `--prompts-dir` | Executa o arquivo `.md` ou pasta de prompts especificada sequencialmente com auto-reply e auto-merge. |
+| `amb agent [target] --issue` | `-i` | **Sincronização com GitHub Issues:** Mapeia cada prompt para uma GitHub Issue (cria ou reaproveita), vincula commits/PRs e fecha a issue automaticamente pós-merge. |
+| `amb agent [target] --pipeline` | — | **Batch Visual Pipeline:** Executa o orquestrador Design-to-Deploy completo (Stitch + Jules) em lote para os prompts especificados. |
+| `amb agent [target] --dry-run` | — | **Simulação Segura:** Simula o parsing dos prompts, resolução de regras e validação do fluxo sem criar sessões no Jules ou alterar branches. |
+| `amb agent --concurrency <N>` | `-c` | Nível de concorrência paralela para processamento de personas e prompts em lote no Jules (Padrão: 1). |
 | `amb agent --list` | `-l` | Lista todas as personas disponíveis no projeto ativo. |
-| `amb agent --role <nome>` | `-r` | Despacha uma persona para o Google Jules na nuvem (Cloud VM + Branch + PR). |
+| `amb agent --role <nome>` | `-r` | Despacha uma persona para o Google Jules na nuvem (Cloud VM + Branch dedicada + PR). |
 | `amb agent --role <nome> --agy` | `--local` | Executa a persona localmente via CLI `agy`. |
 | `amb agent --role <nome> --task "<texto>"` | `-t` | Anexa instruções ou escopo adicional ao prompt base da persona. |
 | `amb agent --all` | `-a` | Executa todas as personas da pasta sequencialmente em lote. |
@@ -255,32 +267,39 @@ Descobre dinamicamente e executa personas da pasta `.amb/personas/`, operando ci
 | `amb agent --loop --modules <m1,m2>` | `-m` | Rotaciona o foco entre módulos do repositório a cada ciclo. |
 | `amb agent --loop --no-auto-merge` | — | Desabilita o merge automático do Pull Request ao concluir o ciclo com sucesso. |
 | `amb agent --personas-dir <pasta>` | — | Define um diretório customizado de personas. |
-| `amb agent --concurrency <N>` | `-c` | Nível de concorrência para processamento em lote no Jules (Padrão: 1). |
-| `amb loop status` | — | Inspeciona o estado da máquina finita (`.amb/loop_state.json`), ciclo ativo e sessão Jules. |
-| `amb loop pause` | — | Pausa graciosamente o loop autônomo contínuo. |
+| `amb loop` | — | **Invocação Amigável:** Executar `amb loop` sem argumentos exibe automaticamente o status da máquina finita (`.amb/loop_state.json`). |
+| `amb loop status` | — | Inspeciona detalhadamente o estado da máquina finita, ciclo ativo, fila restante e sessão Jules. |
+| `amb loop pause` | — | Pausa graciosamente o loop autônomo contínuo entre sessões. |
 | `amb loop resume` | — | Retoma o ciclo do ponto exato onde foi interrompido ou pausado. |
+| `amb persona` | — | **Invocação Amigável:** Executar `amb persona` sem argumentos lista automaticamente todas as personas com status de validação estrutural (`✅ Válida` ou `⚠️ Incompleta`). |
+| `amb persona list` | — | Lista as personas locais exibindo missão resumida, arquivos de foco e status de integridade. |
 | `amb persona validate` | — | Audita conformidade estrutural das personas em `.amb/personas/` (missão, arquivos de foco, regras). |
 | `amb workflow schedule` | — | Gera automação CI/CD do GitHub Actions (`.github/workflows/amb_scheduled.yml`) com agendamento cron. |
+
+> **💡 Telemetria Executiva Integrada:** Ao término de qualquer orquestração em lote ou ciclo de agentes, o AMB emite automaticamente o **Quadro Executivo de Produtividade** (`🏆 RESUMO EXECUTIVO DE ORQUESTRAÇÃO AMB_V2`), consolidando prompts processados, telas geradas no Stitch, sessões Jules, PRs integrados via auto-merge e taxa de aprovação no QA local.
 
 > **💡 `amb context` automático no loop:** ao despachar cada sessão, o `autonomous_loop` roda automaticamente `amb context <modulo>` e **anexa o roteiro arquitetural completo** (DB → Services → UI) ao prompt enviado ao Jules, reduzindo em 20-30min o tempo de exploração inicial por sessão.
 
 ```bash
 # Exemplos:
-amb loop status                                             # Checar estado persistido do ciclo
-amb loop pause                                              # Pausar loop em execução
-amb loop resume                                             # Retomar ciclo pausado
-amb persona validate                                        # Auditar integridade das personas locais
-amb agent -p .amb/prompts/                               # Desenvolvimento em lote: executa todos os prompts da pasta
-amb agent -p .amb/prompts/ --branch feature/nova-ui      # Executar pasta de prompts na branch alvo
-amb agent -p .amb/prompts/ --loop                        # Loop contínuo sobre a pasta de prompts
-amb agent --list                                        # Ver personas disponíveis
-amb agent --role engineer                               # Despachar persona para o Jules na nuvem
-amb agent --role engineer --agy                         # Executar persona localmente via agy
-amb agent --role engineer --loop                        # Loop contínuo infinito com auto-merge de PR
-amb agent --role engineer --loop --max-cycles 3         # Loop com limite de 3 ciclos
-amb agent --all --loop --max-cycles 2                   # Todas as personas, 2 ciclos completos
-amb agent --role engineer --loop --modules api,web      # Rotacionar entre módulos por ciclo
-amb workflow schedule --cron "0 2 * * *" --role engineer # Criar cron job CI/CD noturno
+amb loop                                                      # Exibe status da máquina de estados do loop
+amb loop pause                                                # Pausar loop em execução
+amb loop resume                                               # Retomar ciclo pausado
+amb persona                                                   # Listar personas locais com validação arquitetural
+amb persona validate                                          # Auditar integridade das personas locais
+amb agent .amb/prompts/                                       # Argumento posicional: executa fila de prompts
+amb agent .amb/prompts/ --issue                               # Executa fila com sincronização automática de GitHub Issues
+amb agent .amb/prompts/ --pipeline                            # Executa lote integrando design visual (Stitch) + Jules
+amb agent .amb/prompts/ --dry-run                             # Simula a esteira sem gerar efeitos colaterais
+amb agent .amb/prompts/ -c 2                                  # Concorrência paralela no processamento de prompts
+amb agent --list                                              # Ver personas disponíveis
+amb agent --role engineer                                     # Despachar persona para o Jules na nuvem
+amb agent --role engineer --agy                               # Executar persona localmente via agy
+amb agent --role engineer --loop                              # Loop contínuo infinito com auto-merge de PR
+amb agent --role engineer --loop --max-cycles 3               # Loop com limite de 3 ciclos
+amb agent --all --loop --max-cycles 2                         # Todas as personas, 2 ciclos completos
+amb agent --role engineer --loop --modules api,web            # Rotacionar entre módulos por ciclo
+amb workflow schedule --cron "0 2 * * *" --role engineer       # Criar cron job CI/CD noturno
 ```
 
 ---
@@ -294,23 +313,29 @@ Orquestração unificada de alto nível conectando a geração de interface no S
 
 | Comando / Opção | Alias | Descrição |
 | :--- | :--- | :--- |
-| `amb pipeline -s <stitch.md> -j <jules.md>` | — | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** com prompts separados para Stitch e Jules. |
+| `amb pipeline [target]` | — | **Argumento Posicional:** Executa o pipeline com base em um arquivo único `.md` contendo especificações visual e de engenharia. |
+| `amb pipeline -s <s.md> -j <j.md>` | — | Executa o pipeline orquestrado ponta a ponta **Design-to-Deploy** com prompts separados para Stitch e Jules. |
 | `amb pipeline -j <jules.md> --skip-stitch` | — | Pula a etapa visual do Stitch e vai direto para a engenharia no Jules. |
-| `amb pipeline -s <s.md> -j <j.md> -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
-| `amb pipeline -s <s.md> -j <j.md> --auto-merge` | — | Aprova formalmente e faz merge do Pull Request no GitHub após aprovação no QA local. |
-| `amb pipeline -s <s.md> -j <j.md> --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: detecta a atual). |
-| `amb pipeline -s <s.md> -j <j.md> --device <D>`| `-d` | Dispositivo alvo para o Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
-| `amb pipeline -s <s.md> -j <j.md> --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar. |
-| `amb pipeline --edit-screen-id <id>` | — | Refina uma tela existente no Stitch em vez de criar uma nova. |
+| `amb pipeline [alvo] -y` | `--auto-approve` | Pula confirmações manuais no Gatekeeper 1 de Design (Modo 100% autônomo). |
+| `amb pipeline [alvo] --auto-merge` | — | Aprova formalmente e faz merge do Pull Request no GitHub após validação com 100% de sucesso no QA local. |
+| `amb pipeline [alvo] --dry-run` | — | **Simulação de Pipeline:** Valida o parsing das especificações, regras arquiteturais e mocks sem criar telas ou sessões no Jules. |
+| `amb pipeline [alvo] --branch <b>` | `-b` | Define o branch-alvo de início para o Jules (Padrão: detecta a branch atual). |
+| `amb pipeline [alvo] --device <D>` | `-d` | Dispositivo alvo para a tela no Stitch (`DESKTOP`, `MOBILE`, `TABLET`). |
+| `amb pipeline [alvo] --sync-ds` | — | Sincroniza design tokens locais (`design.md`) com o Stitch antes de gerar a tela. |
+| `amb pipeline --edit-screen-id <id>` | — | Refina uma tela existente no Stitch em vez de criar uma nova do zero. |
 | `amb pipeline --screen-id <id>` | — | Utiliza uma tela já existente no Stitch como ponto de partida (não recria). |
 | `amb pipeline --resume-session <id>` | `-r` | Retoma o monitoramento ao vivo e QA de uma sessão Jules já iniciada. |
 | `amb pipeline --no-qa` | — | Desabilita o teste QA local automático no final da execução. |
 
+> **💡 Máquina de Estados Persistente:** O pipeline persiste o estado de cada etapa em `.amb/pipeline_state.json`. Em caso de interrupção ou necessidade de revisão de design, o fluxo pode ser retomado exatamente do ponto em que parou sem perda de contexto.
+
 ```bash
 # Exemplos do Pipeline:
-amb pipeline -s specs/login_ui.md -j specs/login_eng.md        # Execução completa (Design no Stitch + Engenharia no Jules)
+amb pipeline specs/feature_login.md                           # Argumento posicional: especificação unificada
+amb pipeline -s specs/login_ui.md -j specs/login_eng.md        # Prompts dedicados (Design no Stitch + Engenharia no Jules)
 amb pipeline -j specs/fix_api.md --skip-stitch                 # Tarefa de backend/engenharia pura (sem tela Stitch)
-amb pipeline -s specs/painel.md -j specs/painel_eng.md -y      # Pipeline autônomo sem pausas de aprovação
+amb pipeline specs/feature_login.md --auto-merge -y           # Pipeline 100% autônomo com auto-merge pós-QA
+amb pipeline specs/feature_login.md --dry-run                 # Simulação do pipeline sem chamadas externas
 amb pipeline --resume-session 538227422414712240               # Reconectar a uma sessão remota do Jules
 ```
 
@@ -366,21 +391,33 @@ amb pipeline --resume-session 538227422414712240               # Reconectar a um
 | **Git & PRs** | `amb git pr merge <id>` | Realiza o merge do PR |
 | **Git & PRs** | `amb git pr close <id>` | Fecha Pull Request sem merge |
 | **Git & PRs** | `amb hooks install` | Instala hook de pré-commit |
-| **Arquitetura** | `amb schema [filtro]` | Consulta catálogo Drizzle DB (Read-Only) |
-| **Arquitetura** | `amb context <modulo>` | Roteiro de arquivos em camadas para IA |
-| **Personas** | `amb agent --list` | `amb agent -l` |
+| **Arquitetura** | `amb schema [filtro]` | `amb schema [filtro] --json` (Drizzle & Prisma) |
+| **Arquitetura** | `amb context <modulo>` | `amb context <modulo> --tree` / `-o <file>` |
+| **Arquitetura** | `amb context --list-modules` | Autodescoberta dinâmica de módulos do repo |
+| **Personas** | `amb agent [alvo]` | `amb agent .amb/prompts/` (Argumento posicional) |
 | **Personas** | `amb agent -p <pasta>` | `amb agent -p .amb/prompts/` (Lote de prompts) |
-| **Personas** | `amb agent --role <nome>` | `amb agent -r <nome>` (Jules Cloud) |
+| **Personas** | `amb agent [alvo] --issue` | `amb agent -i` (Sincronização com GitHub Issues) |
+| **Personas** | `amb agent [alvo] --pipeline` | Batch visual Design-to-Deploy em lote |
+| **Personas** | `amb agent [alvo] --dry-run` | Simulação sem chamadas de rede ou commits |
+| **Personas** | `amb agent --role <nome>` | `amb agent -r <nome>` (Jules Cloud VM + PR) |
 | **Personas** | `amb agent --role <nome> --agy`| `amb agent -r <nome> --local` (Local CLI) |
+| **Personas** | `amb agent --concurrency <N>` | `amb agent -c <N>` (Processamento paralelo) |
 | **Personas** | `amb agent --loop` | `amb agent --continuous` (Loop contínuo autônomo) |
 | **Personas** | `amb agent --all --loop` | Executa todas as personas em ciclo infinito |
 | **Personas** | `amb agent --loop --max-cycles <N>` | Loop contínuo com limite de ciclos |
 | **Personas** | `amb agent --loop --modules <m1,m2>` | Loop rotacionando módulos de foco |
 | **Personas** | `amb agent --loop --no-auto-merge` | Desabilita merge automático pós-ciclo |
+| **Personas** | `amb loop` | `amb loop status` (Invocação amigável padrão) |
 | **Personas** | `amb loop status` | Exibe estado da máquina finita do loop |
+| **Personas** | `amb loop pause` | Pausa graciosamente o loop autônomo |
+| **Personas** | `amb loop resume` | Retoma o ciclo do ponto exato onde parou |
+| **Personas** | `amb persona` | `amb persona list` (Listagem com status arquitetural) |
 | **Personas** | `amb persona validate` | Audita integridade estrutural das personas |
+| **Pipeline** | `amb pipeline [alvo]` | `amb pipeline specs/task.md` (Posicional unificado) |
 | **Pipeline** | `amb pipeline -s <s.md> -j <j.md>` | Orquestrador Design-to-Deploy ponta a ponta |
 | **Pipeline** | `amb pipeline -j <j.md> --skip-stitch` | Tarefa de engenharia pura (sem tela) |
+| **Pipeline** | `amb pipeline [alvo] --auto-merge` | Auto-merge do PR gerado pós-QA 100% verde |
+| **Pipeline** | `amb pipeline [alvo] --dry-run` | Simulação do fluxo de design e engenharia |
 | **Pipeline** | `amb pipeline --resume-session <id>` | Retoma monitoramento de sessão remota |
 
 ---
@@ -390,18 +427,20 @@ amb pipeline --resume-session 538227422414712240               # Reconectar a um
 ```text
 📁 amb_v2/
 ├── pyproject.toml / setup.py        # Configuração de build e comando global 'amb'
-├── amb_cli/                         # Pacote Python principal da CLI (92 arquivos, todos <= 300 linhas)
+├── amb_cli/                         # Pacote Python principal da CLI (119 arquivos, todos <= 300 linhas)
 │   ├── cli.py                       # Ponto de entrada CLI (Single Source of Truth)
 │   ├── cli_modules/                 # Handlers e parsers modulares da CLI (SRP)
 │   │   ├── alert_notifier.py        # Emissor de alertas visuais e sonoros
 │   │   ├── cli_handlers.py          # Despacho enxuto de subcomandos
 │   │   ├── cli_parsers.py           # Definição modular de argumentos e subcomandos
-│   │   └── handlers_core/           # Handlers desacoplados por domínio (antigravity, git, jules, stitch)
+│   │   └── handlers_core/           # Handlers desacoplados por domínio (antigravity, git, jules, stitch, loop, persona)
 │   ├── core/                        # Núcleo de infraestrutura da CLI (Framework AMB)
 │   │   ├── bootstrap.py             # Bootstrap centralizado de ambiente e sys.path
+│   │   ├── config_manager.py        # Singleton thread-safe de configuração (.env + amb_project.json)
 │   │   ├── diagnostics.py           # Diagnóstico de saúde e credenciais (amb check)
 │   │   ├── env.py                   # Gerenciamento seguro de variáveis (.env)
 │   │   ├── exceptions.py            # Hierarquia canônica de exceções (AmbError)
+│   │   ├── local_telemetry.py       # Telemetria executiva local e histórico de métricas
 │   │   └── logger.py                # Logging formatado e cores ANSI
 │   ├── workspace/                   # Contexto e governança do projeto consumidor alvo
 │   │   ├── project_context.py       # Identificação de raiz, repo e metadados
@@ -412,28 +451,33 @@ amb pipeline --resume-session 538227422414712240               # Reconectar a um
 │   │   ├── wizard_app.py            # Janela mestre e launcher do Wizard (Tkinter)
 │   │   └── wizard_core/             # Runner dinâmico, gestor de .env e parser extractor
 │   ├── architecture/                # Inteligência de repositório e leitura de schemas
-│   │   ├── db_schema_reader.py      # Leitor de schemas e banco de dados (Read-Only)
+│   │   ├── db_schema_reader.py      # Leitor de schemas Drizzle e Prisma (Read-Only)
 │   │   ├── ai_context_builder.py    # Construtor de contexto por camadas para IA
 │   │   └── context_core/            # Configurações de camadas e constantes
 │   ├── agents/                      # Agentes autônomos e personas
 │   │   ├── auto_reply.py            # Resposta cognitiva com Gemini
 │   │   ├── autonomous_loop.py       # Loop contínuo autônomo (Jules + Gemini + Auto-Merge)
 │   │   ├── local_agent_runner.py    # Executor dinâmico de personas
+│   │   ├── persona_engine.py        # Motor unificado de resolução e validação de personas
 │   │   ├── monitor.py               # Sentinela contínuo em tempo real
+│   │   ├── state_machine.py         # Máquina de estados desacoplada do loop autônomo
 │   │   ├── auto_reply_core/         # Extração de histórico turn-by-turn e conselheiro cognitivo
-│   │   └── loop_core/               # Despachante de ciclos e assistente de sessão
+│   │   └── loop_core/               # Despachante de ciclos, issues e assistente de sessão
 │   ├── integrations/                # Integrações oficiais com APIs e SDKs externos
 │   │   ├── antigravity/             # Cliente cognitivo Google Antigravity & Gemini REST
-│   │   ├── jules/                   # Cliente REST oficial do Google Jules & watcher
+│   │   ├── jules/                   # Cliente REST oficial do Google Jules, SessionMonitor & watcher
 │   │   ├── stitch/                  # Cliente oficial para Google Stitch SDK
 │   │   ├── git/                     # Serviço de Git de alta performance e automação GitHub CLI
 │   │   └── common/                  # BaseGoogleClient com retries e backoff exponencial
 │   └── pipeline/                    # Orquestrador Design-to-Deploy
 │       ├── pipeline.py              # Orquestrador do fluxo ponta a ponta
+│       ├── pipeline_batch.py        # Execução visual de pipelines em lote
+│       ├── state_machine.py         # Máquina de estados finita persistente do pipeline
 │       ├── quality_gatekeeper.py    # Gatekeeper local de QA e integridade
 │       └── pipeline_core/           # Estágio de design no Stitch e construtor de prompts
-├── .agents/rules/                   # Regras arquiteturais canônicas do ecossistema
-└── tests/                           # Suíte de testes unitários (158 testes, 100% green)
+├── .amb/prompts/_completed/         # 🏆 Catálogo histórico das 75 User Stories concluídas e testadas
+├── .agents/rules/                   # 🤖 Regras arquiteturais canônicas do ecossistema
+└── tests/                           # 🧪 Suíte de testes unitários (98 arquivos, 515 testes, 100% green)
 ```
 
 ---
