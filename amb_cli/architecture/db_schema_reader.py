@@ -35,19 +35,72 @@ class DbSchemaReader:
             Path(root) / "db" / "schema",
             Path(root) / "server" / "src" / "db" / "schema",
             Path(root) / "backend" / "src" / "db" / "schema",
+            Path(root) / "prisma",
+            Path(root) / "src" / "prisma",
+            Path(root),
         ]
         valid_dirs = [p for p in candidates if p.exists() and p.is_dir()]
         return valid_dirs
 
     @classmethod
     def list_schema_files(cls, root: str) -> List[Path]:
-        """Lista todos os arquivos de schema TypeScript/JavaScript encontrados."""
+        """Lista todos os arquivos de schema TypeScript/JavaScript/Prisma encontrados."""
         dirs = cls.find_schema_dirs(root)
         files = []
         for d in dirs:
             files.extend([f for f in d.glob("*.ts") if f.name != "index.ts"])
             files.extend([f for f in d.glob("*.js") if f.name != "index.js"])
+            files.extend([f for f in d.glob("*.prisma")])
         return sorted(list(set(files)))
+
+    @staticmethod
+    def parse_prisma_schema(filepath: Path) -> List[Dict[str, Any]]:
+        """Extrai definições de tabelas e colunas de arquivos Prisma ORM."""
+        try:
+            content = filepath.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            return []
+
+        tables = []
+        try:
+            pattern = re.compile(
+                r"model\s+(\w+)\s*\{([^}]+)\}",
+                re.MULTILINE | re.DOTALL
+            )
+
+            for match in pattern.finditer(content):
+                model_name = match.group(1)
+                columns_block = match.group(2)
+
+                columns = []
+                for line in columns_block.splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("//") or line.startswith("@@"):
+                        continue
+
+                    # matches: fieldName FieldType @options
+                    parts = line.split(maxsplit=2)
+                    if len(parts) >= 2:
+                        col_name = parts[0]
+                        col_type = parts[1]
+                        col_opts = parts[2] if len(parts) > 2 else ""
+                        columns.append({
+                            "name": col_name,
+                            "type": col_type,
+                            "options": col_opts.strip()
+                        })
+
+                tables.append({
+                    "variable": model_name,
+                    "table_name": model_name.lower(),
+                    "file": filepath.name,
+                    "path": str(filepath),
+                    "columns": columns
+                })
+        except Exception:
+            pass
+
+        return tables
 
     @staticmethod
     def parse_drizzle_schema(filepath: Path) -> List[Dict[str, Any]]:
@@ -109,7 +162,10 @@ def show_schema(filter_term: Optional[str] = None, as_json: bool = False) -> Non
 
     all_tables = []
     for f in schema_files:
-        all_tables.extend(DbSchemaReader.parse_drizzle_schema(f))
+        if f.suffix == '.prisma':
+            all_tables.extend(DbSchemaReader.parse_prisma_schema(f))
+        else:
+            all_tables.extend(DbSchemaReader.parse_drizzle_schema(f))
 
     if filter_term:
         ft = filter_term.lower().strip()

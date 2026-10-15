@@ -37,9 +37,11 @@ def repo_root(tmp_path):
 def test_find_schema_dirs(repo_root):
     dirs = DbSchemaReader.find_schema_dirs(str(repo_root))
 
-    assert len(dirs) == 2
+    # Expect 3 matches: the 2 mock dirs and the root dir itself (added for Prisma)
+    assert len(dirs) == 3
     assert Path(repo_root) / "apps" / "api" / "src" / "db" / "schema" in dirs
     assert Path(repo_root) / "src" / "db" / "schema" in dirs
+    assert Path(repo_root) in dirs
 
 
 def test_list_schema_files(repo_root):
