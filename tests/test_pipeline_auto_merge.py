@@ -11,6 +11,7 @@ class TestPipelineAutoMerge(unittest.TestCase):
         """Garante que o parser propaga as novas flags pro Orquestrador."""
         args = MagicMock()
         args.spec = None
+        args.prompt_file = None
         args.stitch_prompt = None
         args.jules_prompt = None
         args.auto_approve = False
@@ -31,6 +32,7 @@ class TestPipelineAutoMerge(unittest.TestCase):
         cmd_pipeline(args)
 
         mock_run.assert_called_once_with(
+            prompt_file=None,
             stitch_prompt_file=None,
             jules_prompt_file=None,
             auto_approve=False,

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMB_V2 Web Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo-title">
+            <h1>AMB_V2 Web Console</h1>
+            <span class="badge">DiogoLuisHS/amb_v2 - Online</span>
+        </div>
+        <div class="api-status">
+            <span class="status-indicator">Google Jules <span class="dot green"></span></span>
+            <span class="status-indicator">Google Stitch <span class="dot green"></span></span>
+            <span class="status-indicator">Gemini IA <span class="dot green"></span></span>
+        </div>
+        <div class="header-actions">
+            <button id="theme-toggle">🌓 Tema</button>
+            <button id="docs-btn">Documentação</button>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <section class="kpi-cards">
+            <div class="card">
+                <h3>Sessões Jules Ativas</h3>
+                <div class="kpi-value">03 <span class="progress-bar"><span class="progress" style="width: 75%"></span></span></div>
+                <div class="kpi-subtext">75% Carga</div>
+            </div>
+            <div class="card">
+                <h3>Saúde do Projeto (QA)</h3>
+                <div class="kpi-value text-green">100%</div>
+                <div class="kpi-subtext">42/42 testes passando | Zero falhas</div>
+            </div>
+            <div class="card">
+                <h3>Branch Git Ativa</h3>
+                <div class="kpi-value">main</div>
+                <div class="kpi-subtext">Status: Sincronizada</div>
+            </div>
+            <div class="card">
+                <h3>Status do Loop Autônomo</h3>
+                <div class="kpi-value text-cyan">RUNNING</div>
+                <div class="kpi-subtext">Latência: 430ms</div>
+            </div>
+        </section>
+
+        <section class="command-hub">
+            <h2>Ações Rápidas CLI</h2>
+            <div class="hub-grid">
+                <button class="cmd-btn" data-cmd="amb check">🔍 Executar Diagnóstico (QA Pass)</button>
+                <button class="cmd-btn" data-cmd="amb prompt">📝 Sintetizar Prompt com IA (AI Gen)</button>
+                <button class="cmd-btn" data-cmd="amb pipeline">🚀 Iniciar Pipeline Design-to-Deploy (Prod)</button>
+                <button class="cmd-btn" data-cmd="amb monitor">👁️ Sentinela em Tempo Real</button>
+                <button class="cmd-btn" data-cmd="amb jules clean">🧹 Auditar e Limpar Sessões (Purge)</button>
+            </div>
+        </section>
+
+        <section class="terminal-section">
+            <div class="terminal-header">
+                <span>Terminal ao vivo // amb_console.log</span>
+            </div>
+            <div id="terminal-output" class="terminal-window">
+                <!-- Logs will appear here -->
+            </div>
+        </section>
+
+        <section class="sessions-list">
+            <div class="sessions-header">
+                <h2>Sessões Recentes do Agente Jules</h2>
+            </div>
+            <table class="sessions-table">
+                <thead>
+                    <tr>
+                        <th>ID Sessão</th>
+                        <th>Nome / Descrição</th>
+                        <th>Status</th>
+                        <th>Branch</th>
+                        <th>Duração</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="sessions-tbody">
+                    <!-- Sessions rows populated via JS -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
