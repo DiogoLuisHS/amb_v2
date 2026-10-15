@@ -18,32 +18,9 @@ from core import Colors, log, log_error, AmbError
 from workspace import find_repo_root, get_repo_name, IssueSynchronizer
 from integrations.git.git_service import GitService
 from integrations.jules.jules_client import JulesClient
-from agents.local_agent_runner import get_personas_directory, discover_personas
+from amb_cli.agents.persona_engine import PersonaEngine
 from agents.loop_core.session_assistant import monitor_and_assist_session
 from agents.loop_core.cycle_dispatcher import build_ai_context, dispatch_jules_session, handle_pr_merge
-
-
-def load_persona_content(role: str) -> tuple[str, str]:
-    """Carrega dinamicamente o conteúdo da persona."""
-    personas_dir = get_personas_directory()
-    personas = discover_personas(personas_dir)
-    clean_role = role.lower().replace(".md", "").strip()
-
-    if clean_role in personas:
-        p = personas[clean_role]
-        return p["title"], p["content"]
-
-    default_personas = {
-        "engineer": (
-            "Autonomous Software Engineer",
-            "Você é o Autonomous Software Engineer. Sua missão é dar continuidade ao desenvolvimento do projeto.\n"
-            "Analise débitos técnicos, implemente melhorias e abra o Pull Request quando concluído.",
-        ),
-    }
-    if clean_role in default_personas:
-        return default_personas[clean_role]
-
-    return f"{role.title()} Agent", f"Você é o agente especialista {role} do projeto."
 
 
 def run_autonomous_loop(
@@ -68,8 +45,8 @@ def run_autonomous_loop(
         branch = GitService(repo_root=repo_root).get_current_branch(cwd=repo_root)
     branch = branch or "main"
 
-    personas_dir = get_personas_directory()
-    discovered = discover_personas(personas_dir)
+    engine = PersonaEngine(repo_root=repo_root)
+    discovered = engine.discover_personas()
 
     syncer = IssueSynchronizer(repo_root=repo_root)
     items_to_run = syncer.resolve_items_queue(prompt_file, use_issues=use_issues)
@@ -134,7 +111,28 @@ def run_autonomous_loop(
                 session_title = f"{title} - Ciclo #{completed_cycles}"
                 full_prompt = build_ai_context(base_prompt, None, p_path.stem)
             else:
-                title, base_prompt = load_persona_content(item_name)
+                # Usar PersonaEngine para unificação e DRY
+                base_prompt_raw = engine.load_persona(item_name)
+                if not base_prompt_raw:
+                    if item_name.lower() == "engineer":
+                        base_prompt_raw = (
+                            "Você é o Autonomous Software Engineer. Sua missão é dar continuidade ao desenvolvimento do projeto.\n"
+                            "Analise débitos técnicos, implemente melhorias e abra o Pull Request quando concluído."
+                        )
+                    else:
+                        base_prompt_raw = f"Você é o agente especialista {item_name} do projeto."
+                    log("AGENT", f"Persona '{item_name}' não encontrada. Usando fallback padrão.", Colors.YELLOW)
+
+                base_prompt = engine.render_persona_template(base_prompt_raw)
+
+                # Para manter compatibilidade de pegar title:
+                # O title vem da descoberta ou de fallback.
+                title = item_name.capitalize() + " Agent"
+                if discovered and item_name.lower() in discovered:
+                    title = discovered[item_name.lower()].get("title", title)
+                elif item_name.lower() == "engineer":
+                    title = "Autonomous Software Engineer"
+
                 if current_module:
                     full_prompt = (
                         f"{base_prompt}\n\n---\n\n"

@@ -16,6 +16,7 @@ ensure_amb_env()
 
 from core import Colors, log, log_error
 from workspace import find_repo_root
+from amb_cli.agents.persona_engine import PersonaEngine
 
 
 class ApiExecutionError(Exception):
@@ -25,115 +26,6 @@ class ApiExecutionError(Exception):
         self.hint = hint
 
 
-def get_personas_directory(custom_dir: Optional[str] = None) -> str:
-    """Resolve e retorna o diretório de personas com prioridade para o .amb do projeto."""
-    root = find_repo_root()
-    if custom_dir:
-        abs_custom = os.path.abspath(custom_dir)
-        if not os.path.exists(abs_custom):
-            os.makedirs(abs_custom, exist_ok=True)
-        return abs_custom
-
-    amb_personas = os.path.join(root, ".amb", "personas")
-    if os.path.exists(amb_personas) and os.path.isdir(amb_personas):
-        return os.path.abspath(amb_personas)
-
-    jules_personas = os.path.join(root, ".jules", "personas")
-    if os.path.exists(jules_personas) and os.path.isdir(jules_personas):
-        return os.path.abspath(jules_personas)
-
-    candidates = [
-        os.path.join(root, ".amb"),
-        os.path.join(root, ".jules"),
-        os.path.join(root, "amb_cli", "agents", "personas"),
-        os.path.join(os.path.dirname(__file__), "personas"),
-        os.path.join(root, "amb_cli", "integrations", "antigravity", "personas"),
-    ]
-
-    for p in candidates:
-        if os.path.exists(p) and os.path.isdir(p):
-            # If it's one of the legacy non-personas dirs, check for md files
-            if os.path.basename(p) in (".amb", ".jules"):
-                md_files = [f for f in os.listdir(p) if f.endswith(".md") and not f.startswith("_") and f.lower() != "readme.md"]
-                if md_files:
-                    return os.path.abspath(p)
-            else:
-                return os.path.abspath(p)
-
-    default_dir = os.path.join(root, ".amb", "personas")
-    os.makedirs(default_dir, exist_ok=True)
-    return default_dir
-
-
-def discover_personas(personas_dir: str) -> Dict[str, Dict[str, str]]:
-    """Varre dinamicamente a pasta de personas e extrai metadados dos arquivos markdown."""
-    personas = {}
-    if not os.path.exists(personas_dir):
-        return personas
-
-    for fname in sorted(os.listdir(personas_dir)):
-        if not fname.endswith(".md"):
-            continue
-        if fname.lower() in ["readme.md"] or fname.startswith("_"):
-            continue
-
-        key = os.path.splitext(fname)[0].lower()
-        fpath = os.path.join(personas_dir, fname)
-
-        title = key.capitalize()
-        summary = "Agente de manutenção especializado."
-        content = ""
-
-        try:
-            with open(fpath, "r", encoding="utf-8", errors="replace") as f:
-                content = f.read().strip()
-
-            m_title = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
-            if m_title:
-                title = m_title.group(1).strip()
-
-            lines = [l.strip() for l in content.split("\n") if l.strip() and not l.startswith("#")]
-            if lines:
-                summary = lines[0][:120] + ("..." if len(lines[0]) > 120 else "")
-        except (OSError, IOError) as e:
-            log_error("AGENT", f"Erro ao ler arquivo da persona '{fname}': {e}")
-            continue
-
-        personas[key] = {
-            "key": key,
-            "filename": fname,
-            "path": fpath,
-            "title": title,
-            "summary": summary,
-            "content": content
-        }
-
-    return personas
-
-
-def list_personas(personas: Dict[str, Dict[str, str]], personas_dir: str) -> None:
-    """Exibe no terminal a listagem dinâmica de todas as personas encontradas na pasta."""
-    print("\n" + "=" * 75)
-    print(f"{Colors.BOLD}{Colors.CYAN}🤖 PERSONAS DISPONÍVEIS NA PASTA ({len(personas)} encontradas){Colors.RESET}")
-    print(f"📁 Diretório: {Colors.DIM}{personas_dir}{Colors.RESET}")
-    print("=" * 75 + "\n")
-
-    if not personas:
-        print(f"{Colors.YELLOW}Nenhuma persona (.md) encontrada em: {personas_dir}{Colors.RESET}")
-        print(f"Basta adicionar arquivos como '{personas_dir}/minha_persona.md' para ativá-las.\n")
-        return
-
-    for key, p in personas.items():
-        print(f"  • {Colors.BOLD}{key:<12}{Colors.RESET} {Colors.GREEN}{p['title']}{Colors.RESET} (Arquivo: {p['filename']})")
-        print(f"    Missão: {Colors.DIM}{p['summary']}{Colors.RESET}\n")
-
-    print(f"{Colors.YELLOW}Como Executar:{Colors.RESET}")
-    print(f"  • Despachar Jules (Padrão): amb agent --role <nome>  (ou python amb_cli/agents/local_agent_runner.py --role <nome>)")
-    print(f"  • TODAS as Personas (Jules):  amb agent --all")
-    print(f"  • Executar Local (agy CLI):   amb agent --role <nome> --agy (ou --local)")
-    print(f"  • Pasta de Prompts (Lote):    amb agent -p .amb/prompts/ (executa todos os .md sequencialmente)\n")
-
-
 def execute_single_persona(
     persona_data: Dict[str, str],
     task: Optional[str] = None,
@@ -141,8 +33,9 @@ def execute_single_persona(
 ) -> None:
     """Executa ou despacha uma persona específica."""
     title = persona_data["title"]
-    base_content = persona_data["content"]
     root = find_repo_root()
+    engine = PersonaEngine(repo_root=root)
+    base_content = engine.render_persona_template(persona_data["content"])
 
     full_prompt = base_content
 
@@ -225,11 +118,12 @@ def main() -> None:
 
     dispatch_jules = not args.agy
 
-    personas_dir = get_personas_directory(args.personas_dir)
-    personas = discover_personas(personas_dir)
+    engine = PersonaEngine()
+    personas_dir = engine.get_personas_directory(args.personas_dir)
+    personas = engine.discover_personas(args.personas_dir)
 
     if args.list or (not args.role and not args.all):
-        list_personas(personas, personas_dir)
+        engine.list_personas(personas, personas_dir)
         return
 
     if args.all:
