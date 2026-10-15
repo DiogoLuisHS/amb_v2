@@ -1,5 +1,13 @@
-import tkinter as tk
-from tkinter import ttk
+try:
+    import tkinter as tk
+except ImportError:
+    tk = None
+
+try:
+    from tkinter import ttk
+except ImportError:
+    ttk = None
+
 import subprocess
 import os
 import sys
@@ -17,7 +25,7 @@ from gui.wizard_core.runner_tab import RunnerTab
 from gui.wizard_core.settings_tab import SettingsTab
 
 
-class DynamicWizard(tk.Tk):
+class DynamicWizard(tk.Tk if tk else object):
     """Main Application Window for the AMB_V2 Command Wizard."""
 
     def __init__(self):
