@@ -10,6 +10,7 @@ de schemas (Drizzle ORM, Prisma, etc.) no projeto ativo sem permissão de escrit
 import os
 import sys
 import re
+import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -97,7 +98,7 @@ class DbSchemaReader:
         return tables
 
 
-def show_schema(filter_term: Optional[str] = None) -> None:
+def show_schema(filter_term: Optional[str] = None, as_json: bool = False) -> None:
     """Exibe no terminal o catálogo de tabelas e colunas formatado."""
     root = find_repo_root()
     schema_files = DbSchemaReader.list_schema_files(root)
@@ -120,6 +121,15 @@ def show_schema(filter_term: Optional[str] = None) -> None:
         ]
     else:
         filtered = all_tables
+
+    if as_json:
+        output = {
+            "root": root,
+            "total_tables": len(filtered),
+            "tables": filtered
+        }
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+        return
 
     print("\n" + "=" * 75)
     print(f"🏛️  {Colors.BOLD}{Colors.CYAN}CATÁLOGO DE SCHEMAS DO BANCO DE DADOS (READ-ONLY){Colors.RESET}")
