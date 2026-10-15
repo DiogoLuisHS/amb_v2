@@ -222,7 +222,8 @@ def test_cmd_agent_loop_parameters():
             max_cycles=2,
             branch="main",
             no_auto_merge=True,
-            concurrency=1
+                concurrency=1,
+                use_pipeline=False
         )
 
 
@@ -250,7 +251,8 @@ def test_cmd_agent_sync_issues_parameters():
             branch="develop",
             no_auto_merge=False,
             concurrency=1,
-            use_issues=True
+                use_issues=True,
+                use_pipeline=False
         )
 
 
