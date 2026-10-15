@@ -35,7 +35,8 @@ class PipelineOrchestrator:
         auto_approve: bool = False, skip_stitch: bool = False, no_qa: bool = False,
         resume_session: str = None, device_type: str = None, edit_screen_id: str = None,
         screen_id: str = None, sync_ds: bool = False, starting_branch: str = None,
-        auto_merge: bool = False, no_auto_merge: bool = False, resume: bool = False
+        auto_merge: bool = False, no_auto_merge: bool = False, resume: bool = False,
+        dry_run: bool = False
     ):
         if auto_approve and not no_auto_merge:
             auto_merge = True
@@ -77,6 +78,16 @@ class PipelineOrchestrator:
             jules_prompt = jules_prompt or p_jules
 
         file_label = file_label.strip() or "Tarefa Não Identificada"
+
+        if dry_run:
+            has_stitch = "Sim" if stitch_prompt and not skip_stitch else "Não"
+            has_jules = "Sim" if jules_prompt else "Não"
+            print(f"\n{Colors.BOLD}{Colors.CYAN}=== 🔍 SIMULAÇÃO DE ORQUESTRAÇÃO DE PIPELINE [DRY-RUN] ==={Colors.RESET}")
+            print(f"  • Prompt Alvo: {file_label}")
+            print(f"  • Stitch (Design UI): {has_stitch}")
+            print(f"  • Jules (Backend/Código): {has_jules}")
+            print(f"  • Branch Alvo: {starting_branch}")
+            return
 
         print(f"\n{Colors.BOLD}{Colors.CYAN}🚀 INICIANDO PIPELINE: {file_label}{Colors.RESET}")
         log("PARSER", f"Visual: {len(stitch_prompt)} chars | Dev: {len(jules_prompt)} chars", Colors.DIM)
