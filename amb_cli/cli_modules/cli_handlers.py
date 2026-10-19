@@ -212,17 +212,9 @@ def cmd_validate(args: Any) -> None:
 
 def cmd_pipeline(args: Any) -> None:
     """Executa o pipeline completo Design-to-Deploy."""
-    spec = getattr(args, "spec", None)
-    if spec:
-        if os.path.exists(spec):
-            args.prompt_file = spec
-        else:
-            args.stitch_prompt = spec
-            args.jules_prompt = spec
-
     from pipeline.pipeline import PipelineOrchestrator
+
     PipelineOrchestrator.run(
-        prompt_file=getattr(args, "prompt_file", None),
         stitch_prompt_file=getattr(args, "stitch_prompt", None),
         jules_prompt_file=getattr(args, "jules_prompt", None),
         auto_approve=getattr(args, "auto_approve", False),

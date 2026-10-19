@@ -53,8 +53,8 @@ def test_batch_execution_with_pipeline_flag(mock_dependencies):
     mock_pipeline.run.assert_called_once()
     assert mock_pipeline.run.call_args[1]["prompt_file"] == "prompt.md"
 
-def test_auto_detection_stitch_section(mock_dependencies):
-    """Testa auto-detecção de prompts contendo seções ## Stitch roteando para o pipeline mesmo sem a flag."""
+def test_no_auto_detection_without_pipeline_flag(mock_dependencies):
+    """Garante que sem a flag --pipeline o pipeline visual NÃO é acionado mesmo se o prompt contiver seções ## Stitch."""
 
     mock_syncer = mock_dependencies["syncer"]
     mock_pipeline = mock_dependencies["pipeline"]
@@ -68,16 +68,19 @@ def test_auto_detection_stitch_section(mock_dependencies):
         {"type": "prompt", "name": "prompt", "path": mock_path, "content": "## Stitch\nSome UI instructions.", "_full_prompt": "## Stitch\nSome UI instructions."}
     ]
 
-    run_autonomous_loop(
-        prompt_file="test_dir",
-        use_pipeline=False,
-        max_cycles=1,
-    )
+    with patch("amb_cli.agents.autonomous_loop.dispatch_jules_session", return_value="sess_123"), \
+         patch("amb_cli.agents.autonomous_loop.monitor_and_assist_session", return_value="COMPLETED"), \
+         patch("amb_cli.agents.autonomous_loop.handle_pr_merge", return_value=True):
+        run_autonomous_loop(
+            prompt_file="test_dir",
+            use_pipeline=False,
+            max_cycles=1,
+        )
 
-    mock_pipeline.run.assert_called_once()
+    mock_pipeline.run.assert_not_called()
 
 def test_sequential_processing_multiple_prompts(mock_dependencies):
-    """Testa processamento sequencial de múltiplos prompts visuais em lote."""
+    """Testa processamento sequencial de múltiplos prompts visuais em lote quando use_pipeline=True."""
 
     mock_syncer = mock_dependencies["syncer"]
     mock_pipeline = mock_dependencies["pipeline"]
@@ -93,13 +96,13 @@ def test_sequential_processing_multiple_prompts(mock_dependencies):
     mock_path2.stem = "prompt2"
 
     mock_syncer.resolve_items_queue.return_value = [
-        {"type": "prompt", "name": "prompt1", "path": mock_path1, "content": "## Stitch\nUI1.", "_full_prompt": "## Stitch\nUI1."},
-        {"type": "prompt", "name": "prompt2", "path": mock_path2, "content": "## Stitch\nUI2.", "_full_prompt": "## Stitch\nUI2."}
+        {"type": "prompt", "name": "prompt1", "path": mock_path1, "content": "UI1.", "_full_prompt": "UI1."},
+        {"type": "prompt", "name": "prompt2", "path": mock_path2, "content": "UI2.", "_full_prompt": "UI2."}
     ]
 
     run_autonomous_loop(
         prompt_file="test_dir",
-        use_pipeline=False,
+        use_pipeline=True,
         max_cycles=1,
     )
 

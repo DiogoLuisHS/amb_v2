@@ -21,7 +21,6 @@ from amb_cli.agents.persona_engine import PersonaEngine
 from agents.loop_core.session_assistant import monitor_and_assist_session
 from agents.loop_core.cycle_dispatcher import build_ai_context, dispatch_jules_session, handle_pr_merge
 from pipeline.pipeline import PipelineOrchestrator
-from pipeline.pipeline_core.prompt_builder import parse_single_prompt
 def _record_and_present_summary(start_time: float, items_count: int, json_mode: bool):
     round_duration = time.time() - start_time
     metrics = LocalTelemetry.get_round_metrics(start_time)
@@ -73,12 +72,9 @@ def run_autonomous_loop(
                 print(f"    {idx}. [Issue] {item.get('issue_number')} -> \"{title}\"")
             elif item["type"] == "prompt":
                 p_path = Path(item["path"])
-                base_prompt = item.get("content") or p_path.read_text(encoding="utf-8", errors="replace")
-                stitch_p, jules_p = parse_single_prompt(base_prompt)
-                has_stitch = "Sim" if (stitch_p and stitch_p != jules_p) or "## stitch" in base_prompt.lower() or "ui:" in base_prompt.lower() else "Não"
-                has_jules = "Sim" if jules_p or not has_stitch else "Não"
                 title = p_path.stem.replace('_', ' ').title()
-                print(f"    {idx}. [Prompt] {p_path.name} -> \"{title}\" (Stitch: {has_stitch} | Jules: {has_jules})")
+                mode = "Pipeline Visual" if use_pipeline else "Jules Direct"
+                print(f"    {idx}. [Prompt] {p_path.name} -> \"{title}\" ({mode})")
             else:
                 print(f"    {idx}. [Persona] {item['name'].capitalize()} Agent")
         return
@@ -194,17 +190,16 @@ def run_autonomous_loop(
                     )
                 # Despacho no Jules
                 try:
-                    trigger_pipeline = use_pipeline
-                    if item["type"] in ("prompt", "issue"):
-                        content = item.get("_full_prompt", "")
-                        stitch_p, jules_p = parse_single_prompt(content)
-                        if (stitch_p and stitch_p != jules_p) or "## stitch" in content.lower() or "ui:" in content.lower():
-                            trigger_pipeline = True
-                    if trigger_pipeline and item.get("path") and item.get("path").exists():
-                        log("PIPELINE", f"Detectada execução em lote com Pipeline Visual para '{item_name}'", Colors.CYAN)
-                        PipelineOrchestrator.run(prompt_file=str(item["path"]), auto_approve=True, auto_merge=not no_auto_merge, starting_branch=branch)
+                    if use_pipeline and item.get("path") and item.get("path").exists():
+                        log("PIPELINE", f"Executando Pipeline para '{item_name}'", Colors.CYAN)
+                        PipelineOrchestrator.run(
+                            prompt_file=str(item["path"]),
+                            auto_approve=True,
+                            auto_merge=not no_auto_merge,
+                            starting_branch=branch,
+                        )
                         if item.get("type") == "issue" and item.get("issue_number", 0) > 0:
-                            syncer.close_issue(item["issue_number"], comment=f"✅ Concluído via Pipeline Visual em Lote (Ciclo #{completed_cycles}).")
+                            syncer.close_issue(item["issue_number"], comment=f"✅ Concluído via Pipeline em Lote (Ciclo #{completed_cycles}).")
                         if item.get("path"):
                             c_dir = item["path"].parent / "_completed"
                             c_dir.mkdir(parents=True, exist_ok=True)
