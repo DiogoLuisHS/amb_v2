@@ -103,9 +103,24 @@ def cmd_advisor(args: Any) -> None:
 
 
 def cmd_gui(args: Any) -> None:
-    """Inicia o Assistente Gráfico (Tkinter UI)."""
-    from gui.wizard_app import start_wizard
-    start_wizard()
+    """Inicia o Assistente Gráfico (Web Console ou Tkinter UI Wizard)."""
+    if getattr(args, "web", False):
+        from gui.web.server import start_web_gui
+        start_web_gui(
+            headless=getattr(args, "headless", False),
+            port=getattr(args, "port", None)
+        )
+        return
+
+    try:
+        from gui.wizard_app import start_wizard
+        start_wizard()
+    except Exception:
+        from gui.web.server import start_web_gui
+        start_web_gui(
+            headless=getattr(args, "headless", False),
+            port=getattr(args, "port", None)
+        )
 
 
 def cmd_config(args: Any) -> None:

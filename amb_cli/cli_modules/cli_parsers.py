@@ -62,7 +62,10 @@ def create_parser() -> argparse.ArgumentParser:
     p.add_argument("--auto-approve", "-y", action="store_true", help="Responde ou aprova automaticamente com IA sem confirmação.")
     p.add_argument("--chat", "-c", action="store_true", help="Inicia sessão de chat conversacional contínuo (REPL) com o agente Jules.")
 
-    _c("gui", "Abre o Assistente Gráfico Interativo (UI Wizard) para montagem de comandos e gestão de ambiente (.env).", cmd_gui, ["ui", "wizard"])
+    p_gui = _c("gui", "Abre o Assistente Gráfico Interativo (Web Console ou Tkinter UI Wizard).", cmd_gui, ["ui", "wizard"])
+    p_gui.add_argument("--web", "-w", action="store_true", help="Inicia o novo console Web no navegador padrão (porta local).")
+    p_gui.add_argument("--port", type=int, help="Porta personalizada para o console Web.")
+    p_gui.add_argument("--headless", action="store_true", help="Inicia o servidor sem abrir o navegador automaticamente.")
     p = _c("agent", "Desenvolvimento autônomo e personas (lote -p <dir> ou loop contínuo).", cmd_agent, ["agent_alias"], desc="Executor de desenvolvimento autônomo (Jules na nuvem ou Antigravity local).")
     p.add_argument("target", nargs="?", help="Nome da persona (ex: engineer) OU caminho de pasta/arquivo de prompts (.amb/prompts/).")
     p.add_argument("--role", "-r", help="Nome da persona a executar (ex: engineer). Opcional se usar -p/--prompt.")
