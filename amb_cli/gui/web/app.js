@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('sessions-tbody');
     const terminalOutput = document.getElementById('terminal-output');
 
+    function stripAnsi(text) {
+        return String(text).replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '').replace(/\[\d+m/g, '');
+    }
+
     function addLog(message, type = 'info') {
         const time = new Date().toLocaleTimeString('pt-BR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const div = document.createElement('div');
@@ -12,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'error') colorClass = 'log-error';
         if (type === 'warning') colorClass = 'log-warning';
 
-        div.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${message}</span>`;
+        const cleanMsg = stripAnsi(message);
+        div.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${cleanMsg}</span>`;
         terminalOutput.appendChild(div);
         terminalOutput.scrollTop = terminalOutput.scrollHeight;
     }
