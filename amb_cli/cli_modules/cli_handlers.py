@@ -212,25 +212,38 @@ def cmd_validate(args: Any) -> None:
 
 def cmd_pipeline(args: Any) -> None:
     """Executa o pipeline completo Design-to-Deploy."""
+    spec = getattr(args, "spec", None)
+    if spec:
+        if os.path.exists(spec):
+            args.prompt_file = spec
+        else:
+            args.stitch_prompt = spec
+            args.jules_prompt = spec
+
     from pipeline.pipeline import PipelineOrchestrator
 
-    PipelineOrchestrator.run(
-        stitch_prompt_file=getattr(args, "stitch_prompt", None),
-        jules_prompt_file=getattr(args, "jules_prompt", None),
-        auto_approve=getattr(args, "auto_approve", False),
-        skip_stitch=getattr(args, "skip_stitch", False),
-        no_qa=getattr(args, "no_qa", False),
-        resume_session=getattr(args, "resume_session", None),
-        device_type=getattr(args, "device", None) or getattr(args, "device_type", None),
-        edit_screen_id=getattr(args, "edit_screen_id", None),
-        screen_id=getattr(args, "screen_id", None),
-        sync_ds=getattr(args, "sync_ds", False),
-        starting_branch=getattr(args, "branch", None),
-        auto_merge=getattr(args, "auto_merge", False),
-        no_auto_merge=getattr(args, "no_auto_merge", False),
-        resume=getattr(args, "resume", False),
-        dry_run=getattr(args, "dry_run", False)
-    )
+    run_kwargs: dict[str, Any] = {
+        "stitch_prompt_file": getattr(args, "stitch_prompt", None),
+        "jules_prompt_file": getattr(args, "jules_prompt", None),
+        "auto_approve": getattr(args, "auto_approve", False),
+        "skip_stitch": getattr(args, "skip_stitch", False),
+        "no_qa": getattr(args, "no_qa", False),
+        "resume_session": getattr(args, "resume_session", None),
+        "device_type": getattr(args, "device", None) or getattr(args, "device_type", None),
+        "edit_screen_id": getattr(args, "edit_screen_id", None),
+        "screen_id": getattr(args, "screen_id", None),
+        "sync_ds": getattr(args, "sync_ds", False),
+        "starting_branch": getattr(args, "branch", None),
+        "auto_merge": getattr(args, "auto_merge", False),
+        "no_auto_merge": getattr(args, "no_auto_merge", False),
+        "resume": getattr(args, "resume", False),
+        "dry_run": getattr(args, "dry_run", False),
+    }
+    p_file = getattr(args, "prompt_file", None)
+    if p_file and isinstance(p_file, str):
+        run_kwargs["prompt_file"] = p_file
+
+    PipelineOrchestrator.run(**run_kwargs)
 
 
 def cmd_schema(args: Any) -> None:
