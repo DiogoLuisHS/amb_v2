@@ -10,14 +10,16 @@
     <header class="navbar">
         <div class="logo-title">
             <h1>AMB_V2 Web Console</h1>
-            <span class="badge">DiogoLuisHS/amb_v2 - Online</span>
+            <span id="repo-badge" class="badge">Carregando ambiente...</span>
         </div>
         <div class="api-status">
-            <span class="status-indicator">Google Jules <span class="dot green"></span></span>
-            <span class="status-indicator">Google Stitch <span class="dot green"></span></span>
-            <span class="status-indicator">Gemini IA <span class="dot green"></span></span>
+            <span class="status-indicator">Google Jules <span id="dot-jules" class="dot red" title="Status Jules API"></span></span>
+            <span class="status-indicator">Google Stitch <span id="dot-stitch" class="dot red" title="Status Stitch API"></span></span>
+            <span class="status-indicator">Gemini IA <span id="dot-gemini" class="dot red" title="Status Gemini API"></span></span>
+            <span class="status-indicator">GitHub <span id="dot-github" class="dot red" title="Status GitHub Token"></span></span>
         </div>
         <div class="header-actions">
+            <button id="refresh-btn">🔄 Atualizar</button>
             <button id="theme-toggle">🌓 Tema</button>
             <button id="docs-btn">Documentação</button>
         </div>
@@ -26,35 +28,35 @@
     <main class="dashboard">
         <section class="kpi-cards">
             <div class="card">
-                <h3>Sessões Jules Ativas</h3>
-                <div class="kpi-value">03 <span class="progress-bar"><span class="progress" style="width: 75%"></span></span></div>
-                <div class="kpi-subtext">75% Carga</div>
-            </div>
-            <div class="card">
-                <h3>Saúde do Projeto (QA)</h3>
-                <div class="kpi-value text-green">100%</div>
-                <div class="kpi-subtext">42/42 testes passando | Zero falhas</div>
+                <h3>Modelo IA Ativo</h3>
+                <div id="kpi-gemini-model" class="kpi-value text-cyan">--</div>
+                <div id="kpi-gemini-subtext" class="kpi-subtext">Lendo configuração...</div>
             </div>
             <div class="card">
                 <h3>Branch Git Ativa</h3>
-                <div class="kpi-value">main</div>
-                <div class="kpi-subtext">Status: Sincronizada</div>
+                <div id="kpi-git-branch" class="kpi-value">--</div>
+                <div id="kpi-git-subtext" class="kpi-subtext">Verificando repositório...</div>
             </div>
             <div class="card">
-                <h3>Status do Loop Autônomo</h3>
-                <div class="kpi-value text-cyan">RUNNING</div>
-                <div class="kpi-subtext">Latência: 430ms</div>
+                <h3>Loop Autônomo</h3>
+                <div id="kpi-loop-state" class="kpi-value text-cyan">--</div>
+                <div id="kpi-loop-subtext" class="kpi-subtext">Estado atual (.amb)</div>
+            </div>
+            <div class="card">
+                <h3>Sessões Registradas</h3>
+                <div id="kpi-sessions-count" class="kpi-value">--</div>
+                <div id="kpi-sessions-subtext" class="kpi-subtext">Telemetria local</div>
             </div>
         </section>
 
         <section class="command-hub">
-            <h2>Ações Rápidas CLI</h2>
+            <h2>Ações Rápidas CLI (Execução em Tempo Real)</h2>
             <div class="hub-grid">
-                <button class="cmd-btn" data-cmd="amb check">🔍 Executar Diagnóstico (QA Pass)</button>
-                <button class="cmd-btn" data-cmd="amb prompt">📝 Sintetizar Prompt com IA (AI Gen)</button>
-                <button class="cmd-btn" data-cmd="amb pipeline">🚀 Iniciar Pipeline Design-to-Deploy (Prod)</button>
-                <button class="cmd-btn" data-cmd="amb monitor">👁️ Sentinela em Tempo Real</button>
-                <button class="cmd-btn" data-cmd="amb jules clean">🧹 Auditar e Limpar Sessões (Purge)</button>
+                <button class="cmd-btn" data-cmd="amb check">🔍 Diagnóstico QA (amb check)</button>
+                <button class="cmd-btn" data-cmd="amb stats">📊 Estatísticas e Tokens (amb stats)</button>
+                <button class="cmd-btn" data-cmd="amb validate amb_cli/cli.py">📐 Auditar Arquitetura (amb validate)</button>
+                <button class="cmd-btn" data-cmd="amb monitor --once">👁️ Sentinela Único (amb monitor)</button>
+                <button class="cmd-btn" data-cmd="amb jules list">☁️ Listar Sessões Jules (amb jules list)</button>
             </div>
         </section>
 
@@ -63,13 +65,13 @@
                 <span>Terminal ao vivo // amb_console.log</span>
             </div>
             <div id="terminal-output" class="terminal-window">
-                <!-- Logs will appear here -->
+                <!-- Logs em tempo real -->
             </div>
         </section>
 
         <section class="sessions-list">
             <div class="sessions-header">
-                <h2>Sessões Recentes do Agente Jules</h2>
+                <h2>Sessões Recentes do Projeto</h2>
             </div>
             <table class="sessions-table">
                 <thead>
@@ -83,7 +85,7 @@
                     </tr>
                 </thead>
                 <tbody id="sessions-tbody">
-                    <!-- Sessions rows populated via JS -->
+                    <!-- Preenchido dinamicamente via JS com dados reais -->
                 </tbody>
             </table>
         </section>

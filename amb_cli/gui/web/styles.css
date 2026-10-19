@@ -82,6 +82,8 @@ body {
     display: inline-block;
 }
 .dot.green { background-color: var(--accent-green); box-shadow: 0 0 5px var(--accent-green); }
+.dot.red { background-color: var(--accent-red); box-shadow: 0 0 5px var(--accent-red); }
+.dot.yellow { background-color: #e5c07b; box-shadow: 0 0 5px #e5c07b; }
 
 .header-actions button {
     background: transparent;

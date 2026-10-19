@@ -69,8 +69,37 @@ def test_web_gui_cli_flag_integration(monkeypatch):
 
     assert web_called, "start_web_gui deveria ter sido chamado quando --web é passado."
 
+def test_web_gui_api_status():
+    """Garante que a rota /api/status responde com JSON contendo dados reais do projeto e ambiente."""
+    import json
+    port = get_free_port(9050)
+
+    def run_server():
+        try:
+            start_web_gui(headless=True, port=port, run_forever=False)
+        except Exception:
+            pass
+
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+    time.sleep(0.5)
+
+    response = urllib.request.urlopen(f"http://localhost:{port}/api/status", timeout=2)
+    assert response.status == 200
+    data = json.loads(response.read().decode('utf-8'))
+    assert "project" in data
+    assert "model" in data
+    assert "apis" in data
+    assert "loop_state" in data
+    assert "sessions" in data
+    assert isinstance(data["apis"], dict)
+    assert "gemini" in data["apis"]
+    assert "jules" in data["apis"]
+    server_thread.join(timeout=1)
+
 def test_web_gui_api_exec():
-    """Garante que a rota /api/exec responde com JSON estruturado."""
+    """Garante que a rota /api/exec executa comandos reais permitidos e retorna status estruturado."""
+    import json
     port = get_free_port(9100)
 
     def run_server():
@@ -83,8 +112,9 @@ def test_web_gui_api_exec():
     server_thread.start()
     time.sleep(0.5)
 
-    response = urllib.request.urlopen(f"http://localhost:{port}/api/exec?cmd=amb%20check", timeout=2)
+    response = urllib.request.urlopen(f"http://localhost:{port}/api/exec?cmd=git%20--version", timeout=5)
     assert response.status == 200
-    data = response.read().decode('utf-8')
-    assert "Mock execution of 'amb check' completed." in data
+    data = json.loads(response.read().decode('utf-8'))
+    assert data.get("status") == "ok"
+    assert "git version" in data.get("output", "").lower()
     server_thread.join(timeout=1)
